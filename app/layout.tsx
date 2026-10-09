@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   description:
     'Internal ERP system for Japan Circular Trading Co., Ltd. — vehicle export management, CRM, inventory, auctions, invoicing, payments, and shipping.',
   icons: {
-    icon: '/images/jct-logo-light.png',
-    apple: '/images/jct-logo-light.png',
+    icon: '/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png',
+    apple: '/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png',
   },
 };
 
