@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
       const recentTasks = recentTasksRes.data || [];
 
-      const assigneeIds = [...new Set(recentTasks.map((t) => t.assigned_to))];
+      const assigneeIds = Array.from(new Set(recentTasks.map((t) => t.assigned_to)));
       const assigneeNames: Record<string, string> = {};
       if (assigneeIds.length > 0) {
         const { data: assignees } = await supabase
