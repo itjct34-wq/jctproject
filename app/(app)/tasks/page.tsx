@@ -14,7 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreVertical, Loader2, CheckSquare, Clock, AlertTriangle } from 'lucide-react';
+import { Plus, MoreVertical, Loader2, CheckSquare, Clock, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { supabase } from '@/lib/supabase/client';
 import type { Profile, Task } from '@/lib/types';
 import { format } from 'date-fns';
@@ -31,6 +32,9 @@ export default function TasksPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskWithAssignee | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
@@ -118,6 +122,37 @@ export default function TasksPage() {
     setForm({ title: '', description: '', assigned_to: '', priority: 'medium', due_date: '' });
     setDialogOpen(false);
     loadTasks();
+  };
+
+  const openEdit = (task: TaskWithAssignee) => {
+    setEditingTask(task);
+    setForm({ title: task.title, description: task.description || '', assigned_to: task.assigned_to || '', priority: task.priority, due_date: task.due_date || '' });
+    setEditOpen(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask || !form.title.trim() || !form.assigned_to) return;
+    setSubmitting(true);
+    const { error } = await supabase.from('tasks').update({
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      assigned_to: form.assigned_to,
+      priority: form.priority,
+      due_date: form.due_date || null,
+    }).eq('id', editingTask.id);
+    setSubmitting(false);
+    if (error) { toast.error('Failed to update task: ' + error.message); return; }
+    toast.success('Task updated'); setEditOpen(false); setEditingTask(null); loadTasks();
+  };
+
+  const confirmDelete = async () => {
+    if (!editingTask) return;
+    setSubmitting(true);
+    const { error } = await supabase.from('tasks').delete().eq('id', editingTask.id);
+    setSubmitting(false);
+    if (error) { toast.error('Failed to delete: ' + error.message); return; }
+    toast.success('Task deleted'); setDeleteOpen(false); setEditingTask(null); loadTasks();
   };
 
   const updateStatus = async (taskId: string, status: string) => {
@@ -400,6 +435,15 @@ export default function TasksPage() {
                               Cancel Task
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem onClick={() => openEdit(task)}>
+                            <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit Task
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setEditingTask(task); setDeleteOpen(true); }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete Task
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -410,6 +454,66 @@ export default function TasksPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title *</Label>
+              <Input id="edit-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea id="edit-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Assign To *</Label>
+                <Select value={form.assigned_to} onValueChange={(v) => setForm({ ...form, assigned_to: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-due-date">Due Date</Label>
+              <Input id="edit-due-date" type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Saving...</> : 'Save Changes'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete task?"
+        description="This will permanently remove the task. This action cannot be undone."
+        confirmLabel="Delete permanently"
+        destructive
+        loading={submitting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
