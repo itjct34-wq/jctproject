@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 
 /**
- * Lightweight QR code renderer using QR server API.
- * Works without extra npm install.
+ * QR code for invoice verification links.
+ * Uses a public QR image API (no extra npm dependency).
  */
 export function InvoiceQRCode({
   value,
@@ -21,6 +21,7 @@ export function InvoiceQRCode({
   }, [value, size]);
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       width={size}
@@ -36,6 +37,6 @@ export function InvoiceQRCode({
 export function buildVerifyUrl(token: string, origin?: string): string {
   const base =
     origin ||
-    (typeof window !== 'undefined' ? window.location.origin : 'https://japancirculartrading.com');
+    (typeof window !== 'undefined' ? window.location.origin : '');
   return `${base}/verify/${token}`;
 }
