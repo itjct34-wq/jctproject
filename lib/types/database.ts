@@ -446,9 +446,43 @@ export interface Invoice {
   currency: string;
   payment_status: 'unpaid' | 'partial' | 'paid' | 'cancelled' | 'credited';
   notes: string | null;
+  // Shipping / commercial terms
+  incoterms: string | null;
+  shipment_type: string | null;
+  container_mode: string | null;
+  port_of_loading: string | null;
+  port_of_discharge: string | null;
+  vessel_name: string | null;
+  bl_number: string | null;
+  freight_total: number | null;
+  insurance_total: number | null;
+  other_charges: number | null;
+  discount_total: number | null;
+  verification_token: string | null;
+  bank_details: string | null;
+  payment_terms: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface InvoiceVerifyResult {
+  valid: boolean;
+  message?: string;
+  invoice_code?: string;
+  invoice_type?: string;
+  issue_date?: string;
+  currency?: string;
+  total?: number;
+  payment_status?: string;
+  incoterms?: string;
+  shipment_type?: string;
+  container_mode?: string;
+  port_of_loading?: string;
+  port_of_discharge?: string;
+  customer_name?: string;
+  company_name?: string;
+  verified_at?: string;
 }
 
 export interface Payment {
