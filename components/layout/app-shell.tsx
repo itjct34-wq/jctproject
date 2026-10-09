@@ -27,9 +27,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3">
           <img
-            src="/images/705607377_122127683871150897_4165866362055650133_n.jpg"
+            src="/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png"
             alt="Japan Circular Trading"
-            className="w-14 h-14 rounded-xl object-cover border border-border shadow-sm"
+            className="w-14 h-14 rounded-xl object-contain bg-white border border-border shadow-sm p-1"
           />
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
