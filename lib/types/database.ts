@@ -328,6 +328,214 @@ export interface SupplierContact {
   created_at: string;
 }
 
+export interface AuctionListing {
+  id: string;
+  listing_code: string;
+  supplier_id: string | null;
+  vehicle_id: string | null;
+  chassis_number: string | null;
+  make: string | null;
+  model: string | null;
+  model_year: number | null;
+  auction_date: string | null;
+  lot_number: string | null;
+  start_price: number | null;
+  currency: string;
+  result: 'pending' | 'won' | 'lost' | 'cancelled';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuctionBid {
+  id: string;
+  listing_id: string;
+  bid_amount: number;
+  currency: string;
+  max_bid: number | null;
+  status: 'pending' | 'approved' | 'rejected' | 'won' | 'lost';
+  approved_by: string | null;
+  approved_at: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Purchase {
+  id: string;
+  purchase_code: string;
+  supplier_id: string | null;
+  vehicle_id: string | null;
+  auction_listing_id: string | null;
+  purchase_date: string;
+  vehicle_price: number;
+  auction_fees: number;
+  transport_cost: number;
+  inspection_cost: number;
+  other_cost: number;
+  currency: string;
+  status: 'draft' | 'confirmed' | 'invoiced' | 'paid' | 'cancelled';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Sale {
+  id: string;
+  sale_code: string;
+  customer_id: string;
+  vehicle_id: string;
+  sale_date: string;
+  sale_price: number;
+  currency: string;
+  deposit_amount: number;
+  deposit_date: string | null;
+  status: 'reserved' | 'confirmed' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+  delivery_date: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Quotation {
+  id: string;
+  quotation_code: string;
+  customer_id: string;
+  sale_id: string | null;
+  price_type: 'FOB' | 'CNF' | 'CIF';
+  subtotal: number;
+  freight: number;
+  insurance: number;
+  other_fees: number;
+  total: number;
+  currency: string;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted';
+  valid_until: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuotationItem {
+  id: string;
+  quotation_id: string;
+  vehicle_id: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  created_at: string;
+}
+
+export interface Invoice {
+  id: string;
+  invoice_code: string;
+  customer_id: string;
+  sale_id: string | null;
+  invoice_type: 'proforma' | 'commercial' | 'credit_note';
+  issue_date: string;
+  due_date: string | null;
+  subtotal: number;
+  tax: number;
+  total: number;
+  currency: string;
+  payment_status: 'unpaid' | 'partial' | 'paid' | 'cancelled' | 'credited';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Payment {
+  id: string;
+  payment_code: string;
+  customer_id: string | null;
+  invoice_id: string | null;
+  sale_id: string | null;
+  payment_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  amount_jpy: number;
+  payment_method: 'bank_transfer' | 'cash' | 'credit_card' | 'other' | null;
+  bank_reference: string | null;
+  status: 'pending' | 'received' | 'reconciled' | 'rejected';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Expense {
+  id: string;
+  expense_code: string;
+  category: string;
+  vehicle_id: string | null;
+  sale_id: string | null;
+  expense_date: string;
+  amount: number;
+  currency: string;
+  payment_method: 'bank_transfer' | 'cash' | 'credit_card' | 'other' | null;
+  vendor: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'paid';
+  approved_by: string | null;
+  approved_at: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Shipment {
+  id: string;
+  shipment_code: string;
+  sale_id: string | null;
+  booking_date: string | null;
+  etd: string | null;
+  eta: string | null;
+  vessel_name: string | null;
+  voyage_number: string | null;
+  port_of_loading: string | null;
+  port_of_discharge: string | null;
+  final_destination: string | null;
+  bl_number: string | null;
+  shipping_line: string | null;
+  container_number: string | null;
+  status: 'booked' | 'loaded' | 'in_transit' | 'arrived' | 'delivered' | 'cancelled';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShipmentItem {
+  id: string;
+  shipment_id: string;
+  vehicle_id: string;
+  created_at: string;
+}
+
+export interface ExportDocument {
+  id: string;
+  shipment_id: string | null;
+  sale_id: string | null;
+  document_type: 'export_certificate' | 'commercial_invoice' | 'packing_list' | 'bill_of_lading' | 'courier_receipt' | 'inspection_certificate' | 'other';
+  document_number: string | null;
+  issue_date: string | null;
+  expiry_date: string | null;
+  issuing_authority: string | null;
+  status: 'pending' | 'prepared' | 'submitted' | 'received' | 'verified' | 'rejected';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UserWithRoles extends Profile {
   roles: Role[];
   team_name?: string | null;
