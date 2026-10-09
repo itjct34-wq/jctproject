@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { useAuth } from '@/lib/auth-provider';
 import { Loader2 } from 'lucide-react';
-import { Car } from 'lucide-react';
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -26,9 +26,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-primary">
-            <Car className="w-7 h-7 text-white" />
-          </div>
+          <img
+            src="/images/705607377_122127683871150897_4165866362055650133_n.jpg"
+            alt="Japan Circular Trading"
+            className="w-14 h-14 rounded-xl object-cover border border-border shadow-sm"
+          />
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm">Loading ERP...</span>

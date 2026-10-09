@@ -1,13 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
-import { usePermissions } from '@/hooks/use-permissions';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Search, Settings, LogOut, User, Menu, ChevronDown } from 'lucide-react';
+import { Bell, Search, Settings, LogOut, Menu, ChevronDown } from 'lucide-react';
 import { ROLE_COLORS } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
@@ -26,7 +23,6 @@ import { format } from 'date-fns';
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const { profile, roles, signOut } = useAuth();
-  const { isSuperAdmin, isAdmin } = usePermissions();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const today = format(new Date(), 'EEEE, MMM d, yyyy');

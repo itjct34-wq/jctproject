@@ -5,14 +5,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_GROUPS } from '@/lib/nav';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useAuth } from '@/lib/auth-provider';
-import { Car, ChevronLeft, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const pathname = usePathname();
   const { canView } = usePermissions();
-  const { profile } = useAuth();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -35,9 +33,11 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
       )}
     >
       <div className="flex items-center gap-2.5 h-14 px-3 border-b border-border shrink-0">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary shrink-0">
-          <Car className="w-5 h-5 text-white" />
-        </div>
+        <img
+          src="/images/705607377_122127683871150897_4165866362055650133_n.jpg"
+          alt="Japan Circular Trading"
+          className="w-9 h-9 rounded-lg object-cover border border-border shrink-0"
+        />
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground truncate">JCT ERP</p>

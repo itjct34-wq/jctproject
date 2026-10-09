@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Lock, Mail, Car } from 'lucide-react';
+import { Loader2, Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -40,9 +40,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
-              <Car className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src="/images/705607377_122127683871150897_4165866362055650133_n.jpg"
+              alt="Japan Circular Trading"
+              className="w-16 h-16 rounded-xl object-cover border border-border shadow-sm"
+            />
             <div className="text-left">
               <h1 className="text-xl font-bold text-foreground">Japan Circular Trading</h1>
               <p className="text-xs text-muted-foreground">Co., Ltd. — Nagoya, Japan</p>
@@ -110,6 +112,9 @@ export default function LoginPage() {
 
         <p className="text-center text-xs text-muted-foreground mt-6">
           Japan Circular Trading Co., Ltd. — Used Vehicle Export
+        </p>
+        <p className="text-center text-xs text-muted-foreground mt-2">
+          +81 70-2241-6356 · itjct34@gmail.com
         </p>
       </div>
     </div>
