@@ -536,6 +536,19 @@ export interface ExportDocument {
   updated_at: string;
 }
 
+export interface InvoiceItem {
+  id: string;
+  invoice_id: string;
+  vehicle_id: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  line_total: number;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface UserWithRoles extends Profile {
   roles: Role[];
   team_name?: string | null;
