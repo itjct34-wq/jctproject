@@ -25,6 +25,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const { profile, roles, signOut } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
   const today = format(new Date(), 'EEEE, MMM d, yyyy');
 
   useEffect(() => {
@@ -79,13 +80,24 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex-1 max-w-md mx-auto">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <form
+          className="relative"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = searchQ.trim();
+            if (!q) return;
+            router.push(`/vehicles?q=${encodeURIComponent(q)}`);
+            setSearchQ('');
+          }}
+        >
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search vehicles, customers, invoices..."
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="Search stock #, chassis, make… (Enter)"
             className="pl-9 h-9 bg-muted/50 border-transparent focus-visible:bg-background"
           />
-        </div>
+        </form>
       </div>
 
       <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
@@ -120,6 +132,34 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
               notifications.map((n) => (
                 <div
                   key={n.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={async () => {
+                    if (!n.is_read) {
+                      await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
+                      setNotifications((prev) =>
+                        prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
+                      );
+                    }
+                    if (n.related_module && n.related_id) {
+                      const map: Record<string, string> = {
+                        tasks: '/tasks',
+                        invoices: '/invoices',
+                        sales: '/sales',
+                        vehicles: '/vehicles',
+                        payments: '/payments',
+                        shipments: '/shipments',
+                      };
+                      const href = map[n.related_module];
+                      if (href) {
+                        setNotifOpen(false);
+                        router.push(href);
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') (e.currentTarget as HTMLElement).click();
+                  }}
                   className={cn(
                     'px-4 py-3 border-b border-border/50 hover:bg-accent/50 cursor-pointer transition-colors',
                     !n.is_read && 'bg-primary/5'
@@ -127,12 +167,12 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                 >
                   <div className="flex items-start gap-2">
                     {!n.is_read && (
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">{n.title}</p>
+                      <p className="text-sm font-medium text-foreground leading-snug">{n.title}</p>
                       {n.message && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{n.message}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                       )}
                       <p className="text-[10px] text-muted-foreground mt-1">
                         {format(new Date(n.created_at), 'MMM d, h:mm a')}
