@@ -294,6 +294,40 @@ export interface VehicleStatusHistory {
   created_at: string;
 }
 
+export interface Supplier {
+  id: string;
+  supplier_code: string;
+  supplier_type: 'auction_house' | 'dealer' | 'wholesaler' | 'individual';
+  name: string;
+  category: string | null;
+  country: string | null;
+  city: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  contact_person: string | null;
+  payment_terms: string | null;
+  default_currency: string;
+  status: 'active' | 'inactive' | 'blocked';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierContact {
+  id: string;
+  supplier_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  is_primary: boolean;
+  created_at: string;
+}
+
 export interface UserWithRoles extends Profile {
   roles: Role[];
   team_name?: string | null;
