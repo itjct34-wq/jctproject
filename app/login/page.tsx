@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
@@ -36,7 +36,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-red-50/30 px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -46,15 +46,16 @@ export default function LoginPage() {
               className="w-16 h-16 rounded-xl object-contain bg-white border border-border shadow-sm p-1"
             />
             <div className="text-left">
-              <h1 className="text-xl font-bold text-foreground">Japan Circular Trading</h1>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Japan Circular Trading</h1>
               <p className="text-xs text-muted-foreground">Co., Ltd. — Nagoya, Japan</p>
             </div>
           </div>
         </div>
 
         <Card className="border-border/60 shadow-lg">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-center text-lg">Sign in to ERP</CardTitle>
+            <p className="text-center text-xs text-muted-foreground mt-1">Vehicle export operations system</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -118,5 +119,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-muted/30">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
