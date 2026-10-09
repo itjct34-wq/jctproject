@@ -255,6 +255,45 @@ export interface CustomerCommunication {
   created_at: string;
 }
 
+export interface Vehicle {
+  id: string;
+  stock_number: string;
+  chassis_number: string;
+  make: string;
+  model: string;
+  model_grade: string | null;
+  model_year: number | null;
+  registration_year: number | null;
+  color: string | null;
+  mileage_km: number | null;
+  transmission: 'automatic' | 'manual' | 'cvt' | 'other' | null;
+  fuel_type: 'petrol' | 'diesel' | 'hybrid' | 'electric' | 'other' | null;
+  source_country: string | null;
+  source_supplier: string | null;
+  purchase_price: number | null;
+  purchase_currency: string;
+  listed_price: number | null;
+  listed_currency: string;
+  status: 'in_stock' | 'reserved' | 'sold' | 'in_transit' | 'exported' | 'on_hold' | 'archived';
+  location: string | null;
+  arrival_date: string | null;
+  reserved_until: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleStatusHistory {
+  id: string;
+  vehicle_id: string;
+  from_status: Vehicle['status'] | null;
+  to_status: Vehicle['status'];
+  note: string | null;
+  changed_by: string;
+  created_at: string;
+}
+
 export interface UserWithRoles extends Profile {
   roles: Role[];
   team_name?: string | null;
