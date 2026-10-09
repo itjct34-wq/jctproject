@@ -34,9 +34,9 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
     >
       <div className="flex items-center gap-2.5 h-14 px-3 border-b border-border shrink-0">
         <img
-          src="/images/705607377_122127683871150897_4165866362055650133_n.jpg"
+          src="/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png"
           alt="Japan Circular Trading"
-          className="w-9 h-9 rounded-lg object-cover border border-border shrink-0"
+          className="w-9 h-9 rounded-lg object-contain bg-white border border-border shrink-0 p-0.5"
         />
         {!collapsed && (
           <div className="min-w-0 flex-1">
