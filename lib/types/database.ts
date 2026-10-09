@@ -193,6 +193,68 @@ export interface Task {
   updated_at: string;
 }
 
+export interface Customer {
+  id: string;
+  customer_code: string;
+  customer_type: 'individual' | 'company';
+  full_name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  country: string | null;
+  city: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  tax_id: string | null;
+  default_currency: string;
+  status: 'lead' | 'active' | 'inactive' | 'blocked';
+  source: string | null;
+  notes: string | null;
+  assigned_to: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerContact {
+  id: string;
+  customer_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface CustomerRequirement {
+  id: string;
+  customer_id: string;
+  make: string | null;
+  model: string | null;
+  year_from: number | null;
+  year_to: number | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  currency: string;
+  status: 'open' | 'matched' | 'closed';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerCommunication {
+  id: string;
+  customer_id: string;
+  communication_type: 'call' | 'email' | 'whatsapp' | 'visit' | 'note';
+  subject: string;
+  body: string | null;
+  created_by: string;
+  created_at: string;
+}
+
 export interface UserWithRoles extends Profile {
   roles: Role[];
   team_name?: string | null;
