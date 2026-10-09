@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: 'Japan Circular Trading — Mini ERP',
   description:
     'Internal ERP system for Japan Circular Trading Co., Ltd. — vehicle export management, CRM, inventory, auctions, invoicing, payments, and shipping.',
+  icons: {
+    icon: '/images/jct-logo-light.png',
+    apple: '/images/jct-logo-light.png',
+  },
 };
 
 export default function RootLayout({
