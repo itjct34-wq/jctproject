@@ -65,11 +65,10 @@ export async function POST(request:NextRequest){
    vehicle_make:data.vehicle_make||null,vehicle_model:data.vehicle_model||null,year_from:data.year_from??null,year_to:data.year_to??null,
    budget_min:data.budget_min??null,budget_max:data.budget_max??null,
    country:data.destination_country||null,interested_models:[data.vehicle_make,data.vehicle_model].filter(Boolean).join(' ')||null,
-   quantity:data.quantity,budget:data.budget_max??data.budget_min??null,currency:data.currency,incoterms:data.incoterm,
+   quantity:data.quantity,budget:data.budget_max??data.budget_min??null,currency:data.currency,incoterm:data.incoterm,incoterms:data.incoterm,
    message:data.message,status:'new',source:'website'
-  }).select('inquiry_number').single();
+  }).select('inquiry_code').single();
   if(error)return NextResponse.json({error:'Could not save inquiry. Please try again.'},{status:500});
-  const inquiryCode='JCT-INQ-'+String(created.inquiry_number).padStart(6,'0');
-  return NextResponse.json({success:true,inquiry_code:inquiryCode},{status:201,headers:{'Cache-Control':'no-store'}});
+  return NextResponse.json({success:true,inquiry_code:created.inquiry_code},{status:201,headers:{'Cache-Control':'no-store'}});
  }catch{return NextResponse.json({error:'Inquiry service temporarily unavailable.'},{status:500});}
 }
