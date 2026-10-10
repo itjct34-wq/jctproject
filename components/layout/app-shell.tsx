@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -51,12 +52,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div
+          className="lg:hidden fixed inset-0 z-50 flex"
+          onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+          onTouchEnd={(e) => {
+            if (touchStartX == null) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            // Swipe left to close drawer
+            if (dx < -60) setMobileOpen(false);
+            setTouchStartX(null);
+          }}
+        >
           <div
             className="absolute inset-0 bg-black/30"
             onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
           />
-          <div className="relative z-10">
+          <div className="relative z-10" role="dialog" aria-label="Navigation menu">
             <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
           </div>
         </div>
