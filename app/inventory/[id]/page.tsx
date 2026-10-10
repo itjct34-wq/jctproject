@@ -29,24 +29,41 @@ type PublicVehicle = {
   notes: string | null;
 };
 
+type GalleryRow = { image_url: string; is_primary: boolean | null; sort_order: number };
+
 export default function PublicVehicleDetailPage() {
   const params = useParams();
   const id = String(params?.id || '');
   const [vehicle, setVehicle] = useState<PublicVehicle | null>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
+  const [active, setActive] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const { data } = await supabase
-        .from('vehicles')
-        .select(
-          'id, stock_number, chassis_number, make, model, model_grade, model_year, registration_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, color, status, primary_image_url, source_country, notes'
-        )
-        .eq('id', id)
-        .in('status', ['in_stock', 'reserved'])
-        .maybeSingle();
-      setVehicle((data as PublicVehicle) || null);
+      const [vRes, gRes] = await Promise.all([
+        supabase
+          .from('vehicles')
+          .select(
+            'id, stock_number, chassis_number, make, model, model_grade, model_year, registration_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, color, status, primary_image_url, source_country, notes'
+          )
+          .eq('id', id)
+          .in('status', ['in_stock', 'reserved'])
+          .maybeSingle(),
+        supabase
+          .from('vehicle_images')
+          .select('image_url, is_primary, sort_order')
+          .eq('vehicle_id', id)
+          .order('sort_order', { ascending: true }),
+      ]);
+      const v = (vRes.data as PublicVehicle) || null;
+      setVehicle(v);
+      const imgs = ((gRes.data || []) as GalleryRow[]).map((r) => r.image_url);
+      if (imgs.length) setGallery(imgs);
+      else if (v?.primary_image_url) setGallery([v.primary_image_url]);
+      else setGallery([]);
+      setActive(0);
       setLoading(false);
     })();
   }, [id]);
@@ -66,21 +83,39 @@ export default function PublicVehicleDetailPage() {
           <div className="mt-12 rounded-2xl border border-white/10 bg-zinc-900/50 p-10 text-center">
             <CarFront className="mx-auto h-10 w-10 text-zinc-600" />
             <p className="mt-3 text-white font-medium">Vehicle not available</p>
-            <p className="mt-1 text-sm text-zinc-500">It may have been sold or removed from public stock.</p>
-            <Link href="/inventory" className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500">
+            <Link href="/inventory" className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white">
               Browse stock
             </Link>
           </div>
         ) : (
           <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <div className="relative aspect-[16/11] rounded-2xl overflow-hidden border border-white/10 bg-zinc-950">
-              {vehicle.primary_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={vehicle.primary_image_url} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover" />
-              ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950">
-                  <CarFront className="h-16 w-16 text-zinc-600" />
-                  <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
+            <div className="space-y-3">
+              <div className="relative aspect-[16/11] rounded-2xl overflow-hidden border border-white/10 bg-zinc-950">
+                {gallery[active] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={gallery[active]} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full flex flex-col items-center justify-center gap-2">
+                    <CarFront className="h-16 w-16 text-zinc-600" />
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
+                  </div>
+                )}
+              </div>
+              {gallery.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {gallery.map((url, i) => (
+                    <button
+                      key={url + i}
+                      type="button"
+                      onClick={() => setActive(i)}
+                      className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border ${
+                        i === active ? 'border-red-500 ring-1 ring-red-500' : 'border-white/10'
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -119,48 +154,40 @@ export default function PublicVehicleDetailPage() {
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency)
                     : 'Ask for quote'}
                 </p>
-                <p className="mt-2 text-xs text-zinc-500">C&F / CIF available on request · RORO or container</p>
+                <p className="mt-2 text-xs text-zinc-500">C&F / CIF on request · RORO or container</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                {[ 
+                {[
                   vehicle.mileage_km != null && { icon: Gauge, label: 'Mileage', value: `${vehicle.mileage_km.toLocaleString()} km` },
                   vehicle.transmission && { icon: Settings2, label: 'Transmission', value: vehicle.transmission },
                   vehicle.fuel_type && { icon: Fuel, label: 'Fuel', value: vehicle.fuel_type },
                   vehicle.chassis_number && { icon: CarFront, label: 'Chassis', value: vehicle.chassis_number },
-                ].filter(Boolean).map((item) => {
-                  const it = item as { icon: typeof Gauge; label: string; value: string };
-                  const Icon = it.icon;
-                  return (
-                    <div key={it.label} className="rounded-xl border border-white/10 bg-zinc-900/40 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                        <Icon className="h-3 w-3" /> {it.label}
-                      </p>
-                      <p className="mt-1 text-white font-medium capitalize">{it.value}</p>
-                    </div>
-                  );
-                })}
+                ]
+                  .filter(Boolean)
+                  .map((item) => {
+                    const it = item as { icon: typeof Gauge; label: string; value: string };
+                    const Icon = it.icon;
+                    return (
+                      <div key={it.label} className="rounded-xl border border-white/10 bg-zinc-900/40 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                          <Icon className="h-3 w-3" /> {it.label}
+                        </p>
+                        <p className="mt-1 text-white font-medium capitalize">{it.value}</p>
+                      </div>
+                    );
+                  })}
               </div>
-
-              {vehicle.notes && (
-                <div className="text-sm text-zinc-400 border-t border-white/10 pt-4">
-                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Notes</p>
-                  <p className="whitespace-pre-wrap">{vehicle.notes}</p>
-                </div>
-              )}
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link
                   href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
-                  className="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 transition-colors"
+                  className="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500"
                 >
                   Inquire about this vehicle
                 </Link>
-                <Link
-                  href="/inventory"
-                  className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 hover:bg-white/5"
-                >
-                  More stock
+                <Link href="/verify-agent" className="rounded-full border border-emerald-500/40 px-6 py-3 text-sm font-medium text-emerald-300">
+                  Verify agent
                 </Link>
               </div>
             </div>
