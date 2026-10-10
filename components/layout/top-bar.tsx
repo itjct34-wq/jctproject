@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Search, Settings, LogOut, Menu, ChevronDown } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Bell, Search, Settings, LogOut, Menu, ChevronDown, User } from 'lucide-react';
 import { ROLE_COLORS } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
@@ -67,7 +68,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-white border-b border-border flex items-center px-4 gap-3">
+    <header className="sticky top-0 z-30 h-14 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border flex items-center px-4 gap-3">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
@@ -102,6 +103,8 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         </form>
       </div>
 
+      <ThemeToggle />
+
       <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
         <DropdownMenuTrigger asChild>
           <button aria-label="Notifications" className="relative flex items-center justify-center w-9 h-9 rounded-md hover:bg-accent transition-colors">
@@ -117,10 +120,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <span className="text-sm font-semibold">Notifications</span>
             {unreadCount > 0 && (
-              <button
-                onClick={markAllRead}
-                className="text-xs text-primary hover:underline"
-              >
+              <button onClick={markAllRead} className="text-xs text-primary hover:underline">
                 Mark all read
               </button>
             )}
@@ -168,9 +168,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   )}
                 >
                   <div className="flex items-start gap-2">
-                    {!n.is_read && (
-                      <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />
-                    )}
+                    {!n.is_read && <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground leading-snug">{n.title}</p>
                       {n.message && (
@@ -192,6 +190,9 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <DropdownMenuTrigger asChild>
           <button aria-label="User menu" className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
             <Avatar className="w-8 h-8">
+              {profile?.avatar_url && (
+                <AvatarImage src={profile.avatar_url} alt={profile.full_name || 'User'} />
+              )}
               <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
                 {initials}
               </AvatarFallback>
@@ -227,6 +228,10 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push('/settings')}>
+            <User className="mr-2 h-4 w-4" />
+            Profile & settings
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push('/settings')}>
             <Settings className="mr-2 h-4 w-4" />
             System Settings
