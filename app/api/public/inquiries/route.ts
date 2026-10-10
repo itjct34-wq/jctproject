@@ -44,6 +44,9 @@ export async function POST(request:NextRequest){
   const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim();
   const ipHash=createHash('sha256').update(secret).update(':inquiry:').update(ip).digest('hex');
   const db=await createServerClient();
+  const {data:currencyConfig}=await db.from('system_config').select('value').eq('key','currencies').maybeSingle();
+  const configuredCurrencies=Array.isArray(currencyConfig?.value)?currencyConfig.value.filter((v:unknown):v is string=>typeof v==='string'):['JPY','USD','EUR','GBP','PKR'];
+  if(!configuredCurrencies.includes(data.currency))return NextResponse.json({error:'Please choose a currently supported currency.'},{status:400});
   const since=new Date(Date.now()-10*60*1000).toISOString();
   const {count}=await db.from('inquiry_submission_attempts').select('id',{count:'exact',head:true}).eq('ip_hash',ipHash).gte('attempted_at',since);
   if((count||0)>=5)return NextResponse.json({error:'Too many inquiries from this connection. Please try again in 10 minutes.'},{status:429});
