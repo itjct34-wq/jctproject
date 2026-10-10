@@ -106,32 +106,9 @@
   }
 }
 
-/* Public marketing pages stay light even when ERP dark mode is on */
-.public-site { background: #fff !important; color: #18181b !important; color-scheme: light; }
-.public-site .bg-zinc-950,
-.public-site .bg-zinc-900,
-.public-site .bg-zinc-900\/40,
-.public-site .bg-zinc-900\/50,
-.public-site .bg-zinc-900\/60,
-.public-site .bg-zinc-900\/80,
-.public-site .bg-zinc-950\/50 { background-color: #fff !important; }
-.public-site .bg-gradient-to-br {
-  background-image: linear-gradient(to bottom right, #ffffff, #fff1f2) !important;
-}
-.public-site .text-white { color: #18181b !important; }
-.public-site .text-zinc-400,
-.public-site .text-zinc-200 { color: #52525b !important; }
-.public-site .text-red-400 { color: #dc2626 !important; }
-.public-site .bg-red-600,
-.public-site .bg-red-600 *,
-.public-site .bg-gradient-to-r,
-.public-site .bg-gradient-to-r * { color: #fff !important; }
-.public-site .bg-gradient-to-r {
-  background-image: linear-gradient(to right, #b91c1c, #7f1d1d) !important;
-}
-.public-site .border-white\/5,
-.public-site .border-white\/10,
-.public-site .border-white\/20 { border-color: #e4e4e7 !important; }
+/* Public pages own their color palettes. Avoid global utility overrides that flatten
+   dark hero sections and destroy contrast on marketing pages. */
+.public-site { color-scheme: light; }
 
 @media print {
   @page { size: A4; margin: 10mm; }
