@@ -49,6 +49,31 @@ export type PermissionModule =
   | 'audit'
   | 'notifications';
 
+export interface Office {
+  id: string;
+  code: string;
+  name: string;
+  country: string | null;
+  city: string | null;
+  address: string | null;
+  timezone: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Shift {
+  id: string;
+  office_id: string | null;
+  code: string;
+  name: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -58,6 +83,9 @@ export interface Profile {
   avatar_url: string | null;
   job_title: string | null;
   department: string | null;
+  office_id: string | null;
+  shift_id: string | null;
+  preferred_currency: string | null;
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -447,7 +475,6 @@ export interface Invoice {
   currency: string;
   payment_status: 'unpaid' | 'partial' | 'paid' | 'cancelled' | 'credited';
   notes: string | null;
-  // Shipping / commercial terms
   incoterms: string | null;
   shipment_type: string | null;
   container_mode: string | null;
