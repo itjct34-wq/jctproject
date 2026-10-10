@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { PublicShell } from '@/components/public/public-shell';
 import { supabase } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/utils/format';
-import { CarFront, Loader2 } from 'lucide-react';
+import { CarFront, Fuel, Gauge, Loader2, Settings2 } from 'lucide-react';
 
 type PublicVehicle = {
   id: string;
@@ -18,7 +18,9 @@ type PublicVehicle = {
   listed_currency: string;
   transmission: string | null;
   fuel_type: string | null;
+  color: string | null;
   status: string;
+  primary_image_url: string | null;
 };
 
 export default function InventoryPage() {
@@ -29,7 +31,9 @@ export default function InventoryPage() {
     (async () => {
       const { data } = await supabase
         .from('vehicles')
-        .select('id, stock_number, make, model, model_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, status')
+        .select(
+          'id, stock_number, make, model, model_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, color, status, primary_image_url'
+        )
         .in('status', ['in_stock', 'reserved'])
         .order('updated_at', { ascending: false })
         .limit(48);
@@ -56,42 +60,97 @@ export default function InventoryPage() {
             <CarFront className="mx-auto h-10 w-10 text-zinc-600" />
             <p className="mt-3 text-white font-medium">Stock list updating</p>
             <p className="mt-1 text-sm text-zinc-500">Contact us for current auction and yard availability.</p>
-            <Link href="/contact" className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500">
+            <Link
+              href="/contact"
+              className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500"
+            >
               Request availability
             </Link>
           </div>
         ) : (
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {vehicles.map((v) => (
-              <div key={v.id} className="rounded-2xl border border-white/10 bg-zinc-900/60 overflow-hidden hover:border-red-500/30 transition-colors">
-                <div className="h-32 bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center">
-                  <CarFront className="h-12 w-12 text-zinc-600" />
+              <article
+                key={v.id}
+                className="group rounded-2xl border border-white/10 bg-zinc-900/60 overflow-hidden hover:border-red-500/40 hover:shadow-lg hover:shadow-red-900/20 transition-all duration-300"
+              >
+                <div className="relative aspect-[16/10] bg-zinc-950 overflow-hidden">
+                  {v.primary_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={v.primary_image_url}
+                      alt={`${v.make} ${v.model}`}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 flex flex-col items-center justify-center gap-2">
+                      <CarFront className="h-14 w-14 text-zinc-600" />
+                      <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
+                    </div>
+                  )}
+                  <span
+                    className={`absolute top-3 right-3 text-[10px] uppercase tracking-wider rounded-full border px-2.5 py-1 font-medium backdrop-blur-sm ${
+                      v.status === 'in_stock'
+                        ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                        : 'border-amber-500/40 bg-amber-500/20 text-amber-300'
+                    }`}
+                  >
+                    {v.status === 'in_stock' ? 'Available' : 'Reserved'}
+                  </span>
                 </div>
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
+
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h2 className="font-semibold text-white text-lg leading-tight">
+                      {v.make} {v.model}
+                    </h2>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      {v.stock_number}
+                      {v.model_year ? ` · ${v.model_year}` : ''}
+                      {v.color ? ` · ${v.color}` : ''}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                    {v.mileage_km != null && (
+                      <span className="inline-flex items-center gap-1">
+                        <Gauge className="h-3 w-3" />
+                        {v.mileage_km.toLocaleString()} km
+                      </span>
+                    )}
+                    {v.transmission && (
+                      <span className="inline-flex items-center gap-1">
+                        <Settings2 className="h-3 w-3" />
+                        {v.transmission}
+                      </span>
+                    )}
+                    {v.fuel_type && (
+                      <span className="inline-flex items-center gap-1">
+                        <Fuel className="h-3 w-3" />
+                        {v.fuel_type}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-end justify-between pt-1 border-t border-white/5">
                     <div>
-                      <h2 className="font-semibold text-white">{v.make} {v.model}</h2>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        {v.stock_number}{v.model_year ? ` · ${v.model_year}` : ''}
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">Price</p>
+                      <p className="text-xl font-bold text-white">
+                        {v.listed_price != null
+                          ? formatMoney(v.listed_price, v.listed_currency)
+                          : 'Ask for price'}
                       </p>
                     </div>
-                    <span className="text-[10px] uppercase tracking-wider rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-400">
-                      {v.status === 'in_stock' ? 'Available' : 'Reserved'}
-                    </span>
+                    <Link
+                      href={`/contact?stock=${encodeURIComponent(v.stock_number)}`}
+                      className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors"
+                    >
+                      Inquire
+                    </Link>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-400">
-                    {v.mileage_km != null && <span>{v.mileage_km.toLocaleString()} km</span>}
-                    {v.transmission && <span>· {v.transmission}</span>}
-                    {v.fuel_type && <span>· {v.fuel_type}</span>}
-                  </div>
-                  <p className="mt-3 text-lg font-bold text-white">
-                    {v.listed_price != null ? formatMoney(v.listed_price, v.listed_currency) : 'Ask for price'}
-                  </p>
-                  <Link href="/contact" className="mt-3 inline-block text-sm text-red-400 hover:text-red-300">
-                    Inquire →
-                  </Link>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
