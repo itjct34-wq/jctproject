@@ -2,6 +2,7 @@
 
 import { format } from 'date-fns';
 import type { Quotation, Customer } from '@/lib/types';
+import { InvoiceQRCode } from '@/components/invoices/qr-code';
 
 type LineItem = {
   description: string;
@@ -15,6 +16,7 @@ type Props = {
   items?: LineItem[];
   customer?: Customer | null;
   company?: { name?: string; address?: string; phone?: string; email?: string };
+  verificationUrl?: string;
 };
 
 export function CommercialQuotationTemplate({
@@ -22,6 +24,7 @@ export function CommercialQuotationTemplate({
   items = [],
   customer,
   company,
+  verificationUrl,
 }: Props) {
   const companyName = company?.name || 'Japan Circular Trading';
   const companyAddress = company?.address || '2-505-101 Daitoro, Nakagawa-ku, Nagoya, Aichi 454-0943, Japan';
@@ -194,6 +197,17 @@ export function CommercialQuotationTemplate({
         <div className="text-[11px] text-gray-600 border-t pt-2 mb-4">
           <span className="font-semibold">Notes: </span>
           {quotation.notes}
+        </div>
+      )}
+
+      {verificationUrl && (
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3 break-inside-avoid">
+          <div>
+            <p className="text-xs font-bold text-gray-800">Quotation verification</p>
+            <p className="mt-1 max-w-xs text-[10px] leading-relaxed text-gray-500">Scan to verify this quotation number, status and validity online.</p>
+            <p className="mt-1 break-all font-mono text-[9px] text-gray-500">{verificationUrl}</p>
+          </div>
+          <InvoiceQRCode value={verificationUrl} size={104} className="shrink-0" />
         </div>
       )}
 
