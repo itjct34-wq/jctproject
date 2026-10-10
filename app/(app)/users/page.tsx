@@ -42,7 +42,7 @@ export default function UsersPage() {
   const [shifts, setShifts] = useState<{ id: string; name: string; office_id: string | null }[]>([]);
   const [assignOfficeUser, setAssignOfficeUser] = useState<UserWithRoles | null>(null);
   const [editingProfile, setEditingProfile] = useState<UserWithRoles | null>(null);
-  const [profileForm, setProfileForm] = useState({ full_name: '', phone: '', job_title: '', department: '' });
+  const [profileForm, setProfileForm] = useState({ full_name: '', phone: '', job_title: '', department: '', office_id: 'none', shift_id: 'none' });
   const [teamMembers, setTeamMembers] = useState<(TeamMember & { user_name: string; user_email: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -243,18 +243,26 @@ export default function UsersPage() {
       phone: user.phone || '',
       job_title: user.job_title || '',
       department: user.department || '',
+      office_id: user.office_id || 'none',
+      shift_id: user.shift_id || 'none',
     });
   };
 
   const saveUserProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProfile) return;
+    if (profileForm.shift_id !== 'none' && !shifts.some((shift) => shift.id === profileForm.shift_id && shift.office_id === profileForm.office_id)) {
+      toast.error('Choose a shift that belongs to the selected office.');
+      return;
+    }
     setSubmitting(true);
     const { error } = await supabase.from('profiles').update({
       full_name: profileForm.full_name.trim() || null,
       phone: profileForm.phone.trim() || null,
       job_title: profileForm.job_title.trim() || null,
       department: profileForm.department.trim() || null,
+      office_id: profileForm.office_id === 'none' ? null : profileForm.office_id,
+      shift_id: profileForm.shift_id === 'none' ? null : profileForm.shift_id,
       updated_at: new Date().toISOString(),
     }).eq('id', editingProfile.id);
     setSubmitting(false);
@@ -503,6 +511,28 @@ export default function UsersPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="edit-user-job-title">Job title</Label><Input id="edit-user-job-title" value={profileForm.job_title} onChange={(e) => setProfileForm({ ...profileForm, job_title: e.target.value })} /></div>
               <div className="space-y-2"><Label htmlFor="edit-user-department">Department</Label><Input id="edit-user-department" value={profileForm.department} onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })} /></div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Office</Label>
+                <Select value={profileForm.office_id} onValueChange={(v) => setProfileForm({ ...profileForm, office_id: v, shift_id: 'none' })}>
+                  <SelectTrigger><SelectValue placeholder="Select office" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {offices.map((office) => <SelectItem key={office.id} value={office.id}>{office.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Shift</Label>
+                <Select value={profileForm.shift_id} onValueChange={(v) => setProfileForm({ ...profileForm, shift_id: v })} disabled={profileForm.office_id === 'none'}>
+                  <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {shifts.filter((shift) => shift.office_id === profileForm.office_id).map((shift) => <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setEditingProfile(null)}>Cancel</Button><Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Profile'}</Button></DialogFooter>
           </form>
