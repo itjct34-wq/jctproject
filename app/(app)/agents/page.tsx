@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase/client';
-import { Loader2, Plus, Pencil, Trash2, BadgeCheck } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, BadgeCheck, RefreshCw, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Agent = {
@@ -22,6 +23,7 @@ type Agent = {
   title: string | null;
   is_active: boolean;
   verified_until: string | null;
+  user_id?: string | null;
 };
 
 const empty = {
@@ -32,10 +34,14 @@ const empty = {
   title: 'Sales Agent',
   is_active: true,
   verified_until: '',
+  user_id: '',
 };
 
 export default function AgentsPage() {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
+  const [staffProfiles, setStaffProfiles] = useState<{id:string;full_name:string|null;email:string|null}[]>([]);
+  const [liveCodes, setLiveCodes] = useState<Record<string,{code:string;expires_at:string;seconds_remaining:number}>>({});
+  const [codeBusy, setCodeBusy] = useState('');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -45,12 +51,13 @@ export default function AgentsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('agent_verifications')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [{data,error},{data:profiles}] = await Promise.all([
+      supabase.from('agent_verifications').select('*').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id,full_name,email').order('full_name'),
+    ]);
     if (error) toast.error(error.message);
     else setAgents((data || []) as Agent[]);
+    setStaffProfiles((profiles||[]) as {id:string;full_name:string|null;email:string|null}[]);
     setLoading(false);
   }, []);
 
@@ -77,6 +84,7 @@ export default function AgentsPage() {
       title: a.title || 'Sales Agent',
       is_active: a.is_active,
       verified_until: a.verified_until || '',
+      user_id: a.user_id || '',
     });
     setOpen(true);
   };
@@ -93,6 +101,7 @@ export default function AgentsPage() {
       title: form.title.trim() || 'Sales Agent',
       is_active: form.is_active,
       verified_until: form.verified_until || null,
+      user_id: form.user_id || null,
       created_by: profile?.id || null,
       updated_at: new Date().toISOString(),
     };
@@ -107,6 +116,18 @@ export default function AgentsPage() {
     toast.success(editing ? 'Agent updated' : 'Agent code created');
     setOpen(false);
     load();
+  };
+
+  const getLiveCode = async (a: Agent) => {
+    if (!session?.access_token) { toast.error('Please sign in again.'); return; }
+    setCodeBusy(a.id);
+    try {
+      const response = await fetch('/api/agent-verification/code?agentId=' + encodeURIComponent(a.id), { headers: { Authorization: 'Bearer ' + session.access_token }, cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) { toast.error(data.error || 'Could not generate code'); return; }
+      setLiveCodes(prev => ({ ...prev, [a.id]: data }));
+    } catch { toast.error('Verification service unavailable.'); }
+    finally { setCodeBusy(''); }
   };
 
   const remove = async (id: string) => {
@@ -155,6 +176,13 @@ export default function AgentsPage() {
                     {a.title}{a.phone ? ` · ${a.phone}` : ''}
                   </p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => void getLiveCode(a)} disabled={codeBusy===a.id || !a.user_id}>
+                    {codeBusy===a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}
+                    <span className="ml-1.5">Live code</span>
+                  </Button>
+                  {liveCodes[a.id] && <button type="button" className="font-mono text-sm font-bold tracking-widest" title="Copy current code" onClick={() => { void navigator.clipboard.writeText(liveCodes[a.id].code); toast.success('Current code copied'); }}>{liveCodes[a.id].code} <span className="text-xs font-normal text-muted-foreground">· {liveCodes[a.id].seconds_remaining}s</span></button>}
+                </div>
                 <Button size="sm" variant="outline" onClick={() => openEdit(a)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -180,6 +208,14 @@ export default function AgentsPage() {
                 onChange={(e) => setForm({ ...form, agent_code: e.target.value.toUpperCase() })}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Linked login account</Label>
+              <Select value={form.user_id || 'unlinked'} onValueChange={(v) => setForm({ ...form, user_id: v === 'unlinked' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="Link an existing user account" /></SelectTrigger>
+                <SelectContent><SelectItem value="unlinked">No linked login</SelectItem>{staffProfiles.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email || p.id}{p.email ? ' · ' + p.email : ''}</SelectItem>)}</SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Linking an account lets that representative view their own rotating code after signing in.</p>
             </div>
             <div className="space-y-2">
               <Label>Full name *</Label>
