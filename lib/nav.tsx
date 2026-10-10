@@ -18,6 +18,8 @@ import {
   UserCog,
   Settings,
   ScrollText,
+  BadgeCheck,
+  Newspaper,
 } from 'lucide-react';
 import type { RoleName, PermissionModule } from '@/lib/types';
 
@@ -47,6 +49,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Customers', href: '/customers', icon: Users, module: 'customers' },
       { label: 'Sales & Reservations', href: '/sales', icon: PackageCheck, module: 'sales' },
       { label: 'Quotations', href: '/quotations', icon: FileText, module: 'sales' },
+      { label: 'Agent verification', href: '/agents', icon: BadgeCheck, module: 'users' },
     ],
   },
   {
@@ -84,6 +87,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Administration',
     items: [
       { label: 'Reports', href: '/reports', icon: BarChart3, module: 'reports' },
+      { label: 'Blog posts', href: '/blog-admin', icon: Newspaper, module: 'settings' },
       { label: 'Users & Teams', href: '/users', icon: UserCog, module: 'users' },
       { label: 'System Config', href: '/settings', icon: Settings, module: 'settings' },
       { label: 'Audit Logs', href: '/audit', icon: ScrollText, module: 'audit' },
