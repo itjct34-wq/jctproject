@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2,Save,ShieldAlert,Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 type ConfigRow={key:string;value:unknown;description:string|null};
+function configValues(value:unknown,keys:string[]):string[]{if(Array.isArray(value))return value.filter((v):v is string=>typeof v==='string');if(value&&typeof value==='object'){const o=value as Record<string,unknown>;for(const k of keys)if(Array.isArray(o[k]))return (o[k] as unknown[]).filter((v):v is string=>typeof v==='string');}return [];}
 const CONFIGS=[
  {key:'currencies',label:'Supported currencies',help:'One ISO currency code per line, e.g. JPY, USD, EUR, GBP, PKR.'},
  {key:'freight_destinations',label:'Freight destination countries',help:'One destination country per line. Used by public inquiries and future shipping forms.'},
@@ -20,7 +21,7 @@ const CONFIGS=[
 export default function ConfigurationPage(){
  const {isSuperAdmin}=usePermissions();const {profile}=useAuth();
  const [rows,setRows]=useState<Record<string,ConfigRow>>({});const [values,setValues]=useState<Record<string,string>>({});const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);
- const load=useCallback(async()=>{setLoading(true);const {data,error}=await supabase.from('system_config').select('key,value,description').in('key',CONFIGS.map(c=>c.key));if(error)toast.error(error.message);else{const map:Record<string,ConfigRow>={};const text:Record<string,string>={};(data||[]).forEach((r:any)=>{map[r.key]=r;text[r.key]=Array.isArray(r.value)?r.value.join('\n'):''});setRows(map);setValues(text);}setLoading(false);},[]);
+ const load=useCallback(async()=>{setLoading(true);const {data,error}=await supabase.from('system_config').select('key,value,description').in('key',CONFIGS.map(c=>c.key));if(error)toast.error(error.message);else{const map:Record<string,ConfigRow>={};const text:Record<string,string>={};(data||[]).forEach((r:any)=>{map[r.key]=r;text[r.key]=configValues(r.value,r.key==='currencies'?['enabled','values','options']:r.key==='freight_destinations'?['countries','values','options']:['enabled','values','options','methods']).join('\n')});setRows(map);setValues(text);}setLoading(false);},[]);
  useEffect(()=>{void load();},[load]);
  const save=async()=>{if(!isSuperAdmin()){toast.error('Only super admins can change global configuration.');return;}setSaving(true);
  for(const c of CONFIGS){const list=(values[c.key]||'').split('\n').map(s=>s.trim()).filter(Boolean);if(!list.length){toast.error(c.label+' cannot be empty');setSaving(false);return;}if(new Set(list.map(s=>s.toLowerCase())).size!==list.length){toast.error(c.label+' contains duplicates');setSaving(false);return;}
