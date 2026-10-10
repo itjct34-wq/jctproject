@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Building2, FileText, Banknote, Sliders, Save, Loader2, User, Camera } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import type { CompanySettings } from '@/lib/types';
-import { SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/lib/utils/currencies';
+import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
@@ -251,14 +251,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Preferred currency</Label>
-                  <Select value={preferredCurrency} onValueChange={setPreferredCurrency}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((c) => (
-                        <SelectItem key={c} value={c}>{c} — {CURRENCY_LABELS[c]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CurrencySelect value={preferredCurrency} onValueChange={setPreferredCurrency} />
                 </div>
               </div>
               <Button size="sm" onClick={saveProfile} disabled={saving}>
@@ -314,14 +307,7 @@ export default function SettingsPage() {
               <CardContent className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Default Currency</Label>
-                  <Select value={settings.default_currency} onValueChange={(v) => update('default_currency', v)} disabled={!canEdit}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((c) => (
-                        <SelectItem key={c} value={c}>{c} — {CURRENCY_LABELS[c]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CurrencySelect value={settings.default_currency} onValueChange={(v) => update('default_currency', v)} disabled={!canEdit} />
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label>Payment Instructions</Label>
