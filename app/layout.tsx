@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-provider';
+import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({
@@ -34,10 +35,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
-        <AuthProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <AuthProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
