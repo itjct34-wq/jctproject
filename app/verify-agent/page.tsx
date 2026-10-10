@@ -1,142 +1,15 @@
 'use client';
-
 import { useState } from 'react';
 import { PublicShell } from '@/components/public/public-shell';
-import { supabase } from '@/lib/supabase/client';
-import { BadgeCheck, Loader2, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
-
-type Agent = {
-  agent_code: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  title: string | null;
-  photo_url: string | null;
-  is_active: boolean;
-  verified_until: string | null;
-  representative_type: string | null;
-};
-
-const typeLabel: Record<string, string> = {
-  sales_agent: 'Sales Agent',
-  freelancer: 'Freelance Representative',
-  company_representative: 'Company Representative',
-};
-
-export default function VerifyAgentPage() {
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [agent, setAgent] = useState<Agent | null>(null);
-  const [notFound, setNotFound] = useState(false);
-
-  const lookup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const c = code.trim().toUpperCase();
-    if (!c) return;
-    setLoading(true);
-    setNotFound(false);
-    setAgent(null);
-    const { data } = await supabase
-      .from('agent_verifications')
-      .select('agent_code, full_name, email, phone, title, photo_url, is_active, verified_until, representative_type')
-      .eq('agent_code', c)
-      .maybeSingle();
-    setLoading(false);
-    if (!data || !data.is_active) {
-      setNotFound(true);
-      return;
-    }
-    if (data.verified_until && new Date(data.verified_until) < new Date()) {
-      setNotFound(true);
-      return;
-    }
-    setAgent(data as Agent);
-  };
-
-  return (
-    <PublicShell>
-      <section className="mx-auto max-w-xl px-4 sm:px-6 py-14 md:py-20">
-        <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600/20 text-red-400">
-            <BadgeCheck className="h-7 w-7" />
-          </div>
-          <h1 className="mt-5 text-3xl font-bold text-white">Verify company representative</h1>
-          <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
-            Sales agents, freelancers and staff receive an automatic ID (e.g. JCT-REP-0001).
-            Enter the code before paying. Pay only to official company accounts.
-          </p>
-        </div>
-
-        <form onSubmit={lookup} className="mt-10 flex gap-2">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="e.g. JCT-REP-0001"
-            className="flex-1 rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 uppercase"
-          />
-          <button
-            type="submit"
-            disabled={loading || !code.trim()}
-            className="rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-          </button>
-        </form>
-
-        {notFound && (
-          <div className="mt-8 rounded-2xl border border-red-500/30 bg-red-950/40 p-5 flex gap-3">
-            <ShieldAlert className="h-6 w-6 text-red-400 shrink-0" />
-            <div>
-              <p className="font-semibold text-red-200">Not a verified representative</p>
-              <p className="mt-1 text-sm text-red-200/80">
-                Invalid, expired or inactive code. Do not transfer money to personal accounts.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {agent && (
-          <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-6">
-            <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold">
-              <ShieldCheck className="h-5 w-5" /> Verified Japan Circular Trading representative
-            </div>
-            <div className="mt-4 flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full overflow-hidden bg-zinc-800 border border-white/10 flex items-center justify-center text-lg font-bold text-white">
-                {agent.photo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={agent.photo_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  agent.full_name.slice(0, 2).toUpperCase()
-                )}
-              </div>
-              <div>
-                <p className="text-xl font-bold text-white">{agent.full_name}</p>
-                <p className="text-sm text-zinc-400">
-                  {agent.title || typeLabel[agent.representative_type || ''] || 'Representative'}
-                </p>
-                <p className="mt-1 font-mono text-xs text-emerald-300">{agent.agent_code}</p>
-                {agent.representative_type && (
-                  <p className="mt-1 text-[11px] uppercase tracking-wider text-zinc-500">
-                    {typeLabel[agent.representative_type] || agent.representative_type}
-                  </p>
-                )}
-              </div>
-            </div>
-            {(agent.email || agent.phone) && (
-              <div className="mt-4 text-sm text-zinc-400 space-y-1 border-t border-white/10 pt-4">
-                {agent.email && <p>Email: {agent.email}</p>}
-                {agent.phone && <p>Phone / WhatsApp: {agent.phone}</p>}
-                {agent.verified_until && (
-                  <p>Valid until: {new Date(agent.verified_until).toLocaleDateString()}</p>
-                )}
-              </div>
-            )}
-            <p className="mt-4 text-xs text-zinc-500">
-              Always pay only to Japan Circular Trading company bank accounts — never to a personal account.
-            </p>
-          </div>
-        )}
-      </section>
-    </PublicShell>
-  );
+import { BadgeCheck,Loader2,Search,ShieldAlert,ShieldCheck,XCircle } from 'lucide-react';
+type Agent={agent_code:string;full_name:string;email:string|null;phone:string|null;title:string|null;photo_url:string|null;representative_type:string|null;verified_until:string|null};
+const labels:Record<string,string>={sales_agent:'Sales Agent',freelancer:'Freelance Representative',company_representative:'Company Representative'};
+export default function VerifyAgentPage(){
+ const [agentCode,setAgentCode]=useState('');const [code,setCode]=useState('');const [loading,setLoading]=useState(false);const [agent,setAgent]=useState<Agent|null>(null);const [error,setError]=useState('');
+ const lookup=async(e:React.FormEvent)=>{e.preventDefault();setLoading(true);setAgent(null);setError('');try{const res=await fetch('/api/public/verify-agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent_code:agentCode,code})});const data=await res.json();if(!res.ok||!data.valid){setError(data.message||'Invalid or expired code.');return;}setAgent(data.agent as Agent);}catch{setError('Verification service unavailable. Please try again.');}finally{setLoading(false);}};
+ return <PublicShell><section className="mx-auto max-w-xl px-4 py-14 sm:px-6 md:py-20"><div className="text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600/20 text-red-400"><BadgeCheck className="h-7 w-7"/></div><h1 className="mt-5 text-3xl font-bold text-white">Verify company representative</h1><p className="mt-3 text-sm leading-relaxed text-zinc-400">Ask the representative to show their current six-digit security code in the JCT system. Codes rotate every 30 seconds and expire automatically. A representative ID alone is not proof of identity.</p></div>
+ <form onSubmit={lookup} className="mt-8 space-y-3 rounded-2xl border border-white/10 bg-zinc-950/70 p-5"><div className="space-y-2"><label className="text-sm text-zinc-300">Representative ID</label><input required minLength={3} maxLength={40} autoCapitalize="characters" value={agentCode} onChange={e=>setAgentCode(e.target.value.toUpperCase())} placeholder="JCT-AGT-…" className="h-11 w-full rounded-xl border border-white/10 bg-zinc-900 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"/></div><div className="space-y-2"><label className="text-sm text-zinc-300">Current 6-digit code</label><input required inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} placeholder="000000" className="h-12 w-full rounded-xl border border-white/10 bg-zinc-900 px-4 font-mono text-xl tracking-[0.4em] text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500/40"/></div><button type="submit" disabled={loading||agentCode.length<3||code.length!==6} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50">{loading?<Loader2 className="h-4 w-4 animate-spin"/>:<Search className="h-4 w-4"/>}Verify current code</button></form>
+ {error&&<div className="mt-6 flex gap-3 rounded-2xl border border-red-500/30 bg-red-950/40 p-5"><ShieldAlert className="h-6 w-6 shrink-0 text-red-400"/><div><p className="font-semibold text-red-200">Verification failed</p><p className="mt-1 text-sm text-red-200/80">{error}</p></div></div>}
+ {agent&&<div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-6"><div className="flex items-center gap-2 text-sm font-semibold text-emerald-400"><ShieldCheck className="h-5 w-5"/>Live code verified</div><p className="mt-1 text-xs text-emerald-200/70">Code was valid at {new Date().toLocaleTimeString()} (verification expires with the 30-second time window).</p><div className="mt-5 flex items-center gap-4"><div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-800 text-lg font-bold text-white">{agent.photo_url?<img src={agent.photo_url} alt="" className="h-full w-full object-cover"/>:agent.full_name.slice(0,2).toUpperCase()}</div><div><p className="text-xl font-bold text-white">{agent.full_name}</p><p className="text-sm text-zinc-400">{agent.title||labels[agent.representative_type||'']||'Representative'}</p><p className="mt-1 font-mono text-xs text-emerald-300">{agent.agent_code}</p></div></div>{(agent.email||agent.phone)&&<div className="mt-4 space-y-1 border-t border-white/10 pt-4 text-sm text-zinc-400">{agent.email&&<p>Email: {agent.email}</p>}{agent.phone&&<p>Phone: {agent.phone}</p>}</div>}<p className="mt-4 text-xs leading-relaxed text-zinc-500">A successful check confirms this representative profile was active and the rotating code was valid at verification time. Always pay only to official company accounts.</p></div>}
+ <p className="mt-6 text-center text-xs text-zinc-500">If the code has expired, ask the representative to refresh their current code and try again.</p></section></PublicShell>;
 }
