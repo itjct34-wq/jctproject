@@ -30,7 +30,7 @@ export function CommercialInvoiceTemplate({ invoice, items, customer, company }:
   const grand = Number(invoice.subtotal || 0) + Number(invoice.tax || 0) + freight + insurance + other - discount;
 
   return (
-    <div className="bg-white text-black max-w-[210mm] mx-auto p-6 print:p-4 text-sm">
+    <div className="invoice-print-root bg-white text-black max-w-[210mm] mx-auto p-6 print:p-4 text-sm">
       <div className="flex justify-between items-start border-b-4 border-red-600 pb-4 mb-4">
         <div className="flex gap-3 items-start">
           <img
@@ -40,7 +40,7 @@ export function CommercialInvoiceTemplate({ invoice, items, customer, company }:
           />
           <div>
             <h1 className="text-2xl font-bold text-red-600 tracking-tight">{companyName}</h1>
-            <p className="text-xs italic text-gray-600 mt-0.5">Car Importing &amp; Exporting Xpert</p>
+            <p className="text-xs italic text-gray-600 mt-0.5">Car Importing & Exporting Xpert</p>
             <p className="text-[11px] text-gray-600 mt-2">{companyAddress}</p>
             <p className="text-[11px] text-gray-600">Tel: {companyPhone} &nbsp;|&nbsp; {companyEmail}</p>
           </div>
@@ -107,9 +107,9 @@ export function CommercialInvoiceTemplate({ invoice, items, customer, company }:
         </thead>
         <tbody>
           {items.map((item, idx) => (
-            <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+            <tr key={item.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
               <td className="border px-2 py-1.5 text-center text-gray-500">{idx + 1}</td>
-              <td className="border px-2 py-1.5">{item.description}</td>
+              <td className="border px-2 py-1.5 whitespace-pre-line">{item.description}</td>
               <td className="border px-2 py-1.5 text-right">{item.quantity}</td>
               <td className="border px-2 py-1.5 text-right">{Number(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
               <td className="border px-2 py-1.5 text-right">{Number(item.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -161,7 +161,7 @@ export function CommercialInvoiceTemplate({ invoice, items, customer, company }:
 
       <div className="text-[10px] text-gray-500 border-t pt-2 space-y-0.5">
         <p>1. Vehicles sold as-is. Buyer may arrange pre-shipment inspection.</p>
-        <p>2. Title &amp; risk transfer per selected Incoterms (FOB / C&amp;F / CIF).</p>
+        <p>2. Title & risk transfer per selected Incoterms (FOB / C&F / CIF).</p>
         <p>3. Full payment required before release of original documents.</p>
         <p>4. Governed by Japanese law. Disputes resolved in Nagoya, Japan.</p>
       </div>
@@ -173,7 +173,7 @@ export function CommercialInvoiceTemplate({ invoice, items, customer, company }:
           <div className="border-t border-gray-400 mt-10 pt-1 text-gray-500 italic">Authorized Signature / Stamp</div>
         </div>
         <div>
-          <p className="text-gray-500">Received &amp; Acknowledged by Buyer</p>
+          <p className="text-gray-500">Received & Acknowledged by Buyer</p>
           <div className="border-t border-gray-400 mt-16 pt-1 text-gray-500 italic">Buyer Signature / Company Stamp</div>
         </div>
       </div>
