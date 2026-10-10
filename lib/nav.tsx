@@ -54,6 +54,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Sales & Reservations', href: '/sales', icon: PackageCheck, module: 'sales' },
       { label: 'Quotations', href: '/quotations', icon: FileText, module: 'sales' },
       { label: 'Agent verification', href: '/agents', icon: BadgeCheck, module: 'users' },
+      { label: 'My verification code', href: '/my-verification', icon: BadgeCheck, module: 'dashboard' },
     ],
   },
   {
