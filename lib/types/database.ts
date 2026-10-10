@@ -433,6 +433,7 @@ export interface Sale {
 export interface Quotation {
   id: string;
   quotation_code: string;
+  verification_token: string | null;
   customer_id: string;
   sale_id: string | null;
   price_type: 'FOB' | 'CNF' | 'CIF';
