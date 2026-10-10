@@ -23,7 +23,7 @@ export async function POST(request:NextRequest){
   }
   const agentCodeHash=createHash('sha256').update(agentCode).digest('hex');
   await db.from('agent_verification_attempts').insert({agent_code_hash:agentCodeHash,ip_hash:ipHash,succeeded:valid});
-  if(!valid)return NextResponse.json({valid:false,message:'Invalid, expired or inactive verification code. Ask the representative to display their current code.'},{status:401});
+  if(!valid||!agent)return NextResponse.json({valid:false,message:'Invalid, expired or inactive verification code. Ask the representative to display their current code.'},{status:401});
   return NextResponse.json({valid:true,agent:{agent_code:agent.agent_code,full_name:agent.full_name,title:agent.title,email:agent.email,phone:agent.phone,photo_url:agent.photo_url,representative_type:agent.representative_type,verified_until:agent.verified_until},verified_at:new Date().toISOString(),expires_in_seconds:Math.max(0,30-Math.floor((Date.now()%30000)/1000))},{headers:{'Cache-Control':'no-store, max-age=0'}});
  }catch{return NextResponse.json({valid:false,message:'Verification service temporarily unavailable.'},{status:500});}
 }
