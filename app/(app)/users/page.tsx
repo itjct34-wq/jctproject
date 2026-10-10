@@ -30,7 +30,7 @@ interface UserWithRoles extends Profile {
 }
 
 export default function UsersPage() {
-  const { profile: currentUser } = useAuth();
+  const { profile: currentUser, session } = useAuth();
   const { isAdmin, isSuperAdmin } = usePermissions();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -94,20 +94,34 @@ export default function UsersPage() {
     if (!inviteForm.email.trim() || !inviteForm.role || !currentUser) return;
     setSubmitting(true);
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: inviteForm.email.trim(),
-      password: 'TempPass123!',
-      email_confirm: true,
-      user_metadata: { full_name: inviteForm.full_name.trim() },
-    });
-
-    if (authError) {
-      toast.error('Failed to create user: ' + authError.message);
+    // User creation needs the service-role key, so it runs on the server.
+    let newUserId: string;
+    let tempPassword: string;
+    try {
+      const res = await fetch('/api/admin/invite-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({
+          email: inviteForm.email.trim(),
+          full_name: inviteForm.full_name.trim(),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.user_id) {
+        toast.error('Failed to create user: ' + (body.error || res.statusText));
+        setSubmitting(false);
+        return;
+      }
+      newUserId = body.user_id as string;
+      tempPassword = body.temp_password as string;
+    } catch (err) {
+      toast.error('Failed to create user: ' + (err instanceof Error ? err.message : 'network error'));
       setSubmitting(false);
       return;
     }
-
-    const newUserId = authData.user.id;
 
     if (inviteForm.team) {
       await supabase.from('team_members').insert({
@@ -125,7 +139,11 @@ export default function UsersPage() {
       });
     }
 
-    toast.success(`User ${inviteForm.email} created with role ${selectedRole?.display_name || ''}`);
+    toast.success(
+      `User ${inviteForm.email} created with role ${selectedRole?.display_name || ''}. ` +
+        `Temporary password (shown once, share it securely): ${tempPassword}`,
+      { duration: 60000 }
+    );
     setInviteForm({ email: '', full_name: '', role: '', team: '' });
     setSubmitting(false);
     setInviteOpen(false);
