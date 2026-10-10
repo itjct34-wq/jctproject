@@ -60,13 +60,13 @@ export const VEHICLE_CSV_HEADERS = [
   'chassis_number', 'make', 'model', 'model_grade', 'model_year', 'registration_year',
   'color', 'mileage_km', 'transmission', 'fuel_type', 'source_country', 'source_supplier',
   'purchase_price', 'purchase_currency', 'listed_price', 'listed_currency',
-  'location', 'arrival_date', 'status', 'notes',
+  'location', 'arrival_date', 'status', 'notes', 'primary_image_url',
 ];
 
 export const VEHICLE_CSV_SAMPLE = [
   'ABC123456789', 'Toyota', 'Prius', 'S', '2019', '2019', 'White', '45000',
-  'automatic', 'hybrid', 'Japan', 'USS Tokyo', '800000', 'JPY', '950000', 'JPY',
-  'Nagoya Yard', '2026-01-15', 'in_stock', 'Clean title',
+  'automatic', 'hybrid', 'Japan', 'USS Tokyo', '800000', 'JPY', '6500', 'USD',
+  'Nagoya Yard', '2026-01-15', 'in_stock', 'Clean title', 'https://example.com/car.jpg',
 ];
 
 export const AUCTION_CSV_HEADERS = [
