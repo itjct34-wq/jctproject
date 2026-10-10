@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { PublicShell } from '@/components/public/public-shell';
+import { PublicPriceEstimator } from '@/components/public/public-price-estimator';
 import { supabase } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils/currencies';
 import { ArrowLeft, CarFront, Fuel, Gauge, Loader2, MapPin, Settings2 } from 'lucide-react';
@@ -156,6 +157,8 @@ export default function PublicVehicleDetailPage() {
                 </p>
                 <p className="mt-2 text-xs text-zinc-500">C&F / CIF on request · RORO or container</p>
               </div>
+
+              <PublicPriceEstimator listedPrice={vehicle.listed_price} currency={vehicle.listed_currency || 'USD'} />
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {[
