@@ -88,7 +88,6 @@ export default function InventoryPage() {
           </p>
         </div>
 
-        {/* Filters — Ansha-style toolbar */}
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
@@ -130,105 +129,98 @@ export default function InventoryPage() {
             <CarFront className="mx-auto h-10 w-10 text-zinc-600" />
             <p className="mt-3 text-white font-medium">No matching vehicles</p>
             <p className="mt-1 text-sm text-zinc-500">Try clearing filters or contact us for sourcing.</p>
-            <Link
-              href="/contact"
-              className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500"
-            >
+            <Link href="/contact" className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500">
               Request sourcing
             </Link>
           </div>
         ) : (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((v) => (
-              <article
-                key={v.id}
-                className="group rounded-2xl border border-white/10 bg-zinc-900/60 overflow-hidden hover:border-red-500/40 hover:shadow-lg hover:shadow-red-900/20 transition-all duration-300"
-              >
-                <div className="relative aspect-[16/10] bg-zinc-950 overflow-hidden">
-                  {v.primary_image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={v.primary_image_url}
-                      alt={`${v.make} ${v.model}`}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 flex flex-col items-center justify-center gap-2">
-                      <CarFront className="h-14 w-14 text-zinc-600" />
-                      <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
+              <Link key={v.id} href={`/inventory/${v.id}`} className="block group">
+                <article className="rounded-2xl border border-white/10 bg-zinc-900/60 overflow-hidden hover:border-red-500/40 hover:shadow-lg hover:shadow-red-900/20 transition-all duration-300 h-full">
+                  <div className="relative aspect-[16/10] bg-zinc-950 overflow-hidden">
+                    {v.primary_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={v.primary_image_url}
+                        alt={`${v.make} ${v.model}`}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 flex flex-col items-center justify-center gap-2">
+                        <CarFront className="h-14 w-14 text-zinc-600" />
+                        <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                      {v.source_country && (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider rounded-full border border-white/20 bg-black/50 px-2 py-0.5 text-zinc-200 backdrop-blur-sm">
+                          <MapPin className="h-2.5 w-2.5" />
+                          {v.source_country}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-                    {v.source_country && (
-                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider rounded-full border border-white/20 bg-black/50 px-2 py-0.5 text-zinc-200 backdrop-blur-sm">
-                        <MapPin className="h-2.5 w-2.5" />
-                        {v.source_country}
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={`absolute top-3 right-3 text-[10px] uppercase tracking-wider rounded-full border px-2.5 py-1 font-medium backdrop-blur-sm ${
-                      v.status === 'in_stock'
-                        ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
-                        : 'border-amber-500/40 bg-amber-500/20 text-amber-300'
-                    }`}
-                  >
-                    {v.status === 'in_stock' ? 'Available' : 'Reserved'}
-                  </span>
-                </div>
-
-                <div className="p-4 space-y-3">
-                  <div>
-                    <h2 className="font-semibold text-white text-lg leading-tight">
-                      {v.make} {v.model}
-                    </h2>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      {v.stock_number}
-                      {v.model_year ? ` · ${v.model_year}` : ''}
-                      {v.color ? ` · ${v.color}` : ''}
-                    </p>
+                    <span
+                      className={`absolute top-3 right-3 text-[10px] uppercase tracking-wider rounded-full border px-2.5 py-1 font-medium backdrop-blur-sm ${
+                        v.status === 'in_stock'
+                          ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                          : 'border-amber-500/40 bg-amber-500/20 text-amber-300'
+                      }`}
+                    >
+                      {v.status === 'in_stock' ? 'Available' : 'Reserved'}
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">
-                    {v.mileage_km != null && (
-                      <span className="inline-flex items-center gap-1">
-                        <Gauge className="h-3 w-3" />
-                        {v.mileage_km.toLocaleString()} km
-                      </span>
-                    )}
-                    {v.transmission && (
-                      <span className="inline-flex items-center gap-1">
-                        <Settings2 className="h-3 w-3" />
-                        {v.transmission}
-                      </span>
-                    )}
-                    {v.fuel_type && (
-                      <span className="inline-flex items-center gap-1">
-                        <Fuel className="h-3 w-3" />
-                        {v.fuel_type}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-end justify-between pt-1 border-t border-white/5">
+                  <div className="p-4 space-y-3">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">FOB</p>
-                      <p className="text-xl font-bold text-white">
-                        {v.listed_price != null
-                          ? formatCurrency(v.listed_price, v.listed_currency)
-                          : 'Ask for quote'}
+                      <h2 className="font-semibold text-white text-lg leading-tight">
+                        {v.make} {v.model}
+                      </h2>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        {v.stock_number}
+                        {v.model_year ? ` · ${v.model_year}` : ''}
+                        {v.color ? ` · ${v.color}` : ''}
                       </p>
                     </div>
-                    <Link
-                      href={`/contact?stock=${encodeURIComponent(v.stock_number)}`}
-                      className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors"
-                    >
-                      Inquire
-                    </Link>
+
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                      {v.mileage_km != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Gauge className="h-3 w-3" />
+                          {v.mileage_km.toLocaleString()} km
+                        </span>
+                      )}
+                      {v.transmission && (
+                        <span className="inline-flex items-center gap-1">
+                          <Settings2 className="h-3 w-3" />
+                          {v.transmission}
+                        </span>
+                      )}
+                      {v.fuel_type && (
+                        <span className="inline-flex items-center gap-1">
+                          <Fuel className="h-3 w-3" />
+                          {v.fuel_type}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-end justify-between pt-1 border-t border-white/5">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">FOB</p>
+                        <p className="text-xl font-bold text-white">
+                          {v.listed_price != null
+                            ? formatCurrency(v.listed_price, v.listed_currency)
+                            : 'Ask for quote'}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white group-hover:bg-red-500 transition-colors">
+                        View details
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              </Link>
             ))}
           </div>
         )}
