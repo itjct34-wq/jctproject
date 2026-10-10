@@ -16,6 +16,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
 import type { Quotation, Customer, Vehicle } from '@/lib/types';
 import { CommercialQuotationTemplate } from '@/components/quotations/commercial-quotation-template';
+import { RecordAttachments } from '@/components/shared/record-attachments';
+import { buildVerifyUrl } from '@/components/invoices/qr-code';
+import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/currencies';
 import { ChevronRight, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
@@ -641,6 +644,7 @@ export default function QuotationsPage() {
                     {selected.notes}
                   </p>
                 )}
+                <RecordAttachments entityType="quotations" entityId={selected.id} />
               </div>
             </>
           )}
@@ -659,6 +663,7 @@ export default function QuotationsPage() {
                   quotation={selected}
                   items={printItems}
                   customer={customerOf(selected.customer_id)}
+                  verificationUrl={selected.verification_token ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/') : undefined}
                 />
               </div>
             </div>
@@ -669,7 +674,7 @@ export default function QuotationsPage() {
             </Button>
             <Button
               onClick={() => {
-                window.print();
+                void printDocumentPdf(`Quotation-${selected?.quotation_code || 'Draft'}`);
               }}
             >
               <Printer className="mr-1.5 h-4 w-4" />
