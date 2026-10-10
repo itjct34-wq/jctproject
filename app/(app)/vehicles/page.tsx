@@ -159,7 +159,30 @@ export default function VehiclesPage() {
     }).eq('id', selected.id);
     setSubmitting(false);
     if (error) { toast.error(`Could not update: ${error.message}`); return; }
-    const updated = { ...selected, ...form, model_year: form.model_year ? Number(form.model_year) : null, mileage_km: form.mileage_km ? Number(form.mileage_km) : null, listed_price: form.listed_price ? Number(form.listed_price) : null, purchase_price: form.purchase_price ? Number(form.purchase_price) : null, primary_image_url: form.primary_image_url.trim() || null } as Vehicle;
+    // Build a typed Vehicle without spreading form (form fields are strings)
+    const updated: Vehicle = {
+      ...selected,
+      chassis_number: form.chassis_number.trim(),
+      make: form.make.trim(),
+      model: form.model.trim(),
+      model_grade: form.model_grade.trim() || null,
+      model_year: form.model_year ? Number(form.model_year) : null,
+      registration_year: form.registration_year ? Number(form.registration_year) : null,
+      color: form.color.trim() || null,
+      mileage_km: form.mileage_km ? Number(form.mileage_km) : null,
+      transmission: form.transmission,
+      fuel_type: form.fuel_type,
+      source_country: form.source_country.trim() || null,
+      source_supplier: form.source_supplier.trim() || null,
+      purchase_price: form.purchase_price ? Number(form.purchase_price) : null,
+      purchase_currency: form.purchase_currency,
+      listed_price: form.listed_price ? Number(form.listed_price) : null,
+      listed_currency: form.listed_currency,
+      location: form.location.trim() || null,
+      arrival_date: form.arrival_date || null,
+      notes: form.notes.trim() || null,
+      primary_image_url: form.primary_image_url.trim() || null,
+    };
     setSelected(updated); setVehicles((items) => items.map((i) => (i.id === updated.id ? updated : i)));
     toast.success('Vehicle updated'); setEditOpen(false);
   };
