@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: '/', label: 'Home' },
-  { href: '/inventory', label: 'Inventory' },
+  { href: '/inventory', label: 'Cars' },
+  { href: '/blog', label: 'Guides' },
+  { href: '/verify-agent', label: 'Verify agent' },
   { href: '/about', label: 'About' },
-  { href: '/blog', label: 'Blog' },
   { href: '/contact', label: 'Contact' },
 ];
 
@@ -40,7 +41,7 @@ export function SiteHeader() {
               href={item.href}
               className={cn(
                 'rounded-md px-3 py-2 text-sm transition-colors',
-                pathname === item.href
+                pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
                   ? 'bg-white/10 text-white'
                   : 'text-zinc-400 hover:bg-white/5 hover:text-white'
               )}
