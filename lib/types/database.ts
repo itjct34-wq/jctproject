@@ -279,6 +279,7 @@ export interface Vehicle {
   arrival_date: string | null;
   reserved_until: string | null;
   notes: string | null;
+  primary_image_url: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
