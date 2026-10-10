@@ -43,10 +43,14 @@ export function AssignOfficeShiftDialog({ open, onOpenChange, user, onDone }: Pr
     }
   }, [user]);
 
-  const filteredShifts = shifts.filter((s) => !officeId || officeId === 'none' || !s.office_id || s.office_id === officeId);
+  const filteredShifts = officeId === 'none' ? [] : shifts.filter((s) => s.office_id === officeId);
 
   const save = async () => {
     if (!user) return;
+    if (shiftId !== 'none' && !filteredShifts.some((s) => s.id === shiftId)) {
+      toast.error('Choose a shift that belongs to the selected office.');
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from('profiles')
@@ -90,7 +94,7 @@ export function AssignOfficeShiftDialog({ open, onOpenChange, user, onDone }: Pr
           </div>
           <div className="space-y-2">
             <Label>Shift</Label>
-            <Select value={shiftId} onValueChange={setShiftId}>
+            <Select value={shiftId} onValueChange={setShiftId} disabled={officeId === "none"}>
               <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
