@@ -327,7 +327,7 @@ export default function OfficesPage() {
             <DialogTitle>{editingOffice ? 'Edit office' : 'New office'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={saveOffice} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label>Code *</Label>
                 <Input value={officeForm.code} onChange={(e) => setOfficeForm({ ...officeForm, code: e.target.value.toUpperCase() })} required />
@@ -337,7 +337,7 @@ export default function OfficesPage() {
                 <Input value={officeForm.name} onChange={(e) => setOfficeForm({ ...officeForm, name: e.target.value })} required />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label>City</Label>
                 <Input value={officeForm.city} onChange={(e) => setOfficeForm({ ...officeForm, city: e.target.value })} />
@@ -384,7 +384,7 @@ export default function OfficesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label>Code *</Label>
                 <Input value={shiftForm.code} onChange={(e) => setShiftForm({ ...shiftForm, code: e.target.value.toUpperCase() })} required />
@@ -394,7 +394,7 @@ export default function OfficesPage() {
                 <Input value={shiftForm.name} onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })} required />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label>Start</Label>
                 <Input type="time" value={shiftForm.start_time} onChange={(e) => setShiftForm({ ...shiftForm, start_time: e.target.value })} />

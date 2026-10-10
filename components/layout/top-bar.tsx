@@ -68,11 +68,11 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border flex items-center px-4 gap-3">
+    <header className="sticky top-0 z-30 h-14 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border flex items-center px-3 sm:px-4 gap-2 sm:gap-3">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
-        className="lg:hidden flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent"
+        className="lg:hidden flex shrink-0 items-center justify-center w-10 h-10 -ml-1 rounded-md hover:bg-accent"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -81,7 +81,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         {today}
       </div>
 
-      <div className="flex-1 max-w-md mx-auto">
+      <div className="flex-1 min-w-0 max-w-md mx-auto">
         <form
           className="relative"
           onSubmit={(e) => {
@@ -96,7 +96,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <Input
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
-            placeholder="Search stock #, chassis, make… (Enter)"
+            placeholder="Search vehicles…"
             className="pl-9 h-9 bg-muted/50 border-transparent focus-visible:bg-background"
             aria-label="Search vehicles"
           />
@@ -107,8 +107,8 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
         <DropdownMenuTrigger asChild>
-          <button aria-label="Notifications" className="relative flex items-center justify-center w-9 h-9 rounded-md hover:bg-accent transition-colors">
-            <Bell className="w-4.5 h-4.5 text-muted-foreground" />
+          <button aria-label="Notifications" className="relative flex shrink-0 items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-md hover:bg-accent transition-colors">
+            <Bell className="w-5 h-5 text-muted-foreground" />
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-primary rounded-full">
                 {unreadCount}
@@ -116,7 +116,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             )}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80 p-0">
+        <DropdownMenuContent align="end" className="w-[calc(100vw-1.5rem)] max-w-[20rem] p-0">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <span className="text-sm font-semibold">Notifications</span>
             {unreadCount > 0 && (
@@ -188,7 +188,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button aria-label="User menu" className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
+          <button aria-label="User menu" className="flex shrink-0 items-center gap-2 rounded-md px-1 sm:px-2 py-1.5 hover:bg-accent transition-colors">
             <Avatar className="w-8 h-8">
               {profile?.avatar_url && (
                 <AvatarImage src={profile.avatar_url} alt={profile.full_name || 'User'} />

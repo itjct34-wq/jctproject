@@ -270,11 +270,15 @@ export default function InvoicesPage() {
             <DialogTitle>Commercial Invoice Preview</DialogTitle>
           </DialogHeader>
           {selected && (
-            <CommercialInvoiceTemplate
-              invoice={selected}
-              items={items}
-              customer={customers.find((c) => c.id === selected.customer_id) || null}
-            />
+            <div className="overflow-x-auto print:overflow-visible">
+              <div className="min-w-[720px] print:min-w-0">
+                <CommercialInvoiceTemplate
+                  invoice={selected}
+                  items={items}
+                  customer={customers.find((c) => c.id === selected.customer_id) || null}
+                />
+              </div>
+            </div>
           )}
           <DialogFooter className="print:hidden flex-wrap gap-2">
             <Button variant="outline" onClick={() => setPrintOpen(false)}>Close</Button>

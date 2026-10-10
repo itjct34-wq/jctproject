@@ -653,11 +653,15 @@ export default function QuotationsPage() {
             <DialogTitle>Print quotation</DialogTitle>
           </DialogHeader>
           {selected && (
-            <CommercialQuotationTemplate
-              quotation={selected}
-              items={printItems}
-              customer={customerOf(selected.customer_id)}
-            />
+            <div className="overflow-x-auto print:overflow-visible">
+              <div className="min-w-[720px] print:min-w-0">
+                <CommercialQuotationTemplate
+                  quotation={selected}
+                  items={printItems}
+                  customer={customerOf(selected.customer_id)}
+                />
+              </div>
+            </div>
           )}
           <DialogFooter className="print:hidden">
             <Button variant="outline" onClick={() => setPrintOpen(false)}>

@@ -75,9 +75,21 @@
 
 @layer base {
   * { @apply border-border; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: clip;
+  }
+  /* Remove the 300ms tap delay and double-tap zoom on interactive elements */
+  a, button, [role="button"], input, select, textarea, label { touch-action: manipulation; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

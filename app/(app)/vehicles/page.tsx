@@ -224,11 +224,11 @@ export default function VehiclesPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>Add vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitCreate} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
             <div className="space-y-1"><Label>Year</Label><Input type="number" value={form.model_year} onChange={(e) => setForm({ ...form, model_year: e.target.value })} /></div></div>
-          <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
             <div className="space-y-1"><Label>Model *</Label><Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required /></div></div>
-          <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label>Listed price</Label><Input type="number" value={form.listed_price} onChange={(e) => setForm({ ...form, listed_price: e.target.value })} /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Listed price</Label><Input type="number" value={form.listed_price} onChange={(e) => setForm({ ...form, listed_price: e.target.value })} /></div>
             <div className="space-y-1"><Label>Currency</Label><Select value={form.listed_currency} onValueChange={(v) => setForm({ ...form, listed_currency: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['USD','JPY','PKR','EUR','GBP'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div>
           <MultiImageUpload folder={form.chassis_number.trim() || 'new'} images={gallery} onChange={setGallery} label="Vehicle photos (multiple)" />
           <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
@@ -239,9 +239,9 @@ export default function VehiclesPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>Edit vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitEdit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
             <div className="space-y-1"><Label>Year</Label><Input type="number" value={form.model_year} onChange={(e) => setForm({ ...form, model_year: e.target.value })} /></div></div>
-          <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
             <div className="space-y-1"><Label>Model *</Label><Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required /></div></div>
           <MultiImageUpload folder={selected?.id || 'edit'} images={gallery} onChange={setGallery} label="Vehicle photos (multiple)" />
           <DialogFooter><Button type="submit" disabled={submitting}>Save</Button></DialogFooter>

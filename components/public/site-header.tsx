@@ -52,19 +52,19 @@ export function SiteHeader() {
             ERP Login
           </Link>
         </nav>
-        <button type="button" className="md:hidden rounded-md p-2 text-zinc-700 hover:bg-zinc-100" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="md:hidden rounded-md p-2.5 text-zinc-700 hover:bg-zinc-100" aria-expanded={open} aria-controls="mobile-nav" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen((v) => !v)}>
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
       {open && (
-        <div className="border-t border-zinc-200 bg-white px-4 py-3 md:hidden">
+        <div id="mobile-nav" className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-zinc-200 bg-white px-4 py-3 md:hidden">
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className={cn('rounded-md px-3 py-2.5 text-sm', pathname === item.href ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-700')}>
+              <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className={cn('rounded-md px-3 py-3 text-base', pathname === item.href ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-700')}>
                 {item.label}
               </Link>
             ))}
-            <Link href="/login" onClick={() => setOpen(false)} className="mt-2 rounded-full bg-red-600 px-4 py-2.5 text-center text-sm font-medium text-white">
+            <Link href="/login" onClick={() => setOpen(false)} className="mt-2 rounded-full bg-red-600 px-4 py-3 text-center text-base font-medium text-white">
               ERP Login
             </Link>
           </nav>

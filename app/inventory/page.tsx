@@ -95,13 +95,13 @@ export default function InventoryPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search make, model, stock #…"
-              className="w-full rounded-xl border border-white/10 bg-zinc-900/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+              className="w-full rounded-xl border border-white/10 bg-zinc-900/80 pl-10 pr-4 py-2.5 text-base sm:text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
             />
           </div>
           <select
             value={makeFilter}
             onChange={(e) => setMakeFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
+            className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
           >
             <option value="all">All makes</option>
             {makes.map((m) => (
@@ -111,7 +111,7 @@ export default function InventoryPage() {
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
+            className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
           >
             <option value="all">All origins</option>
             {countries.map((c) => (

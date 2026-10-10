@@ -5,10 +5,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_GROUPS } from '@/lib/nav';
 import { usePermissions } from '@/hooks/use-permissions';
-import { ChevronLeft, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+  /** Rendered inside the phone/tablet drawer: bigger touch targets, close button. */
+  mobile?: boolean;
+  /** Called after a nav link is tapped (used to close the drawer). */
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { canView } = usePermissions();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -28,8 +37,8 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   return (
     <aside
       className={cn(
-        'flex flex-col bg-white border-r border-border h-screen sticky top-0 transition-all duration-200',
-        collapsed ? 'w-16' : 'w-60'
+        'flex flex-col bg-card border-r border-border h-[100dvh] sticky top-0 transition-all duration-200',
+        mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-60'
       )}
     >
       <div className="flex items-center gap-2.5 h-14 px-3 border-b border-border shrink-0">
@@ -41,12 +50,25 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground truncate">JCT ERP</p>
-            <p className="text-[10px] text-muted-foreground truncate">Circular Trading</p>
+            <p className="text-[11px] text-muted-foreground truncate">Circular Trading</p>
           </div>
+        )}
+        {mobile && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="Close navigation menu"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin py-2">
+      <nav
+        aria-label="Main navigation"
+        className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      >
         {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter(
             (item) => !item.module || canView(item.module)
@@ -59,13 +81,18 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             <div key={group.label} className="mb-1">
               {!collapsed && (
                 <button
+                  type="button"
                   onClick={() => toggleGroup(group.label)}
-                  className="flex items-center justify-between w-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                  aria-expanded={isExpanded}
+                  className={cn(
+                    'flex items-center justify-between w-full px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors',
+                    mobile ? 'py-2.5' : 'py-1.5'
+                  )}
                 >
                   {group.label}
                   <ChevronDown
                     className={cn(
-                      'w-3 h-3 transition-transform',
+                      'w-3.5 h-3.5 transition-transform',
                       isExpanded ? '' : '-rotate-90'
                     )}
                   />
@@ -82,9 +109,12 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                       <Link
                         key={item.href}
                         href={item.href}
+                        onClick={onNavigate}
+                        aria-current={isActive ? 'page' : undefined}
                         title={collapsed ? item.label : undefined}
                         className={cn(
-                          'flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors',
+                          'flex items-center gap-3 rounded-md px-2.5 text-sm transition-colors',
+                          mobile ? 'py-3' : 'py-2',
                           collapsed && 'justify-center',
                           isActive
                             ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
@@ -106,22 +136,25 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         })}
       </nav>
 
-      <div className="border-t border-border p-2 shrink-0">
-        <button
-          onClick={onToggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="flex items-center justify-center w-full rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        >
-          {collapsed ? (
-            <ChevronLeft className="w-4 h-4 rotate-180" />
-          ) : (
-            <>
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              <span>Collapse</span>
-            </>
-          )}
-        </button>
-      </div>
+      {!mobile && (
+        <div className="border-t border-border p-2 shrink-0">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="flex items-center justify-center w-full rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            {collapsed ? (
+              <ChevronLeft className="w-4 h-4 rotate-180" />
+            ) : (
+              <>
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                <span>Collapse</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

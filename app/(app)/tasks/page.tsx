@@ -227,7 +227,7 @@ export default function TasksPage() {
                     rows={3}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Assign To *</Label>
                     <Select
@@ -469,7 +469,7 @@ export default function TasksPage() {
               <Label htmlFor="edit-description">Description</Label>
               <Textarea id="edit-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Assign To *</Label>
                 <Select value={form.assigned_to} onValueChange={(v) => setForm({ ...form, assigned_to: v })}>
