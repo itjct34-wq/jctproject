@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-export function agentTotp(agentId:string, counter:number):string {
+export function agentTotp(agentId:string,counter:number):string {
  const secret=process.env.AGENT_TOTP_SECRET;
  if(!secret) throw new Error('AGENT_TOTP_SECRET is not configured');
  const digest=createHmac('sha1',secret).update(agentId+':'+counter).digest();
@@ -10,10 +10,7 @@ export function agentTotp(agentId:string, counter:number):string {
 export function verifyAgentTotp(agentId:string,code:string,now=Date.now()):boolean {
  if(!/^\d{6}$/.test(code)) return false;
  const counter=Math.floor(now/30000);
- for(const n of [counter-1,counter,counter+1]){
-  const expected=Buffer.from(agentTotp(agentId,n));
-  const actual=Buffer.from(code);
-  if(expected.length===actual.length&&timingSafeEqual(expected,actual)) return true;
- }
- return false;
+ const expected=Buffer.from(agentTotp(agentId,counter));
+ const actual=Buffer.from(code);
+ return expected.length===actual.length&&timingSafeEqual(expected,actual);
 }
