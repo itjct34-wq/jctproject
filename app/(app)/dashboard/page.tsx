@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ROLE_COLORS } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { formatMoney } from '@/lib/utils/format';
 import { supabase } from '@/lib/supabase/client';
 import { Users, Car, Gavel, Receipt, CreditCard, Ship, CheckSquare, Bell, TrendingUp, DollarSign, Calendar, Clock, AlertTriangle, Activity, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
@@ -99,11 +100,11 @@ export default function DashboardPage() {
         reservedVehicles: (vehiclesRes.data || []).filter((v) => v.status === 'reserved').length,
         pendingAuctions: auctionsRes.data?.length || 0,
         totalSales: salesData.filter((s) => s.status !== 'cancelled').length,
-        salesRevenue: salesData.filter((s) => s.status !== 'cancelled').reduce((sum, s) => sum + s.sale_price, 0),
+        salesRevenue: salesData.filter((s) => s.status !== 'cancelled').reduce((sum, s) => sum + (Number(s.sale_price) || 0), 0),
         totalInvoices: invoiceData.length,
-        outstandingAmount: invoiceData.filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial').reduce((sum, i) => sum + i.total, 0),
-        totalPayments: paymentData.filter((p) => p.status !== 'rejected').reduce((sum, p) => sum + p.amount_jpy, 0),
-        totalExpenses: expenseData.filter((e) => e.status === 'paid' || e.status === 'approved').reduce((sum, e) => sum + e.amount, 0),
+        outstandingAmount: invoiceData.filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial').reduce((sum, i) => sum + (Number(i.total) || 0), 0),
+        totalPayments: paymentData.filter((p) => p.status !== 'rejected').reduce((sum, p) => sum + (Number(p.amount_jpy) || 0), 0),
+        totalExpenses: expenseData.filter((e) => e.status === 'paid' || e.status === 'approved').reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
         activeShipments: (shipmentsRes.data || []).filter((s) => s.status === 'booked' || s.status === 'loaded' || s.status === 'in_transit').length,
         recentTasks: recentTasks as DashboardData['recentTasks'],
         assigneeNames,
@@ -123,10 +124,10 @@ export default function DashboardPage() {
     { label: 'Vehicles in stock', value: data.availableVehicles, sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'bg-emerald-50 text-emerald-600' },
     { label: 'Pending auctions', value: data.pendingAuctions, sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'bg-amber-50 text-amber-600' },
     { label: 'Active shipments', value: data.activeShipments, sub: 'In progress', icon: Ship, href: '/shipments', tone: 'bg-cyan-50 text-cyan-600' },
-    { label: 'Sales revenue', value: data.salesRevenue.toLocaleString(), sub: `${data.totalSales} sales`, icon: TrendingUp, href: '/sales', tone: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Outstanding', value: data.outstandingAmount.toLocaleString(), sub: `${data.totalInvoices} invoices`, icon: Receipt, href: '/invoices', tone: 'bg-red-50 text-red-600' },
-    { label: 'Payments received', value: data.totalPayments.toLocaleString(), sub: 'Total JPY', icon: CreditCard, href: '/payments', tone: 'bg-cyan-50 text-cyan-600' },
-    { label: 'Expenses', value: data.totalExpenses.toLocaleString(), sub: 'Approved + paid', icon: DollarSign, href: '/expenses', tone: 'bg-amber-50 text-amber-600' },
+    { label: 'Sales revenue', value: formatMoney(data.salesRevenue), sub: `${data.totalSales} sales`, icon: TrendingUp, href: '/sales', tone: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Outstanding', value: formatMoney(data.outstandingAmount), sub: `${data.totalInvoices} invoices`, icon: Receipt, href: '/invoices', tone: 'bg-red-50 text-red-600' },
+    { label: 'Payments received', value: formatMoney(data.totalPayments), sub: 'Total JPY', icon: CreditCard, href: '/payments', tone: 'bg-cyan-50 text-cyan-600' },
+    { label: 'Expenses', value: formatMoney(data.totalExpenses), sub: 'Approved + paid', icon: DollarSign, href: '/expenses', tone: 'bg-amber-50 text-amber-600' },
   ];
 
   return (
@@ -164,11 +165,13 @@ export default function DashboardPage() {
           <CardHeader className="pb-3"><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {[
-              { label: 'Manage Users & Teams', icon: Users, href: '/users' },
-              { label: 'View Tasks', icon: CheckSquare, href: '/tasks' },
-              { label: 'Reports & Analytics', icon: Activity, href: '/reports' },
-              { label: 'Audit Logs', icon: Clock, href: '/audit' },
-            ].map((action) => (
+              { label: 'Manage Users & Teams', icon: Users, href: '/users', module: 'users' as const },
+              { label: 'View Tasks', icon: CheckSquare, href: '/tasks', module: 'tasks' as const },
+              { label: 'Reports & Analytics', icon: Activity, href: '/reports', module: 'reports' as const },
+              { label: 'Audit Logs', icon: Clock, href: '/audit', module: 'audit' as const },
+              { label: 'New Invoice', icon: Receipt, href: '/invoices', module: 'invoices' as const },
+              { label: 'Vehicles', icon: Car, href: '/vehicles', module: 'vehicles' as const },
+            ].filter((action) => canView(action.module)).map((action) => (
               <Link key={action.label} href={action.href}>
                 <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors cursor-pointer">
                   <action.icon className="w-4 h-4 text-muted-foreground" />
