@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/lib/supabase/client';
 import { formatMoney, formatDate } from '@/lib/utils/format';
 import type { Vehicle, Sale, Invoice, Payment, Expense, Purchase } from '@/lib/types';
-import { BarChart3, CarFront, FileText, Landmark, Loader2, Package, Receipt, TrendingUp } from 'lucide-react';
+import { CarFront, FileText, Landmark, Loader2, Package, Receipt, TrendingUp } from 'lucide-react';
 
 interface ReportData {
   vehicles: Vehicle[];
@@ -47,13 +47,14 @@ export default function ReportsPage() {
       supabase.from('expenses').select('id, category, amount, currency, expense_date'),
       supabase.from('purchases').select('id, purchase_code, purchase_date, total_amount, currency, status'),
     ]);
+    // Partial selects — cast via unknown to satisfy strict TS (full entity types are wider)
     setData({
-      vehicles: (vRes.data || []) as Vehicle[],
-      sales: (sRes.data || []) as Sale[],
-      invoices: (iRes.data || []) as Invoice[],
-      payments: (pRes.data || []) as Payment[],
-      expenses: (eRes.data || []) as Expense[],
-      purchases: (puRes.data || []) as Purchase[],
+      vehicles: (vRes.data || []) as unknown as Vehicle[],
+      sales: (sRes.data || []) as unknown as Sale[],
+      invoices: (iRes.data || []) as unknown as Invoice[],
+      payments: (pRes.data || []) as unknown as Payment[],
+      expenses: (eRes.data || []) as unknown as Expense[],
+      purchases: (puRes.data || []) as unknown as Purchase[],
     });
     setLoading(false);
   }, []);
