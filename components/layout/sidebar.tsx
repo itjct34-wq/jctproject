@@ -19,7 +19,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
-  const { canView } = usePermissions();
+  const { canView, roleNames } = usePermissions();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -71,7 +71,9 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
       >
         {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter(
-            (item) => !item.module || canView(item.module)
+            (item) =>
+              (!item.requiredRoles || item.requiredRoles.some((role) => roleNames.includes(role))) &&
+              (!item.module || canView(item.module))
           );
           if (visibleItems.length === 0) return null;
 

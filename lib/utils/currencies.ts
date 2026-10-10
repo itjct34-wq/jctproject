@@ -46,13 +46,20 @@ export function formatCurrency(
 ): string {
   const n = Number(value);
   const safe = Number.isFinite(n) ? n : 0;
-  const code = normalizeCurrency(currency);
-  const digits = CURRENCY_DECIMALS[code];
+  const requested = typeof currency === 'string' ? currency.trim().toUpperCase() : '';
+  // Respect a configured ISO-4217 code even when it is not in the starter list.
+  const code = /^[A-Z]{3}$/.test(requested) ? requested : normalizeCurrency(currency);
+  const knownDigits = CURRENCY_DECIMALS[code as SupportedCurrency];
+  const digits = knownDigits ?? new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).resolvedOptions().maximumFractionDigits;
   const formatted = safe.toLocaleString(undefined, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
-  if (opts?.showSymbol) return `${CURRENCY_SYMBOLS[code]}${formatted}`;
+  if (opts?.showSymbol) {
+    const symbol = CURRENCY_SYMBOLS[code as SupportedCurrency];
+    if (symbol) return `${symbol}${formatted}`;
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: code, currencyDisplay: 'symbol', minimumFractionDigits: digits, maximumFractionDigits: digits }).format(safe);
+  }
   if (opts?.showCode === false) return formatted;
   return `${code} ${formatted}`;
 }

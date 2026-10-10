@@ -21,6 +21,8 @@ import {
   BadgeCheck,
   Newspaper,
   MapPin,
+  SlidersHorizontal,
+  Inbox,
 } from 'lucide-react';
 import type { RoleName, PermissionModule } from '@/lib/types';
 
@@ -48,9 +50,11 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Sales & CRM',
     items: [
       { label: 'Customers', href: '/customers', icon: Users, module: 'customers' },
+      { label: 'Inquiries', href: '/inquiries', icon: Inbox, module: 'customers' },
       { label: 'Sales & Reservations', href: '/sales', icon: PackageCheck, module: 'sales' },
       { label: 'Quotations', href: '/quotations', icon: FileText, module: 'sales' },
       { label: 'Agent verification', href: '/agents', icon: BadgeCheck, module: 'users' },
+      { label: 'My verification code', href: '/my-verification', icon: BadgeCheck, module: 'dashboard' },
     ],
   },
   {
@@ -92,6 +96,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Blog posts', href: '/blog-admin', icon: Newspaper, module: 'settings' },
       { label: 'Users & Teams', href: '/users', icon: UserCog, module: 'users' },
       { label: 'System Config', href: '/settings', icon: Settings, module: 'settings' },
+      { label: 'Global Configuration', href: '/configuration', icon: SlidersHorizontal, module: 'settings', requiredRoles: ['super_admin'] },
       { label: 'Audit Logs', href: '/audit', icon: ScrollText, module: 'audit' },
     ],
   },

@@ -22,6 +22,7 @@ import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/currencies';
 import { ChevronRight, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 
 const statusStyles: Record<Quotation['status'], string> = {
@@ -352,18 +353,7 @@ export default function QuotationsPage() {
         </div>
         <div className="space-y-2">
           <Label>Currency</Label>
-          <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SUPPORTED_CURRENCIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} />
         </div>
         <div className="space-y-2">
           <Label>Valid until</Label>

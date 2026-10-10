@@ -23,6 +23,7 @@ import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images
 import { VehiclesBulkImportButton } from '@/components/vehicles/vehicles-bulk-import-button';
 import type { Vehicle, VehicleStatusHistory } from '@/lib/types';
 import { CarFront, ChevronRight, DollarSign, Download, Loader2, MapPin, Pencil, Plus, Search, Trash2, Warehouse } from 'lucide-react';
+import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 
 const statusStyles: Record<Vehicle['status'], string> = {
@@ -229,7 +230,7 @@ export default function VehiclesPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
             <div className="space-y-1"><Label>Model *</Label><Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required /></div></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Listed price</Label><Input type="number" value={form.listed_price} onChange={(e) => setForm({ ...form, listed_price: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Currency</Label><Select value={form.listed_currency} onValueChange={(v) => setForm({ ...form, listed_currency: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['USD','JPY','PKR','EUR','GBP'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div>
+            <div className="space-y-1"><Label>Currency</Label><CurrencySelect value={form.listed_currency} onValueChange={(v) => setForm({ ...form, listed_currency: v })} /></div></div>
           <MultiImageUpload folder={form.chassis_number.trim() || 'new'} images={gallery} onChange={setGallery} label="Vehicle photos (multiple)" />
           <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Save'}</Button></DialogFooter>
