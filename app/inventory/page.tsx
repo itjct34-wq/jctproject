@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PublicShell } from '@/components/public/public-shell';
 import { supabase } from '@/lib/supabase/client';
-import { formatMoney } from '@/lib/utils/format';
-import { CarFront, Fuel, Gauge, Loader2, Settings2 } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils/currencies';
+import { CarFront, Fuel, Gauge, Loader2, MapPin, Search, Settings2 } from 'lucide-react';
 
 type PublicVehicle = {
   id: string;
@@ -21,55 +21,125 @@ type PublicVehicle = {
   color: string | null;
   status: string;
   primary_image_url: string | null;
+  source_country: string | null;
 };
 
 export default function InventoryPage() {
   const [vehicles, setVehicles] = useState<PublicVehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
+  const [country, setCountry] = useState('all');
+  const [makeFilter, setMakeFilter] = useState('all');
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('vehicles')
         .select(
-          'id, stock_number, make, model, model_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, color, status, primary_image_url'
+          'id, stock_number, make, model, model_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, color, status, primary_image_url, source_country'
         )
         .in('status', ['in_stock', 'reserved'])
         .order('updated_at', { ascending: false })
-        .limit(48);
+        .limit(96);
       setVehicles((data || []) as PublicVehicle[]);
       setLoading(false);
     })();
   }, []);
 
+  const countries = useMemo(() => {
+    const set = new Set(vehicles.map((v) => v.source_country).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [vehicles]);
+
+  const makes = useMemo(() => {
+    const set = new Set(vehicles.map((v) => v.make).filter(Boolean));
+    return Array.from(set).sort();
+  }, [vehicles]);
+
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return vehicles.filter((v) => {
+      if (country !== 'all' && v.source_country !== country) return false;
+      if (makeFilter !== 'all' && v.make !== makeFilter) return false;
+      if (!term) return true;
+      return [v.make, v.model, v.stock_number, v.color, v.source_country, String(v.model_year || '')]
+        .filter(Boolean)
+        .some((s) => String(s).toLowerCase().includes(term));
+    });
+  }, [vehicles, q, country, makeFilter]);
+
   return (
     <PublicShell>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 md:py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">Stock</p>
-        <h1 className="mt-2 text-3xl md:text-4xl font-bold text-white">Available inventory</h1>
-        <p className="mt-3 text-sm text-zinc-400 max-w-2xl">
-          Live units from our Nagoya yard and partner stock. Prices are indicative — contact us for locked quotes and freight.
-        </p>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-10 md:py-14">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">Global stock</p>
+            <h1 className="mt-2 text-3xl md:text-4xl font-bold text-white">Vehicles for export</h1>
+            <p className="mt-3 text-sm text-zinc-400 max-w-2xl">
+              Browse verified Japan Circular Trading stock — then inquire for FOB / C&F / CIF quotes and shipping.
+            </p>
+          </div>
+          <p className="text-sm text-zinc-500 shrink-0">
+            {loading ? '…' : (
+              <>
+                <span className="text-white font-semibold">{filtered.length}</span> of {vehicles.length} available
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Filters — Ansha-style toolbar */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search make, model, stock #…"
+              className="w-full rounded-xl border border-white/10 bg-zinc-900/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+            />
+          </div>
+          <select
+            value={makeFilter}
+            onChange={(e) => setMakeFilter(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
+          >
+            <option value="all">All makes</option>
+            {makes.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
+          >
+            <option value="all">All origins</option>
+            {countries.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-zinc-500">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading stock…
           </div>
-        ) : vehicles.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="mt-12 rounded-2xl border border-white/10 bg-zinc-900/50 p-10 text-center">
             <CarFront className="mx-auto h-10 w-10 text-zinc-600" />
-            <p className="mt-3 text-white font-medium">Stock list updating</p>
-            <p className="mt-1 text-sm text-zinc-500">Contact us for current auction and yard availability.</p>
+            <p className="mt-3 text-white font-medium">No matching vehicles</p>
+            <p className="mt-1 text-sm text-zinc-500">Try clearing filters or contact us for sourcing.</p>
             <Link
               href="/contact"
               className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500"
             >
-              Request availability
+              Request sourcing
             </Link>
           </div>
         ) : (
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((v) => (
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((v) => (
               <article
                 key={v.id}
                 className="group rounded-2xl border border-white/10 bg-zinc-900/60 overflow-hidden hover:border-red-500/40 hover:shadow-lg hover:shadow-red-900/20 transition-all duration-300"
@@ -89,6 +159,14 @@ export default function InventoryPage() {
                       <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
                     </div>
                   )}
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                    {v.source_country && (
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider rounded-full border border-white/20 bg-black/50 px-2 py-0.5 text-zinc-200 backdrop-blur-sm">
+                        <MapPin className="h-2.5 w-2.5" />
+                        {v.source_country}
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={`absolute top-3 right-3 text-[10px] uppercase tracking-wider rounded-full border px-2.5 py-1 font-medium backdrop-blur-sm ${
                       v.status === 'in_stock'
@@ -135,11 +213,11 @@ export default function InventoryPage() {
 
                   <div className="flex items-end justify-between pt-1 border-t border-white/5">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">Price</p>
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">FOB</p>
                       <p className="text-xl font-bold text-white">
                         {v.listed_price != null
-                          ? formatMoney(v.listed_price, v.listed_currency)
-                          : 'Ask for price'}
+                          ? formatCurrency(v.listed_price, v.listed_currency)
+                          : 'Ask for quote'}
                       </p>
                     </div>
                     <Link
