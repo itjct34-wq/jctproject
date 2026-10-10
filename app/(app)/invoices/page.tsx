@@ -292,7 +292,7 @@ export default function InvoicesPage() {
             <Button variant="outline" onClick={exportCommercialExcel}>
               <Download className="h-4 w-4 mr-2" /> Excel
             </Button>
-            <Button onClick={() => void printDocumentPdf(`Invoice-${selected?.invoice_code || 'Draft'}`)}>
+            <Button onClick={() => void printDocumentPdf(selected?.invoice_code || 'Invoice')}>
               <Printer className="h-4 w-4 mr-2" /> Print / PDF
             </Button>
           </DialogFooter>
