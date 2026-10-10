@@ -20,6 +20,7 @@ import {
   ScrollText,
   BadgeCheck,
   Newspaper,
+  MapPin,
 } from 'lucide-react';
 import type { RoleName, PermissionModule } from '@/lib/types';
 
@@ -78,6 +79,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operations',
     items: [
+      { label: 'Offices & shifts', href: '/offices', icon: MapPin, module: 'users' },
       { label: 'Tasks & Approvals', href: '/tasks', icon: CheckSquare, module: 'tasks' },
       { label: 'Suppliers', href: '/suppliers', icon: Building2 },
       { label: 'Notifications', href: '/notifications', icon: Bell, module: 'notifications' },
