@@ -38,6 +38,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [offices, setOffices] = useState<{ id: string; name: string }[]>([]);
+  const [shifts, setShifts] = useState<{ id: string; name: string; office_id: string | null }[]>([]);
   const [assignOfficeUser, setAssignOfficeUser] = useState<UserWithRoles | null>(null);
   const [editingProfile, setEditingProfile] = useState<UserWithRoles | null>(null);
   const [profileForm, setProfileForm] = useState({ full_name: '', phone: '', job_title: '', department: '' });
@@ -50,7 +52,7 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [roleDialogUser, setRoleDialogUser] = useState<UserWithRoles | null>(null);
 
-  const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: '', team: '' });
+  const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: '', team: '', office: 'none', shift: 'none' });
   const [teamForm, setTeamForm] = useState({ name: '', description: '', department: '', manager_id: '' });
 
   const loadData = useCallback(async () => {
@@ -76,6 +78,9 @@ export default function UsersPage() {
 
     const officeRows = (officesRes.data || []) as { id: string; name: string }[];
     const shiftRows = (shiftsRes.data || []) as { id: string; name: string; office_id: string | null }[];
+
+    setOffices(officeRows);
+    setShifts(shiftRows);
 
     const enriched: UserWithRoles[] = (profilesRes.data as Profile[] || []).map((p) => ({
       ...p,
@@ -136,6 +141,15 @@ export default function UsersPage() {
       return;
     }
 
+    const { error: assignmentError } = await supabase.from('profiles').update({
+      office_id: inviteForm.office === 'none' ? null : inviteForm.office,
+      shift_id: inviteForm.shift === 'none' ? null : inviteForm.shift,
+      updated_at: new Date().toISOString(),
+    }).eq('id', newUserId);
+    if (assignmentError) {
+      toast.error('User was created, but office/shift assignment failed: ' + assignmentError.message);
+    }
+
     if (inviteForm.team) {
       await supabase.from('team_members').insert({
         team_id: inviteForm.team,
@@ -157,7 +171,7 @@ export default function UsersPage() {
         `Temporary password (shown once, share it securely): ${tempPassword}`,
       { duration: 60000 }
     );
-    setInviteForm({ email: '', full_name: '', role: '', team: '' });
+    setInviteForm({ email: '', full_name: '', role: '', team: '', office: 'none', shift: 'none' });
     setSubmitting(false);
     setInviteOpen(false);
     loadData();
@@ -353,6 +367,29 @@ export default function UsersPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Office</Label>
+                      <Select value={inviteForm.office} onValueChange={(v) => setInviteForm({ ...inviteForm, office: v, shift: 'none' })}>
+                        <SelectTrigger><SelectValue placeholder="Select office" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Unassigned</SelectItem>
+                          {offices.map((office) => <SelectItem key={office.id} value={office.id}>{office.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Shift</Label>
+                      <Select value={inviteForm.shift} onValueChange={(v) => setInviteForm({ ...inviteForm, shift: v })} disabled={inviteForm.office === 'none'}>
+                        <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Unassigned</SelectItem>
+                          {shifts.filter((shift) => shift.office_id === inviteForm.office).map((shift) => (
+                            <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Only shifts belonging to the selected office are available.</p>
                     </div>
                     <DialogFooter>
                       <Button type="submit" disabled={submitting || !inviteForm.email.trim() || !inviteForm.role}>
