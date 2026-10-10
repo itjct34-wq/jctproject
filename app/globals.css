@@ -106,9 +106,8 @@
   }
 }
 
-/* Public pages own their color palettes. Avoid global utility overrides that flatten
-   dark hero sections and destroy contrast on marketing pages. */
-.public-site { color-scheme: light; }
+/* Public marketing pages use a dark palette; header and footer provide light contrast. */
+.public-site { color-scheme: dark; }
 
 @media print {
   @page { size: A4; margin: 10mm; }
