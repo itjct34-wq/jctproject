@@ -70,6 +70,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     <header className="sticky top-0 z-30 h-14 bg-white border-b border-border flex items-center px-4 gap-3">
       <button
         onClick={onMenuClick}
+        aria-label="Open navigation menu"
         className="lg:hidden flex items-center justify-center w-8 h-8 rounded-md hover:bg-accent"
       >
         <Menu className="w-5 h-5" />
@@ -96,13 +97,14 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             onChange={(e) => setSearchQ(e.target.value)}
             placeholder="Search stock #, chassis, make… (Enter)"
             className="pl-9 h-9 bg-muted/50 border-transparent focus-visible:bg-background"
+            aria-label="Search vehicles"
           />
         </form>
       </div>
 
       <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="relative flex items-center justify-center w-9 h-9 rounded-md hover:bg-accent transition-colors">
+          <button aria-label="Notifications" className="relative flex items-center justify-center w-9 h-9 rounded-md hover:bg-accent transition-colors">
             <Bell className="w-4.5 h-4.5 text-muted-foreground" />
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-primary rounded-full">
@@ -188,7 +190,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
+          <button aria-label="User menu" className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
             <Avatar className="w-8 h-8">
               <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
                 {initials}
