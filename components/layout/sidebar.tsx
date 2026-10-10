@@ -87,8 +87,8 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                           'flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors',
                           collapsed && 'justify-center',
                           isActive
-                            ? 'bg-primary/8 text-primary font-medium'
-                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                            ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
+                            : 'text-muted-foreground hover:bg-accent hover:text-foreground border-l-2 border-transparent'
                         )}
                       >
                         <Icon className="w-4 h-4 shrink-0" />
@@ -109,6 +109,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
       <div className="border-t border-border p-2 shrink-0">
         <button
           onClick={onToggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className="flex items-center justify-center w-full rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         >
           {collapsed ? (
