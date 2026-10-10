@@ -1,7 +1,7 @@
 -- Structured website inquiries, reusable global config, and agent TOTP flags.
 CREATE TABLE IF NOT EXISTS public.inquiries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  inquiry_code text NOT NULL UNIQUE DEFAULT ('JCT-INQ-' || upper(substr(encode(gen_random_bytes(6),'hex'),1,10))),
+  inquiry_code text NOT NULL DEFAULT ('JCT-INQ-' || upper(substr(encode(gen_random_bytes(6),'hex'),1,10))),
   full_name text NOT NULL CHECK (length(trim(full_name)) BETWEEN 2 AND 160),
   email text NOT NULL CHECK (length(trim(email)) <= 254),
   phone text,

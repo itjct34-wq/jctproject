@@ -44,9 +44,6 @@ export async function POST(request:NextRequest){
   const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim();
   const ipHash=createHash('sha256').update(secret).update(':inquiry:').update(ip).digest('hex');
   const db=await createServerClient();
-  const {data:currencyConfig}=await db.from('system_config').select('value').eq('key','currencies').maybeSingle();
-  const configuredCurrencies=Array.isArray(currencyConfig?.value)?currencyConfig.value.filter((v:unknown):v is string=>typeof v==='string'):['JPY','USD','EUR','GBP','PKR'];
-  if(!configuredCurrencies.includes(data.currency))return NextResponse.json({error:'Please choose a currently supported currency.'},{status:400});
   const since=new Date(Date.now()-10*60*1000).toISOString();
   const {count}=await db.from('inquiry_submission_attempts').select('id',{count:'exact',head:true}).eq('ip_hash',ipHash).gte('attempted_at',since);
   if((count||0)>=5)return NextResponse.json({error:'Too many inquiries from this connection. Please try again in 10 minutes.'},{status:429});
@@ -64,12 +61,10 @@ export async function POST(request:NextRequest){
    destination_country:data.destination_country||null,destination_port:data.destination_port||null,
    vehicle_make:data.vehicle_make||null,vehicle_model:data.vehicle_model||null,year_from:data.year_from??null,year_to:data.year_to??null,
    budget_min:data.budget_min??null,budget_max:data.budget_max??null,
-   country:data.destination_country||null,interested_models:[data.vehicle_make,data.vehicle_model].filter(Boolean).join(' ')||null,
-   quantity:data.quantity,budget:data.budget_max??data.budget_min??null,currency:data.currency,incoterms:data.incoterm,
+   quantity:data.quantity,currency:data.currency,incoterm:data.incoterm,
    message:data.message,status:'new',source:'website'
-  }).select('inquiry_number').single();
+  }).select('inquiry_code').single();
   if(error)return NextResponse.json({error:'Could not save inquiry. Please try again.'},{status:500});
-  const inquiryCode='JCT-INQ-'+String(created.inquiry_number).padStart(6,'0');
-  return NextResponse.json({success:true,inquiry_code:inquiryCode},{status:201,headers:{'Cache-Control':'no-store'}});
+  return NextResponse.json({success:true,inquiry_code:created.inquiry_code},{status:201,headers:{'Cache-Control':'no-store'}});
  }catch{return NextResponse.json({error:'Inquiry service temporarily unavailable.'},{status:500});}
 }
