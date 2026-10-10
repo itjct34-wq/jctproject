@@ -674,7 +674,7 @@ export default function QuotationsPage() {
             </Button>
             <Button
               onClick={() => {
-                void printDocumentPdf(`Quotation-${selected?.quotation_code || 'Draft'}`);
+                void printDocumentPdf(selected?.quotation_code || 'Quotation');
               }}
             >
               <Printer className="mr-1.5 h-4 w-4" />
