@@ -26,9 +26,9 @@ export function InvoiceQRCode({
       src={src}
       width={size}
       height={size}
-      alt="Invoice verification QR code"
+      alt="Document verification QR code"
       className={`rounded border border-border bg-white ${className}`}
-      loading="lazy"
+      loading="eager"
     />
   );
 }
