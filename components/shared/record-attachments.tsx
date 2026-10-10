@@ -27,6 +27,31 @@ function safeFileName(name: string) {
   return name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(-120) || 'attachment';
 }
 
+const ALLOWED_TYPES = [
+  'application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+
+/** Upload a file to the private bucket and link it to a record. Returns true on success (toasts on failure). */
+export async function uploadRecordAttachment(entityType: AttachmentEntity, entityId: string, file: File, userId: string): Promise<boolean> {
+  if (file.size > MAX_FILE_BYTES) { toast.error('Maximum attachment size is 20 MB.'); return false; }
+  if (!ALLOWED_TYPES.includes(file.type)) { toast.error('File type not allowed. Use PDF, image, text, CSV, Word or Excel.'); return false; }
+  const objectPath = `${entityType}/${entityId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+  const { error: uploadError } = await supabase.storage.from('record-attachments').upload(objectPath, file, { contentType: file.type, cacheControl: '3600', upsert: false });
+  if (uploadError) { toast.error('Upload failed: ' + uploadError.message); return false; }
+  const { error: rowError } = await supabase.from('record_attachments').insert({
+    entity_type: entityType, entity_id: entityId, file_name: file.name, object_path: objectPath,
+    content_type: file.type || 'application/octet-stream', size_bytes: file.size, uploaded_by: userId,
+  });
+  if (rowError) {
+    await supabase.storage.from('record-attachments').remove([objectPath]);
+    toast.error('File uploaded but could not be linked: ' + rowError.message);
+    return false;
+  }
+  return true;
+}
+
 export function RecordAttachments({ entityType, entityId }: { entityType: AttachmentEntity; entityId: string }) {
   const { profile } = useAuth();
   const [rows, setRows] = useState<AttachmentRow[]>([]);
@@ -55,42 +80,10 @@ export function RecordAttachments({ entityType, entityId }: { entityType: Attach
       toast.error('Maximum attachment size is 20 MB.');
       return;
     }
-    const allowed = [
-      'application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv',
-      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ];
-    if (!allowed.includes(file.type)) {
-      toast.error('File type not allowed. Use PDF, image, text, CSV, Word or Excel.');
-      return;
-    }
     setUploading(true);
-    const objectPath = `${entityType}/${entityId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-    const { error: uploadError } = await supabase.storage.from('record-attachments').upload(objectPath, file, {
-      contentType: file.type,
-      cacheControl: '3600',
-      upsert: false,
-    });
-    if (uploadError) {
-      setUploading(false);
-      toast.error('Upload failed: ' + uploadError.message);
-      return;
-    }
-    const { error: rowError } = await supabase.from('record_attachments').insert({
-      entity_type: entityType,
-      entity_id: entityId,
-      file_name: file.name,
-      object_path: objectPath,
-      content_type: file.type || 'application/octet-stream',
-      size_bytes: file.size,
-      uploaded_by: profile.id,
-    });
+    const ok = await uploadRecordAttachment(entityType, entityId, file, profile.id);
     setUploading(false);
-    if (rowError) {
-      await supabase.storage.from('record-attachments').remove([objectPath]);
-      toast.error('File uploaded but could not be linked: ' + rowError.message);
-      return;
-    }
+    if (!ok) return;
     toast.success('Attachment uploaded');
     await load();
   };

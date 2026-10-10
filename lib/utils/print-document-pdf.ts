@@ -24,11 +24,25 @@ export async function printDocumentPdf(fileName: string) {
     }));
   }
 
+  // Print a clone placed directly under <body>: the dialog the document lives in is
+  // transformed, scrollable and clipped, which makes browsers print a blank/cut page.
+  let layer: HTMLDivElement | null = null;
+  if (root) {
+    layer = document.createElement('div');
+    layer.id = 'print-layer';
+    layer.appendChild(root.cloneNode(true));
+    document.body.appendChild(layer);
+    document.body.classList.add('printing-document');
+  }
+
   const restore = () => {
     document.title = previousTitle;
+    document.body.classList.remove('printing-document');
+    layer?.remove();
     window.removeEventListener('afterprint', restore);
   };
   window.addEventListener('afterprint', restore, { once: true });
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50)));
   window.print();
   // Some browsers do not emit afterprint consistently; keep the filename title
   // until the print dialog has closed, then restore it.

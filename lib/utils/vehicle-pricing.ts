@@ -15,6 +15,7 @@ export type PriceTerm = 'FOB' | 'C&F' | 'CIF' | 'CNF';
 
 export type CostBreakdown = {
   bidJpy: number;
+  markupRate: number;
   markupJpy: number;
   fixedExpenseJpy: number;
   totalCostJpy: number;
@@ -39,7 +40,7 @@ export function calcVehicleCost(params: {
   priceTerm?: PriceTerm;
 }): CostBreakdown {
   const bid = Math.max(0, Number(params.bidJpy) || 0);
-  const markupRate = params.markupRate ?? DEFAULT_MARKUP_RATE;
+  const markupRate = Math.max(0, params.markupRate ?? DEFAULT_MARKUP_RATE);
   const fixed = params.fixedExpenseJpy ?? FIXED_EXPENSE_JPY;
   const rate = Math.max(0.0001, Number(params.exchangeRate) || 150);
   const profit = Math.max(0, Number(params.profitUsd) || 0);
@@ -67,6 +68,7 @@ export function calcVehicleCost(params: {
 
   return {
     bidJpy: bid,
+    markupRate,
     markupJpy,
     fixedExpenseJpy: fixed,
     totalCostJpy,
@@ -84,7 +86,7 @@ export function calcVehicleCost(params: {
 export function formatPricingSummary(b: CostBreakdown): string {
   return [
     `Bid: ¥${b.bidJpy.toLocaleString()}`,
-    `+10%: ¥${Math.round(b.markupJpy).toLocaleString()}`,
+    `+${+(b.markupRate * 100).toFixed(2)}%: ¥${Math.round(b.markupJpy).toLocaleString()}`,
     `Expense: ¥${b.fixedExpenseJpy.toLocaleString()}`,
     `= ¥${Math.round(b.totalCostJpy).toLocaleString()}`,
     `÷ ${b.exchangeRate} = $${b.costUsd.toFixed(2)}`,

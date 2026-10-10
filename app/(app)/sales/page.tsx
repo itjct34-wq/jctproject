@@ -50,6 +50,8 @@ const emptyForm = {
   reservation_days: '7',
   bid_jpy: '',
   exchange_rate: '150',
+  markup_pct: '10',
+  expense_jpy: '45000',
   profit_usd: '0',
 };
 
@@ -108,13 +110,15 @@ export default function SalesPage() {
     if (!form.bid_jpy) return null;
     return calcVehicleCost({
       bidJpy: Number(form.bid_jpy),
+      markupRate: (form.markup_pct === '' ? 10 : Number(form.markup_pct) || 0) / 100,
+      fixedExpenseJpy: form.expense_jpy === '' ? 45000 : Number(form.expense_jpy) || 0,
       exchangeRate: Number(form.exchange_rate) || 150,
       profitUsd: Number(form.profit_usd) || 0,
       freightUsd: Number(form.freight_usd) || 0,
       insuranceUsd: Number(form.insurance_usd) || 0,
       priceTerm: form.price_term,
     });
-  }, [form.bid_jpy, form.exchange_rate, form.profit_usd, form.freight_usd, form.insurance_usd, form.price_term]);
+  }, [form.bid_jpy, form.markup_pct, form.expense_jpy, form.exchange_rate, form.profit_usd, form.freight_usd, form.insurance_usd, form.price_term]);
 
   useEffect(() => {
     if (!form.vehicle_id) return;
@@ -457,6 +461,17 @@ export default function SalesPage() {
                   <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                   <SelectContent>{availableVehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.make} {v.model} ({v.stock_number})</SelectItem>)}</SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="rounded-lg border p-3 space-y-3">
+              <p className="text-sm font-semibold flex items-center gap-1"><Calculator className="h-4 w-4" /> Price calculator</p>
+              <p className="text-xs text-muted-foreground">(Bid JPY + markup % + expense JPY) ÷ JPY per USD + profit, then freight / insurance by price term.</p>
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+                <div className="space-y-1"><Label>Bid (JPY)</Label><Input type="number" inputMode="decimal" value={form.bid_jpy} onChange={(e) => setForm({ ...form, bid_jpy: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Markup %</Label><Input type="number" inputMode="decimal" step="0.1" value={form.markup_pct} onChange={(e) => setForm({ ...form, markup_pct: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Expense (JPY)</Label><Input type="number" inputMode="decimal" value={form.expense_jpy} onChange={(e) => setForm({ ...form, expense_jpy: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Rate (JPY per USD)</Label><Input type="number" inputMode="decimal" step="0.01" value={form.exchange_rate} onChange={(e) => setForm({ ...form, exchange_rate: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Profit (USD)</Label><Input type="number" inputMode="decimal" value={form.profit_usd} onChange={(e) => setForm({ ...form, profit_usd: e.target.value })} /></div>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
