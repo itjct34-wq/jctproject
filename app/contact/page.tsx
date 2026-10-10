@@ -9,10 +9,11 @@ import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 import { Loader2,Send,CheckCircle2 } from 'lucide-react';
 const defaults=['Australia','Bangladesh','Ghana','Kenya','Malaysia','New Zealand','Pakistan','Singapore','South Africa','Sri Lanka','Tanzania','Thailand','United Arab Emirates','United Kingdom','Zambia'];
+function configList(value:unknown,keys:string[]=[]):string[]{if(Array.isArray(value))return value.filter((v):v is string=>typeof v==='string');if(value&&typeof value==='object'){const o=value as Record<string,unknown>;for(const k of keys)if(Array.isArray(o[k]))return (o[k] as unknown[]).filter((v):v is string=>typeof v==='string');}return [];}
 export default function ContactPage(){
  const [form,setForm]=useState({full_name:'',email:'',phone:'',company_name:'',destination_country:'',destination_port:'',vehicle_make:'',vehicle_model:'',year_from:'',year_to:'',budget_min:'',budget_max:'',currency:'USD',incoterm:'FOB',quantity:'1',message:''});
  const [destinations,setDestinations]=useState(defaults);const [busy,setBusy]=useState(false);const [code,setCode]=useState('');
- useEffect(()=>{fetch('/api/public/config').then(r=>r.ok?r.json():null).then(d=>{if(Array.isArray(d?.freight_destinations)&&d.freight_destinations.length)setDestinations(d.freight_destinations)}).catch(()=>{});},[]);
+ useEffect(()=>{fetch('/api/public/config').then(r=>r.ok?r.json():null).then(d=>{const next=configList(d?.freight_destinations,['countries','values','options']);if(next.length)setDestinations(next);}).catch(()=>{});},[]);
  const set=(key:string,value:string)=>setForm(p=>({...p,[key]:value}));
  const submit=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setCode('');
  const row={full_name:form.full_name.trim(),email:form.email.trim().toLowerCase(),phone:form.phone.trim()||null,company_name:form.company_name.trim()||null,destination_country:form.destination_country||null,destination_port:form.destination_port.trim()||null,vehicle_make:form.vehicle_make.trim()||null,vehicle_model:form.vehicle_model.trim()||null,year_from:form.year_from?Number(form.year_from):null,year_to:form.year_to?Number(form.year_to):null,budget_min:form.budget_min?Number(form.budget_min):null,budget_max:form.budget_max?Number(form.budget_max):null,currency:form.currency,incoterm:form.incoterm,quantity:Number(form.quantity)||1,message:form.message.trim(),website_url:''};
