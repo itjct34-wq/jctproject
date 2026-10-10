@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from '@/components/ui/select';
 import { Loader2,RefreshCw,Mail,Phone,MapPin,CarFront } from 'lucide-react';
 import { toast } from 'sonner';
-type Inquiry={id:string;inquiry_code:string;full_name:string;email:string;phone:string|null;company_name:string|null;destination_country:string|null;destination_port:string|null;vehicle_make:string|null;vehicle_model:string|null;year_from:number|null;year_to:number|null;budget_min:number|null;budget_max:number|null;currency:string;incoterm:string|null;quantity:number;message:string;status:string;assigned_to:string|null;created_at:string};
+type Inquiry={id:string;inquiry_number:number;full_name:string;email:string;phone:string|null;company_name:string|null;destination_country:string|null;destination_port:string|null;vehicle_make:string|null;vehicle_model:string|null;year_from:number|null;year_to:number|null;budget_min:number|null;budget_max:number|null;currency:string;incoterms:string|null;quantity:number;message:string;status:string;assigned_to:string|null;created_at:string};
 type Staff={id:string;full_name:string|null;email:string|null};
 const statuses=['new','in_progress','quoted','converted','closed','spam'];
 const styles:Record<string,string>={new:'bg-blue-500/10 text-blue-600',in_progress:'bg-amber-500/10 text-amber-600',quoted:'bg-emerald-500/10 text-emerald-600',converted:'bg-green-500/10 text-green-600',closed:'bg-muted text-muted-foreground',spam:'bg-red-500/10 text-red-600'};
