@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Search, Users, UserCog, Shield, Loader2, Pencil, Building2, Clock } from 'lucide-react';
 import { AssignOfficeShiftDialog } from '@/components/users/assign-office-shift';
 import { supabase } from '@/lib/supabase/client';
-import type { Profile, Role, Team, TeamMember, RoleName, Office, Shift } from '@/lib/types';
+import type { Profile, Role, Team, TeamMember, RoleName } from '@/lib/types';
 import { ROLE_COLORS } from '@/lib/types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -38,8 +38,6 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [offices, setOffices] = useState<Office[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignOfficeUser, setAssignOfficeUser] = useState<UserWithRoles | null>(null);
   const [editingProfile, setEditingProfile] = useState<UserWithRoles | null>(null);
   const [profileForm, setProfileForm] = useState({ full_name: '', phone: '', job_title: '', department: '' });
@@ -76,10 +74,8 @@ export default function UsersPage() {
       }
     });
 
-    const officeRows = (officesRes.data || []) as Pick<Office, 'id' | 'name'>[];
-    const shiftRows = (shiftsRes.data || []) as Pick<Shift, 'id' | 'name' | 'office_id'>[];
-    setOffices(officeRows as Office[]);
-    setShifts(shiftRows as Shift[]);
+    const officeRows = (officesRes.data || []) as { id: string; name: string }[];
+    const shiftRows = (shiftsRes.data || []) as { id: string; name: string; office_id: string | null }[];
 
     const enriched: UserWithRoles[] = (profilesRes.data as Profile[] || []).map((p) => ({
       ...p,
