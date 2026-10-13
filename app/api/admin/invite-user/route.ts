@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
-import { createServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,54 +9,22 @@ export const dynamic = 'force-dynamic';
 const bodySchema = z.object({
   email: z.string().trim().email().max(254),
   full_name: z.string().trim().max(200).optional().default(''),
+  phone: z.string().trim().max(50).optional().nullable(),
+  job_title: z.string().trim().max(120).optional().nullable(),
+  department: z.string().trim().max(120).optional().nullable(),
+  office_id: z.string().uuid().optional().nullable(),
+  shift_id: z.string().uuid().optional().nullable(),
 });
 
 function generateTempPassword(): string {
-  // 16 random chars + fixed suffix guarantees upper, lower, digit and symbol.
   return `${randomBytes(12).toString('base64url')}aA1!`;
 }
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  if (!token) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const auth = await requireAdmin(request);
+  if (auth instanceof NextResponse) return auth;
+  const { admin } = auth;
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: 'Server is not configured' }, { status: 500 });
-  }
-
-  const admin = await createServerClient();
-
-  // 1. Identify the caller from their access token.
-  const { data: callerData, error: callerError } = await admin.auth.getUser(token);
-  if (callerError || !callerData?.user) {
-    return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
-  }
-
-  // 2. Only admins / super admins may create users.
-  const { data: roleRows, error: roleError } = await admin
-    .from('user_roles')
-    .select('is_active, roles(name)')
-    .eq('user_id', callerData.user.id)
-    .eq('is_active', true);
-
-  if (roleError) {
-    return NextResponse.json({ error: 'Could not verify permissions' }, { status: 500 });
-  }
-
-  const isAdmin = (roleRows || []).some((row) => {
-    const role = row.roles as unknown as { name: string } | { name: string }[] | null;
-    const name = Array.isArray(role) ? role[0]?.name : role?.name;
-    return name === 'admin' || name === 'super_admin';
-  });
-
-  if (!isAdmin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  // 3. Validate input.
   let parsed: z.infer<typeof bodySchema>;
   try {
     parsed = bodySchema.parse(await request.json());
@@ -64,7 +32,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
   }
 
-  // 4. Create the user with a one-time random password (never a shared default).
+  if (parsed.shift_id && parsed.office_id) {
+    const { data: shift } = await admin
+      .from('shifts')
+      .select('id, office_id')
+      .eq('id', parsed.shift_id)
+      .maybeSingle();
+    if (!shift || (shift.office_id && shift.office_id !== parsed.office_id)) {
+      return NextResponse.json({ error: 'Shift does not belong to the selected office' }, { status: 400 });
+    }
+  }
+
   const tempPassword = generateTempPassword();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: parsed.email,
@@ -78,6 +56,38 @@ export async function POST(request: NextRequest) {
       { error: createError?.message || 'Failed to create user' },
       { status: 400 }
     );
+  }
+
+  const profileRow = {
+    id: created.user.id,
+    email: parsed.email,
+    full_name: parsed.full_name || null,
+    phone: parsed.phone || null,
+    job_title: parsed.job_title || null,
+    department: parsed.department || null,
+    office_id: parsed.office_id || null,
+    shift_id: parsed.shift_id || null,
+    is_active: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  let profileError: { message: string } | null = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { error } = await admin.from('profiles').upsert(profileRow, { onConflict: 'id' });
+    if (!error) {
+      profileError = null;
+      break;
+    }
+    profileError = error;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+
+  if (profileError) {
+    return NextResponse.json({
+      user_id: created.user.id,
+      temp_password: tempPassword,
+      warning: 'User created but office/shift could not be saved: ' + profileError.message,
+    });
   }
 
   return NextResponse.json({
