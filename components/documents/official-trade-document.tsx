@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { Customer, Vehicle } from '@/lib/types';
 import { JCT_OFFICIAL, extractChassis, formatMoney } from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
@@ -40,18 +39,18 @@ type Props = {
 };
 
 function customerAddress(customer?: Customer | null) {
-  if (!customer) return '';
+  if (!customer) return '—';
   return [customer.address_line1, customer.address_line2, [customer.city, customer.country].filter(Boolean).join(', ')]
     .filter(Boolean)
-    .join(', ');
+    .join(', ') || '—';
 }
 
-function MetaRow({ label, value, last }: { label: string; value: ReactNode; last?: boolean }) {
+function Field({ label, value }: { label: string; value?: string | null }) {
   return (
-    <tr>
-      <td className={`w-[28%] bg-[#f3f3f3] px-2 py-1.5 font-medium ${last ? '' : 'border-b border-gray-300'}`}>{label}</td>
-      <td className={`px-2 py-1.5 ${last ? '' : 'border-b border-gray-300'}`}>{value || '—'}</td>
-    </tr>
+    <div>
+      <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <p className="mt-0.5 text-[10.5px] font-medium text-slate-800 break-words">{value || '—'}</p>
+    </div>
   );
 }
 
@@ -81,204 +80,172 @@ export function OfficialTradeDocument({
 }: Props) {
   const units = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || (lines.length ? 1 : 0);
   const addr = customerAddress(customer);
+  const consignee = customer?.company_name || customer?.full_name;
+  const mode = shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel');
 
   return (
-    <div className="invoice-print-root bg-white text-black max-w-[210mm] mx-auto text-[11px] leading-snug">
-      <div className="p-5 print:p-0">
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <img src={JCT_OFFICIAL.logo} alt="JCT" className="h-[70px] w-auto object-contain" />
+    <div className="invoice-print-root bg-white text-slate-900 max-w-[210mm] mx-auto">
+      <div className="invoice-sheet flex flex-col bg-white p-[8mm] print:p-0">
+        <header className="flex items-center justify-between gap-5 border-b-2 border-[#c4161c] pb-3">
+          <div className="min-w-0">
+            <img
+              src={JCT_OFFICIAL.logo}
+              alt="JCT Cars Import"
+              className="h-[108px] w-auto max-w-[340px] object-contain object-left shrink-0"
+            />
+            <p className="mt-1 text-[10px] font-semibold tracking-tight text-slate-800">{JCT_OFFICIAL.legalName}</p>
+            <p className="text-[9px] text-slate-500 leading-snug">{JCT_OFFICIAL.address}</p>
           </div>
-          <div className="min-w-[240px] rounded-full bg-gradient-to-b from-[#d31c28] to-[#8a1218] px-8 py-3 text-center shadow-sm">
-            <h1 className="text-2xl font-black tracking-[0.18em] text-white">{title}</h1>
+          <div className="text-right shrink-0 self-start pt-1">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#c4161c]">{kind === 'invoice' ? 'Tax invoice' : 'Quotation'}</p>
+            <h1 className="text-[26px] font-black leading-none tracking-tight text-slate-900">{title}</h1>
+            <p className="mt-1 font-mono text-[12px] font-bold text-slate-800">{documentNo}</p>
           </div>
+        </header>
+
+        <div className="mt-2.5 grid grid-cols-4 gap-1.5 rounded-md bg-slate-50 px-2.5 py-2">
+          <Field label={kind === 'invoice' ? 'Issue date' : 'Date'} value={issueDate} />
+          <Field label={kind === 'invoice' ? 'Due date' : 'Valid until'} value={dueDate || validDate} />
+          <Field label="Sales agent" value={salesAgent} />
+          <Field label="Currency" value={currency} />
         </div>
 
-        <table className="w-full border-collapse border border-gray-400">
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          <section className="rounded-md border border-slate-200 p-2.5">
+            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.18em] text-[#c4161c]">Bill to</p>
+            <p className="text-[12px] font-bold leading-tight">{customer?.full_name || '—'}</p>
+            <p className="text-[9px] text-slate-500">{customer?.customer_code}</p>
+            <p className="mt-1 text-[10px] leading-snug text-slate-700">{addr}</p>
+            <p className="text-[10px] text-slate-700">{[customer?.phone, customer?.email].filter(Boolean).join(' · ') || '—'}</p>
+            {consignee && consignee !== customer?.full_name && (
+              <p className="mt-1 text-[10px] text-slate-600">Consignee: {consignee}</p>
+            )}
+          </section>
+          <section className="rounded-md border border-slate-200 p-2.5">
+            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.18em] text-[#c4161c]">Bill from</p>
+            <p className="text-[12px] font-bold leading-tight">{JCT_OFFICIAL.shortName}</p>
+            <p className="mt-1 text-[10px] leading-snug text-slate-700">{JCT_OFFICIAL.address}</p>
+            <p className="text-[10px] text-slate-700">Fax {JCT_OFFICIAL.fax} · Tel {JCT_OFFICIAL.phone}</p>
+            <p className="text-[10px] text-slate-700">{JCT_OFFICIAL.email}</p>
+            <p className="text-[10px] text-slate-700">{JCT_OFFICIAL.website}</p>
+          </section>
+        </div>
+
+        <div className="mt-2.5 grid grid-cols-5 gap-px overflow-hidden rounded-md border border-slate-200 bg-slate-200">
+          {[
+            ['Type', shipmentType || 'RORO'],
+            ['Mode', mode],
+            ['Term', shipmentTerm || 'FOB'],
+            ['POL', portOfLoading || 'Nagoya, Japan'],
+            ['POD', portOfDischarge || '—'],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-white px-2 py-1.5">
+              <p className="text-[7.5px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+              <p className="text-[10px] font-semibold leading-tight text-slate-800">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-2 mb-1 text-[9px] font-semibold text-slate-500">Vehicles · {units} unit{units === 1 ? '' : 's'}</p>
+        <table className="w-full border-collapse text-[10px]">
           <thead>
-            <tr className="bg-[#c4161c] text-white">
-              <th className="w-1/2 border border-gray-400 px-3 py-1.5 text-left text-sm font-bold">BILL TO</th>
-              <th className="w-1/2 border border-gray-400 px-3 py-1.5 text-left text-sm font-bold">BILL FROM</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="align-top">
-              <td className="border border-gray-400 p-0">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <MetaRow label="Customer ID" value={customer?.customer_code} />
-                    <MetaRow label="Customer Full Name" value={customer?.full_name} />
-                    <MetaRow label="Customer Full Address" value={addr} />
-                    <MetaRow label="Customer Phone" value={customer?.phone} />
-                    <MetaRow label="Customer Email" value={customer?.email} />
-                    <MetaRow label="Consignee Full Name" value={customer?.company_name || customer?.full_name} />
-                    <MetaRow label="Consignee Full Address" value={addr} />
-                    <MetaRow label="Consignee Phone" value={customer?.phone} />
-                    <MetaRow label="Consignee Email" value={customer?.email} last />
-                  </tbody>
-                </table>
-              </td>
-              <td className="border border-gray-400 p-0">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <MetaRow label="Company Name" value={JCT_OFFICIAL.shortName} />
-                    <MetaRow label="Address" value={JCT_OFFICIAL.address} />
-                    <MetaRow label="Fax" value={JCT_OFFICIAL.fax} />
-                    <MetaRow label="Phone" value={JCT_OFFICIAL.phone} />
-                    <MetaRow label="Email" value={JCT_OFFICIAL.email} />
-                    <MetaRow label="Website" value={JCT_OFFICIAL.website} />
-                    <MetaRow label={kind === 'invoice' ? 'Invoice Number' : 'Quotation Number'} value={documentNo} />
-                    <MetaRow label={kind === 'invoice' ? 'Invoice Issue Date' : 'Issue Date'} value={issueDate} />
-                    <MetaRow
-                      label={kind === 'invoice' ? 'Invoice Valid Date' : 'Valid Until'}
-                      value={validDate || '—'}
-                    />
-                    {kind === 'invoice' ? (
-                      <MetaRow label="Payment Due Date" value={dueDate || '—'} />
-                    ) : (
-                      <MetaRow label="Price Terms" value={shipmentTerm || '—'} />
-                    )}
-                    <MetaRow label="Sales Agent" value={salesAgent} last />
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table className="mt-3 w-full border-collapse border border-gray-400">
-          <tbody>
-            <tr>
-              <td className="w-[18%] border border-gray-400 bg-[#c4161c] px-2 py-2 text-center font-bold text-white">
-                SHIPPING INFO
-              </td>
-              <td className="border border-gray-400 px-2 py-2">
-                <p className="text-[9px] uppercase text-gray-500">Type</p>
-                <p className="font-semibold">{shipmentType || 'RORO'}</p>
-              </td>
-              <td className="border border-gray-400 px-2 py-2">
-                <p className="text-[9px] uppercase text-gray-500">Mode (RORO / Container)</p>
-                <p className="font-semibold">{shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel')}</p>
-              </td>
-              <td className="border border-gray-400 bg-gray-100 px-2 py-2">
-                <p className="text-[9px] uppercase text-gray-500">Shipment Term</p>
-                <p className="font-semibold">{shipmentTerm || 'FOB'}</p>
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-gray-400 bg-gray-100 px-2 py-2 font-semibold">Ports</td>
-              <td className="border border-gray-400 px-2 py-2" colSpan={2}>
-                <span className="text-gray-500">POL</span> {portOfLoading || 'Nagoya, Japan'}
-              </td>
-              <td className="border border-gray-400 px-2 py-2">
-                <span className="text-gray-500">POD</span> {portOfDischarge || '—'}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p className="mt-3 font-semibold">Total Unit(s): {units}</p>
-
-        <table className="w-full border-collapse border border-gray-400">
-          <thead>
-            <tr className="bg-[#c4161c] text-white">
-              <th className="border border-gray-300 px-2 py-1.5 text-left">CHASSIS NO</th>
-              <th className="border border-gray-300 px-2 py-1.5 text-left">STOCK INFO</th>
-              <th className="border border-gray-300 px-2 py-1.5 text-right">Freight Charges</th>
-              <th className="border border-gray-300 px-2 py-1.5 text-center">DEPOSIT RATIO</th>
-              <th className="border border-gray-300 px-2 py-1.5 text-right">Vehicle Cost</th>
+            <tr className="bg-slate-900 text-white">
+              <th className="px-2 py-1.5 text-left font-semibold">Chassis</th>
+              <th className="px-2 py-1.5 text-left font-semibold">Stock</th>
+              <th className="px-2 py-1.5 text-right font-semibold">Freight</th>
+              <th className="px-2 py-1.5 text-center font-semibold">Deposit</th>
+              <th className="px-2 py-1.5 text-right font-semibold">Vehicle cost</th>
             </tr>
           </thead>
           <tbody>
             {(lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }]).map((line, idx) => {
               const vehicle = vehicles.find((v) => v.id === line.vehicle_id);
-              const chassis = vehicle?.chassis_number || extractChassis(line.description) || '';
-              const stock =
-                vehicle
-                  ? [vehicle.stock_number, vehicle.make, vehicle.model].filter(Boolean).join(' · ')
-                  : line.description;
+              const chassis = vehicle?.chassis_number || extractChassis(line.description) || '—';
+              const stock = vehicle
+                ? [vehicle.stock_number, vehicle.make, vehicle.model].filter(Boolean).join(' · ')
+                : line.description;
               const deposit =
                 line.discount && line.unit_price
                   ? `${Math.round((Number(line.discount) / Number(line.unit_price)) * 100)}%`
-                  : idx === 0 && kind === 'quotation'
-                    ? 'As agreed'
-                    : '—';
+                  : '—';
               return (
-                <tr key={idx}>
-                  <td className="border border-gray-400 px-2 py-2 font-mono">{chassis || '—'}</td>
-                  <td className="border border-gray-400 px-2 py-2 whitespace-pre-line">{stock}</td>
-                  <td className="border border-gray-400 px-2 py-2 text-right">
-                    {idx === 0 && freightTotal ? formatMoney(freightTotal, currency) : ''}
+                <tr key={idx} className={idx % 2 ? 'bg-slate-50' : 'bg-white'}>
+                  <td className="border-b border-slate-200 px-2 py-1 font-mono text-[9px]">{chassis}</td>
+                  <td className="border-b border-slate-200 px-2 py-1">{stock}</td>
+                  <td className="border-b border-slate-200 px-2 py-1 text-right">
+                    {idx === 0 && freightTotal ? formatMoney(freightTotal, currency) : '—'}
                   </td>
-                  <td className="border border-gray-400 px-2 py-2 text-center">{deposit}</td>
-                  <td className="border border-gray-400 px-2 py-2 text-right">{formatMoney(line.unit_price, currency)}</td>
+                  <td className="border-b border-slate-200 px-2 py-1 text-center">{deposit}</td>
+                  <td className="border-b border-slate-200 px-2 py-1 text-right font-medium">
+                    {formatMoney(line.unit_price, currency)}
+                  </td>
                 </tr>
               );
             })}
-            <tr>
-              <td colSpan={4} className="border border-gray-400 px-2 py-2 text-right font-bold">
+            <tr className="bg-[#c4161c] text-white">
+              <td colSpan={4} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
                 TOTAL
               </td>
-              <td className="border border-gray-400 px-2 py-2 text-right font-bold">{formatMoney(grandTotal, currency)}</td>
+              <td className="px-2 py-1.5 text-right text-[12px] font-black">{formatMoney(grandTotal, currency)}</td>
             </tr>
           </tbody>
         </table>
 
-        <table className="mt-3 w-full border-collapse border border-gray-400">
-          <thead>
-            <tr className="bg-[#c4161c] text-white">
-              <th className="w-1/2 border border-gray-400 px-3 py-1.5 text-left font-bold">BANKING DETAILS</th>
-              <th className="w-1/2 border border-gray-400 px-3 py-1.5 text-left font-bold">Beneficiary Information</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="align-top">
-              <td className="border border-gray-400 px-3 py-3">
-                <p className="mb-1 font-semibold">Beneficiary Bank (Account with Institution) Information</p>
-                <p>Name: {JCT_OFFICIAL.bank.name}</p>
-                <p>Branch Name: {JCT_OFFICIAL.bank.branch}</p>
-                <p>Bank Address: {JCT_OFFICIAL.bank.address}</p>
-                <p>SWIFT Code / BIC: {JCT_OFFICIAL.bank.swift}</p>
-              </td>
-              <td className="border border-gray-400 px-3 py-3">
-                <p>Account Number: {JCT_OFFICIAL.bank.account}</p>
-                <p>Beneficiary Name: {JCT_OFFICIAL.bank.beneficiary}</p>
-                <p>Beneficiary Address: {JCT_OFFICIAL.bank.beneficiaryAddress}</p>
-                <p className="mt-2 font-semibold">Intermediary Bank</p>
-                <p>SWIFT Code / BIC: {JCT_OFFICIAL.bank.intermediarySwift}</p>
-                <p>Bank Name: {JCT_OFFICIAL.bank.intermediaryName}</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-md border border-slate-200 p-2">
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Beneficiary bank</p>
+            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.name}</p>
+            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.branch}</p>
+            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.swift}</p>
+          </div>
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Beneficiary</p>
+            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.beneficiary}</p>
+            <p className="text-[9px] leading-snug font-mono">A/C {JCT_OFFICIAL.bank.account}</p>
+            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.beneficiaryAddress}</p>
+          </div>
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Intermediary</p>
+            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.intermediaryName}</p>
+            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.intermediarySwift}</p>
+          </div>
+        </div>
 
-        {notes && <p className="mt-2 text-gray-700">Notes: {notes}</p>}
+        {notes && <p className="mt-1.5 text-[9px] text-slate-600 line-clamp-2">Notes: {notes}</p>}
 
-        <div className="mt-3 flex items-stretch gap-3">
-          <div className="flex-1 border border-gray-400">
-            <div className="px-3 py-4 text-center">
-              <p className="text-sm font-black">{JCT_OFFICIAL.legalName}</p>
-              <div className="mt-2 flex items-center justify-center gap-3">
-                <div>
-                  <p className="text-[10px]">{JCT_OFFICIAL.directorTitle}</p>
-                  <p className="text-lg font-black tracking-wide">{JCT_OFFICIAL.director}</p>
-                  <p className="mt-1 text-[9px] text-gray-600">{JCT_OFFICIAL.address}</p>
-                  <p className="text-[9px] text-gray-600">PHONE: +81 52-717-4476</p>
-                </div>
-                <JctHanko />
-              </div>
+        <footer className="mt-auto pt-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[17px] font-black leading-none tracking-tight text-slate-900">
+                {JCT_OFFICIAL.legalName}
+              </p>
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <span className="text-[11px] font-bold text-slate-900">{JCT_OFFICIAL.directorTitle}</span>
+                <span className="text-[22px] font-black leading-none tracking-tight text-slate-900">
+                  {JCT_OFFICIAL.director}
+                </span>
+              </p>
+              <p className="mt-1.5 text-[10px] leading-snug text-slate-800">
+                2-505-101,DAITOURO,NAKAGAWA-KU,
+                <br />
+                NAGOYA-SHI,AICHI-KEN, 454-0943 JAPAN
+              </p>
+              <p className="mt-0.5 text-[10px] font-medium text-slate-800">PHONE :+81 52-717-4476</p>
             </div>
-            <div className="border-t border-gray-400 py-2 text-center text-[10px] font-bold tracking-wide">
-              SIGNATURE OF AUTHORISED PERSON
+            <div className="flex shrink-0 items-start gap-3">
+              <JctHanko />
+              {showQr && verificationUrl ? (
+                <div className="flex flex-col items-center">
+                  <InvoiceQRCode value={verificationUrl} size={56} />
+                  <p className="mt-0.5 text-[7px] text-slate-400">Verify</p>
+                </div>
+              ) : null}
             </div>
           </div>
-          {showQr && verificationUrl && (
-            <div className="flex w-[120px] flex-col items-center justify-center border border-gray-400 p-2">
-              <InvoiceQRCode value={verificationUrl} size={88} />
-              <p className="mt-1 text-center text-[8px] text-gray-500">Scan to verify</p>
-            </div>
-          )}
-        </div>
+          <div className="mt-3 border-t-2 border-slate-900 pt-2 text-center">
+            <p className="text-[15px] font-bold tracking-[0.08em] text-slate-900">SIGNATURE OF AUTHORISED PERSON</p>
+          </div>
+        </footer>
       </div>
 
       {includeBankNotice && (

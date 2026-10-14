@@ -13,7 +13,7 @@ export const JCT_OFFICIAL = {
   directorTitle: 'Representative Director',
   corporateNumber: '8180001159348',
   license: 'Aichi Prefecture Public Safety Commission No. 541212314700',
-  logo: '/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png',
+  logo: '/images/jct-cars-import-logo.png',
   bank: {
     name: 'RAKUTEN BANK, LTD.',
     branch: 'HEAD OFFICE',
