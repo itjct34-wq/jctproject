@@ -11,7 +11,7 @@ type Props = {
   customer?: Customer | null;
   company?: { name?: string; address?: string; phone?: string; email?: string };
   verificationUrl?: string;
-  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color'>[];
+  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color' | 'model_year' | 'transmission'>[];
   salesAgent?: string | null;
 };
 
@@ -39,6 +39,9 @@ export function CommercialQuotationTemplate({
             make: item.make || bits.make,
             model: item.model || bits.model,
             colour: item.colour || bits.colour,
+            year: item.year || bits.year,
+            engine: item.engine || bits.engine,
+            transmission: item.transmission || bits.transmission,
           };
         })
       : [

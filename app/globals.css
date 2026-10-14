@@ -163,6 +163,36 @@
   color: #fff;
   border-color: #7a0e12;
 }
+.invoice-print-root footer {
+  overflow: visible;
+}
+.invoice-print-root .invoice-hanko-name {
+  position: relative;
+  display: inline-block;
+  padding: 5mm 7mm 4mm;
+  vertical-align: middle;
+}
+.invoice-print-root .invoice-hanko-director {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.invoice-print-root .invoice-hanko-stamp {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 20mm !important;
+  height: 20mm !important;
+  max-width: none;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: multiply;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+}
 
 @media print {
   @page { size: A4 portrait; margin: 8mm; }
@@ -222,6 +252,13 @@
   body.printing-document #print-layer table.inv-table th,
   body.printing-document #print-layer table.inv-table td {
     border: 1px solid #0b1f3a !important;
+  }
+  body.printing-document #print-layer .invoice-hanko-stamp {
+    width: 18mm !important;
+    height: 18mm !important;
+    mix-blend-mode: multiply !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 @media screen { #print-layer { display: none; } }

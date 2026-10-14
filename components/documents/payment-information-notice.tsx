@@ -21,7 +21,7 @@ export function PaymentInformationNotice({ customerName, reference, issueDate }:
           <p className="mt-1 max-w-[220px]">{JCT_OFFICIAL.addressLetter}</p>
         </div>
         <div className="text-right">
-          <img src={JCT_OFFICIAL.logo} alt="JCT Cars Import" className="ml-auto h-24 w-auto object-contain bg-white rounded p-1" />
+          <img src={JCT_OFFICIAL.logo} alt="Japan Circular Trading" className="ml-auto h-24 w-auto object-contain" />
         </div>
       </div>
 
