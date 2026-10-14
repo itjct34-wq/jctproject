@@ -35,10 +35,20 @@ export function InvoiceQRCode({
   );
 }
 
+/** Public site origin encoded into printed QR codes (anonymous /verify page). */
+export function publicAppOrigin(origin?: string): string {
+  const env =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    '';
+  const raw =
+    origin ||
+    env ||
+    (typeof window !== 'undefined' ? window.location.origin : '');
+  return raw.replace(/\/$/, '');
+}
+
 /** Build the public verification URL for an invoice token */
 export function buildVerifyUrl(token: string, origin?: string): string {
-  const base =
-    origin ||
-    (typeof window !== 'undefined' ? window.location.origin : '');
-  return `${base}/verify/${token}`;
+  return `${publicAppOrigin(origin)}/verify/${token}`;
 }

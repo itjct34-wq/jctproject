@@ -71,6 +71,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Finance',
     items: [
       { label: 'Invoices', href: '/invoices', icon: Receipt, module: 'invoices' },
+      { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices' },
       { label: 'Payments / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
       { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses' },
     ],

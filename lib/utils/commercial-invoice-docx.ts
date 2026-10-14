@@ -12,7 +12,7 @@ import {
   VerticalAlign,
   WidthType,
 } from 'docx';
-import { JCT_OFFICIAL, extractChassis, formatMoney } from '@/lib/jct-official';
+import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney } from '@/lib/jct-official';
 import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
 
 const RED = 'C4161C';
@@ -68,7 +68,7 @@ export async function exportCommercialInvoiceDocx(opts: {
       children: [
         cell(chassis),
         cell(stock),
-        cell('—', { align: AlignmentType.CENTER }),
+        cell(formatDepositRatio(item.discount, item.unit_price), { align: AlignmentType.CENTER }),
         cell(formatMoney(item.unit_price, invoice.currency), { align: AlignmentType.RIGHT }),
       ],
     });

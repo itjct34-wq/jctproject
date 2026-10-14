@@ -15,6 +15,7 @@ type Props = {
   salesAgent?: string | null;
   showQr?: boolean;
   includeBankNotice?: boolean;
+  variant?: 'commercial' | 'auction_deposit';
 };
 
 export function CommercialInvoiceTemplate({
@@ -25,6 +26,7 @@ export function CommercialInvoiceTemplate({
   salesAgent,
   showQr = true,
   includeBankNotice = false,
+  variant = 'commercial',
 }: Props) {
   const freight = Number(invoice.freight_total || 0);
   const insurance = Number(invoice.insurance_total || 0);
@@ -36,7 +38,7 @@ export function CommercialInvoiceTemplate({
   return (
     <OfficialTradeDocument
       kind="invoice"
-      title="INVOICE"
+      title={variant === 'auction_deposit' ? 'AUCTION DEPOSIT INVOICE' : 'INVOICE'}
       documentNo={invoice.invoice_code}
       issueDate={format(new Date(invoice.issue_date), 'yyyy-MM-dd')}
       validDate={invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : null}
@@ -64,6 +66,7 @@ export function CommercialInvoiceTemplate({
       verificationUrl={verifyUrl || undefined}
       showQr={showQr}
       includeBankNotice={includeBankNotice}
+      depositMode={variant === 'auction_deposit' ? 'amount' : 'ratio'}
     />
   );
 }

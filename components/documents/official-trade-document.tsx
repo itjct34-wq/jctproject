@@ -1,5 +1,5 @@
 import type { Customer, Vehicle } from '@/lib/types';
-import { JCT_OFFICIAL, extractChassis, formatMoney } from '@/lib/jct-official';
+import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney } from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
 import { PaymentInformationNotice } from './payment-information-notice';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
@@ -39,6 +39,7 @@ type Props = {
   verificationUrl?: string;
   showQr?: boolean;
   includeBankNotice?: boolean;
+  depositMode?: 'ratio' | 'amount';
 };
 
 function customerAddress(customer?: Customer | null) {
@@ -88,6 +89,7 @@ export function OfficialTradeDocument({
   verificationUrl,
   showQr = true,
   includeBankNotice = false,
+  depositMode = 'ratio',
 }: Props) {
   const units = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || (lines.length ? 1 : 0);
   const addr = customerAddress(customer);
@@ -104,7 +106,6 @@ export function OfficialTradeDocument({
             className="h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0"
           />
           <div className="text-right shrink-0">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#c4161c]">{kind === 'invoice' ? 'Tax invoice' : 'Quotation'}</p>
             <h1 className="text-[26px] font-black leading-none tracking-tight text-slate-900">{title}</h1>
             <p className="mt-1 font-mono text-[12px] font-bold text-slate-800">{documentNo}</p>
           </div>
@@ -173,9 +174,11 @@ export function OfficialTradeDocument({
                   .filter(Boolean)
                   .join(' · ') || line.description;
               const deposit =
-                line.discount && line.unit_price
-                  ? `${Math.round((Number(line.discount) / Number(line.unit_price)) * 100)}%`
-                  : '—';
+                depositMode === 'amount'
+                  ? line.discount
+                    ? formatMoney(Number(line.discount), currency)
+                    : '—'
+                  : formatDepositRatio(line.discount, line.unit_price);
               return (
                 <tr key={idx} className={idx % 2 ? 'bg-slate-50' : 'bg-white'}>
                   <td className="border-b border-slate-200 px-2 py-1 font-mono text-[9px]">{chassis}</td>

@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import type { Invoice, InvoiceItem, Customer } from '@/lib/types';
+import { formatDepositRatio } from '@/lib/jct-official';
 
 const RED = 'E30613';
 const BLACK = '0D0D0D';
@@ -139,7 +140,7 @@ export async function exportCommercialInvoiceExcel(opts: {
   ws.getCell('B20').font = { size: 9, bold: true, color: { argb: 'FFFFFF' } };
   ws.getCell('B20').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLACK } };
 
-  const headers = ['#', 'Description', 'Qty', 'Unit Price', 'Discount', 'Amount'];
+  const headers = ['#', 'Description', 'Qty', 'Unit Price', 'Deposit', 'Amount'];
   const headerCols = [2, 3, 5, 7, 8, 9];
   headers.forEach((h, i) => {
     const cell = ws.getCell(21, headerCols[i]);
@@ -158,8 +159,8 @@ export async function exportCommercialInvoiceExcel(opts: {
     ws.getCell(r, 5).value = item.quantity;
     ws.getCell(r, 7).value = Number(item.unit_price);
     ws.getCell(r, 7).numFmt = '#,##0.00';
-    ws.getCell(r, 8).value = Number(item.discount || 0);
-    ws.getCell(r, 8).numFmt = '#,##0.00';
+    ws.getCell(r, 8).value = formatDepositRatio(item.discount, item.unit_price);
+    ws.getCell(r, 8).alignment = { horizontal: 'right' };
     ws.getCell(r, 9).value = Number(item.line_total);
     ws.getCell(r, 9).numFmt = '#,##0.00';
     [2, 3, 5, 7, 8, 9].forEach((c) => {
@@ -188,7 +189,6 @@ export async function exportCommercialInvoiceExcel(opts: {
 
   const totals: [string, number][] = [
     ['Subtotal', Number(invoice.subtotal)],
-    ['Tax', Number(invoice.tax)],
     ['Insurance', insurance],
     ['Other charges', other],
     ['Discount', -discount],

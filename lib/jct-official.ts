@@ -38,6 +38,28 @@ export function extractChassis(text: string | null | undefined) {
   return match?.[1] || '';
 }
 
+export const DEPOSIT_RATIOS = [30, 70, 100] as const;
+
+export function formatDepositRatio(discount?: number | null, unitPrice?: number | null) {
+  const n = Number(discount || 0);
+  if (!n) return '—';
+  if (n === 30 || n === 70 || n === 100) return `${n}%`;
+  if (n > 0 && n <= 100) return `${Math.round(n)}%`;
+  const price = Number(unitPrice || 0);
+  if (price > 0) return `${Math.max(0, Math.min(100, Math.round((n / price) * 100)))}%`;
+  return '—';
+}
+
+export function normalizeDepositRatio(discount?: number | null, unitPrice?: number | null): (typeof DEPOSIT_RATIOS)[number] {
+  const n = Number(discount || 0);
+  if (n === 30 || n === 70 || n === 100) return n;
+  let pct = n;
+  if (n > 100 && Number(unitPrice) > 0) pct = (n / Number(unitPrice)) * 100;
+  if (pct <= 50) return 30;
+  if (pct <= 85) return 70;
+  return 100;
+}
+
 export function describeInvoiceVehicle(parts: {
   stock_number?: string | null;
   make?: string | null;
