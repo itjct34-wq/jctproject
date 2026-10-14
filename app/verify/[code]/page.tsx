@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
 import type { InvoiceVerifyResult } from '@/lib/types';
 import { CheckCircle2, XCircle, Loader2, ShieldCheck } from 'lucide-react';
 
@@ -21,12 +20,11 @@ export default function VerifyInvoicePage() {
 
     (async () => {
       try {
-        const { data, error } = await supabase.rpc('verify_invoice', { p_token: code });
-        if (error) {
-          setResult({ valid: false, message: error.message });
-        } else {
-          setResult(data as InvoiceVerifyResult);
-        }
+        const res = await fetch(`/api/public/verify-invoice?token=${encodeURIComponent(code)}`, {
+          cache: 'no-store',
+        });
+        const data = (await res.json()) as InvoiceVerifyResult;
+        setResult(data);
       } catch (e) {
         setResult({ valid: false, message: 'Verification service unavailable' });
       } finally {
@@ -43,7 +41,7 @@ export default function VerifyInvoicePage() {
             <ShieldCheck className="w-7 h-7 text-red-500" />
           </div>
           <h1 className="text-xl font-bold text-white">Japan Circular Trading</h1>
-          <p className="text-sm text-zinc-400 mt-1">Invoice Authenticity Verification</p>
+          <p className="text-sm text-zinc-400 mt-1">Invoice authenticity check · no login required</p>
         </div>
 
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
