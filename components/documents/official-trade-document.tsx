@@ -30,7 +30,6 @@ type Props = {
   portOfDischarge?: string | null;
   lines: TradeLine[];
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'>[];
-  freightTotal?: number;
   grandTotal: number;
   notes?: string | null;
   verificationUrl?: string;
@@ -54,6 +53,15 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+function BankLine({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="text-[8px] leading-[1.35] text-slate-700">
+      <span className="font-semibold text-slate-500">{label}: </span>
+      <span className="font-medium text-slate-800">{value}</span>
+    </p>
+  );
+}
+
 export function OfficialTradeDocument({
   kind,
   title,
@@ -71,7 +79,6 @@ export function OfficialTradeDocument({
   portOfDischarge,
   lines,
   vehicles = [],
-  freightTotal = 0,
   grandTotal,
   notes,
   verificationUrl,
@@ -86,17 +93,13 @@ export function OfficialTradeDocument({
   return (
     <div className="invoice-print-root bg-white text-slate-900 max-w-[210mm] mx-auto">
       <div className="invoice-sheet flex flex-col bg-white p-[8mm] print:p-0">
-        <header className="flex items-center justify-between gap-5 border-b-2 border-[#c4161c] pb-3">
-          <div className="min-w-0">
-            <img
-              src={JCT_OFFICIAL.logo}
-              alt="JCT Cars Import"
-              className="h-[108px] w-auto max-w-[340px] object-contain object-left shrink-0"
-            />
-            <p className="mt-1 text-[10px] font-semibold tracking-tight text-slate-800">{JCT_OFFICIAL.legalName}</p>
-            <p className="text-[9px] text-slate-500 leading-snug">{JCT_OFFICIAL.address}</p>
-          </div>
-          <div className="text-right shrink-0 self-start pt-1">
+        <header className="flex items-center justify-between gap-4 border-b-2 border-[#c4161c] pb-3">
+          <img
+            src={JCT_OFFICIAL.logo}
+            alt="JCT Cars Import"
+            className="h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0"
+          />
+          <div className="text-right shrink-0">
             <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#c4161c]">{kind === 'invoice' ? 'Tax invoice' : 'Quotation'}</p>
             <h1 className="text-[26px] font-black leading-none tracking-tight text-slate-900">{title}</h1>
             <p className="mt-1 font-mono text-[12px] font-bold text-slate-800">{documentNo}</p>
@@ -152,7 +155,6 @@ export function OfficialTradeDocument({
             <tr className="bg-slate-900 text-white">
               <th className="px-2 py-1.5 text-left font-semibold">Chassis</th>
               <th className="px-2 py-1.5 text-left font-semibold">Stock</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Freight</th>
               <th className="px-2 py-1.5 text-center font-semibold">Deposit</th>
               <th className="px-2 py-1.5 text-right font-semibold">Vehicle cost</th>
             </tr>
@@ -172,9 +174,6 @@ export function OfficialTradeDocument({
                 <tr key={idx} className={idx % 2 ? 'bg-slate-50' : 'bg-white'}>
                   <td className="border-b border-slate-200 px-2 py-1 font-mono text-[9px]">{chassis}</td>
                   <td className="border-b border-slate-200 px-2 py-1">{stock}</td>
-                  <td className="border-b border-slate-200 px-2 py-1 text-right">
-                    {idx === 0 && freightTotal ? formatMoney(freightTotal, currency) : '—'}
-                  </td>
                   <td className="border-b border-slate-200 px-2 py-1 text-center">{deposit}</td>
                   <td className="border-b border-slate-200 px-2 py-1 text-right font-medium">
                     {formatMoney(line.unit_price, currency)}
@@ -183,7 +182,7 @@ export function OfficialTradeDocument({
               );
             })}
             <tr className="bg-[#c4161c] text-white">
-              <td colSpan={4} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
+              <td colSpan={3} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
                 TOTAL
               </td>
               <td className="px-2 py-1.5 text-right text-[12px] font-black">{formatMoney(grandTotal, currency)}</td>
@@ -191,59 +190,64 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-md border border-slate-200 p-2">
-          <div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Beneficiary bank</p>
-            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.name}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.branch}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.swift}</p>
+        <section className="mt-2.5 rounded-md border border-slate-200 p-2">
+          <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#c4161c]">Banking details</p>
+          <div className="grid grid-cols-3 gap-2.5">
+            <div>
+              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Beneficiary Bank (Account with Institution)</p>
+              <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.name} />
+              <BankLine label="Branch Name" value={JCT_OFFICIAL.bank.branch} />
+              <BankLine label="Bank Address" value={JCT_OFFICIAL.bank.address} />
+              <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.swift} />
+            </div>
+            <div>
+              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Beneficiary Information</p>
+              <BankLine label="Account Number" value={JCT_OFFICIAL.bank.account} />
+              <BankLine label="Beneficiary Name" value={JCT_OFFICIAL.bank.beneficiary} />
+              <BankLine label="Beneficiary Address" value={JCT_OFFICIAL.bank.beneficiaryAddress} />
+            </div>
+            <div>
+              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Intermediary Bank</p>
+              <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.intermediaryName} />
+              <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.intermediarySwift} />
+              <BankLine label="Intermediary Bank address" value={JCT_OFFICIAL.bank.intermediaryAddress} />
+            </div>
           </div>
-          <div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Beneficiary</p>
-            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.beneficiary}</p>
-            <p className="text-[9px] leading-snug font-mono">A/C {JCT_OFFICIAL.bank.account}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.beneficiaryAddress}</p>
-          </div>
-          <div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Intermediary</p>
-            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.intermediaryName}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.intermediarySwift}</p>
-          </div>
-        </div>
+        </section>
 
         {notes && <p className="mt-1.5 text-[9px] text-slate-600 line-clamp-2">Notes: {notes}</p>}
 
         <footer className="mt-auto pt-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[17px] font-black leading-none tracking-tight text-slate-900">
+          <div className="grid grid-cols-[72px_1fr_72px] items-center gap-2">
+            <div className="flex justify-start">
+              <JctHanko className="!h-[64px] !w-[64px]" />
+            </div>
+            <div className="px-2 text-center">
+              <p className="text-[11px] font-bold leading-tight tracking-tight text-slate-900">
                 {JCT_OFFICIAL.legalName}
               </p>
-              <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                <span className="text-[11px] font-bold text-slate-900">{JCT_OFFICIAL.directorTitle}</span>
-                <span className="text-[22px] font-black leading-none tracking-tight text-slate-900">
-                  {JCT_OFFICIAL.director}
-                </span>
+              <p className="mt-0.5 text-[9px] text-slate-700">
+                <span className="font-semibold">{JCT_OFFICIAL.directorTitle}</span>
+                <span className="ml-1.5 text-[12px] font-black tracking-tight text-slate-900">{JCT_OFFICIAL.director}</span>
               </p>
-              <p className="mt-1.5 text-[10px] leading-snug text-slate-800">
-                2-505-101,DAITOURO,NAKAGAWA-KU,
-                <br />
-                NAGOYA-SHI,AICHI-KEN, 454-0943 JAPAN
+              <p className="mt-0.5 text-[8px] leading-snug text-slate-600">
+                2-505-101, DAITOURO, NAKAGAWA-KU, NAGOYA-SHI, AICHI-KEN 454-0943 JAPAN
               </p>
-              <p className="mt-0.5 text-[10px] font-medium text-slate-800">PHONE :+81 52-717-4476</p>
+              <p className="text-[8px] text-slate-600">PHONE :+81 52-717-4476</p>
             </div>
-            <div className="flex shrink-0 items-start gap-3">
-              <JctHanko />
+            <div className="flex justify-end">
               {showQr && verificationUrl ? (
                 <div className="flex flex-col items-center">
-                  <InvoiceQRCode value={verificationUrl} size={56} />
-                  <p className="mt-0.5 text-[7px] text-slate-400">Verify</p>
+                  <InvoiceQRCode value={verificationUrl} size={52} />
+                  <p className="mt-0.5 text-[6px] text-slate-400">Verify</p>
                 </div>
-              ) : null}
+              ) : (
+                <span />
+              )}
             </div>
           </div>
-          <div className="mt-3 border-t-2 border-slate-900 pt-2 text-center">
-            <p className="text-[15px] font-bold tracking-[0.08em] text-slate-900">SIGNATURE OF AUTHORISED PERSON</p>
+          <div className="mt-2 border-t border-slate-300 pt-1.5 text-center">
+            <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-700">SIGNATURE OF AUTHORISED PERSON</p>
           </div>
         </footer>
       </div>

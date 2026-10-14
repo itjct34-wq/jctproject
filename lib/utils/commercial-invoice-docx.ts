@@ -68,7 +68,6 @@ export async function exportCommercialInvoiceDocx(opts: {
       children: [
         cell(chassis),
         cell(stock),
-        cell(idx === 0 && freight ? formatMoney(freight, invoice.currency) : '', { align: AlignmentType.RIGHT }),
         cell('—', { align: AlignmentType.CENTER }),
         cell(formatMoney(item.unit_price, invoice.currency), { align: AlignmentType.RIGHT }),
       ],
@@ -167,7 +166,6 @@ export async function exportCommercialInvoiceDocx(opts: {
                 children: [
                   cell('CHASSIS NO', { bold: true, fill: RED, color: 'FFFFFF' }),
                   cell('STOCK INFO', { bold: true, fill: RED, color: 'FFFFFF' }),
-                  cell('Freight', { bold: true, fill: RED, color: 'FFFFFF' }),
                   cell('DEPOSIT RATIO', { bold: true, fill: RED, color: 'FFFFFF' }),
                   cell('Vehicle Cost', { bold: true, fill: RED, color: 'FFFFFF' }),
                 ],
@@ -176,7 +174,6 @@ export async function exportCommercialInvoiceDocx(opts: {
               new TableRow({
                 children: [
                   cell('TOTAL', { bold: true }),
-                  cell(''),
                   cell(''),
                   cell(''),
                   cell(formatMoney(grand, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
@@ -191,7 +188,23 @@ export async function exportCommercialInvoiceDocx(opts: {
           new Paragraph({
             children: [
               new TextRun({
-                text: `${JCT_OFFICIAL.bank.name} · ${JCT_OFFICIAL.bank.branch} · SWIFT ${JCT_OFFICIAL.bank.swift} · A/C ${JCT_OFFICIAL.bank.account} · ${JCT_OFFICIAL.bank.beneficiary}`,
+                text: `Beneficiary Bank (Account with Institution) Bank Name: ${JCT_OFFICIAL.bank.name} Branch Name: ${JCT_OFFICIAL.bank.branch} Bank Address: ${JCT_OFFICIAL.bank.address} SWIFT Code / BIC: ${JCT_OFFICIAL.bank.swift}`,
+                size: 16,
+              }),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Beneficiary Information Account Number: ${JCT_OFFICIAL.bank.account} Beneficiary Name: ${JCT_OFFICIAL.bank.beneficiary} Beneficiary Address: ${JCT_OFFICIAL.bank.beneficiaryAddress}`,
+                size: 16,
+              }),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Intermediary Bank Bank Name: ${JCT_OFFICIAL.bank.intermediaryName} SWIFT Code / BIC: ${JCT_OFFICIAL.bank.intermediarySwift} Intermediary Bank address: ${JCT_OFFICIAL.bank.intermediaryAddress}`,
                 size: 16,
               }),
             ],

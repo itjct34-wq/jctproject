@@ -337,7 +337,6 @@ export default function InvoicesPage() {
             <div className="space-y-1"><Label>Port of Discharge</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
             <div className="space-y-1"><Label>Vessel</Label><Input value={form.vessel_name} onChange={(e) => setForm({ ...form, vessel_name: e.target.value })} /></div>
             <div className="space-y-1"><Label>BL Number</Label><Input value={form.bl_number} onChange={(e) => setForm({ ...form, bl_number: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Freight</Label><Input type="number" value={form.freight_total} onChange={(e) => setForm({ ...form, freight_total: e.target.value })} /></div>
             <div className="space-y-1"><Label>Insurance</Label><Input type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
             <div className="space-y-1"><Label>Other Charges</Label><Input type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
             <div className="space-y-1"><Label>Discount</Label><Input type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>

@@ -57,7 +57,6 @@ export function CommercialInvoiceTemplate({
         vehicle_id: item.vehicle_id,
       }))}
       vehicles={vehicles}
-      freightTotal={freight}
       grandTotal={grand}
       notes={invoice.notes}
       verificationUrl={verifyUrl || undefined}

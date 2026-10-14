@@ -55,7 +55,6 @@ export function CommercialQuotationTemplate({
       shipmentTerm={quotation.price_type}
       lines={lines}
       vehicles={vehicles}
-      freightTotal={freight}
       grandTotal={grand}
       notes={quotation.notes}
       verificationUrl={verificationUrl}
