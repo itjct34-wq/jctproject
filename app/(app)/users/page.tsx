@@ -104,10 +104,13 @@ export default function UsersPage() {
 
   const handleInvite = async (inviteForm: UserFormValues) => {
     if (!inviteForm.email.trim() || !inviteForm.role || !currentUser) return;
+    if (inviteForm.password.length < 8 || inviteForm.password !== inviteForm.confirm_password) {
+      toast.error('Enter a password of at least 8 characters and confirm it');
+      return;
+    }
     setSubmitting(true);
 
     let newUserId: string;
-    let tempPassword: string;
     try {
       const res = await fetch('/api/admin/invite-user', {
         method: 'POST',
@@ -117,6 +120,7 @@ export default function UsersPage() {
         },
         body: JSON.stringify({
           email: inviteForm.email.trim(),
+          password: inviteForm.password,
           full_name: inviteForm.full_name.trim(),
           phone: inviteForm.phone.trim() || null,
           job_title: inviteForm.job_title.trim() || null,
@@ -133,7 +137,6 @@ export default function UsersPage() {
       }
       if (body.warning) toast.warning(body.warning);
       newUserId = body.user_id as string;
-      tempPassword = body.temp_password as string;
     } catch (err) {
       toast.error('Failed to create user: ' + (err instanceof Error ? err.message : 'network error'));
       setSubmitting(false);
@@ -157,9 +160,7 @@ export default function UsersPage() {
     }
 
     toast.success(
-      `User ${inviteForm.email} created with role ${selectedRole?.display_name || ''}. ` +
-        `Temporary password (shown once, share it securely): ${tempPassword}`,
-      { duration: 60000 }
+      `User ${inviteForm.email} created with role ${selectedRole?.display_name || ''}. They can sign in with the password you set.`
     );
     setSubmitting(false);
     setInviteOpen(false);

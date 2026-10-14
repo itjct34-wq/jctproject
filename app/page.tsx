@@ -10,7 +10,8 @@ import { TrustStrip } from '@/components/public/home/trust-strip';
 import { VehicleCard } from '@/components/public/home/vehicle-card';
 import { loadHomeData } from '@/lib/public/home-data';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: 'Used cars from Japan | Japan Circular Trading, Nagoya',

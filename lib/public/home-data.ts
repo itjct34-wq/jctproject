@@ -32,6 +32,14 @@ export type HomeData = {
 const EMPTY: HomeData = { arrivals: [], makes: [], modelsByMake: {} };
 
 export async function loadHomeData(): Promise<HomeData> {
+  try {
+    return await loadHomeDataUnsafe();
+  } catch {
+    return EMPTY;
+  }
+}
+
+async function loadHomeDataUnsafe(): Promise<HomeData> {
   const db = createPublicSupabase();
   if (!db) return EMPTY;
 

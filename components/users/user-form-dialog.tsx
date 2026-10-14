@@ -11,6 +11,8 @@ import { Loader2 } from 'lucide-react';
 
 export type UserFormValues = {
   email: string;
+  password: string;
+  confirm_password: string;
   full_name: string;
   phone: string;
   job_title: string;
@@ -21,8 +23,12 @@ export type UserFormValues = {
   shift_id: string;
 };
 
+const MIN_PASSWORD_LENGTH = 8;
+
 const emptyForm: UserFormValues = {
   email: '',
+  password: '',
+  confirm_password: '',
   full_name: '',
   phone: '',
   job_title: '',
@@ -65,6 +71,8 @@ export function UserFormDialog({
     if (mode === 'edit' && user) {
       setForm({
         email: user.email || '',
+        password: '',
+        confirm_password: '',
         full_name: user.full_name || '',
         phone: user.phone || '',
         job_title: user.job_title || '',
@@ -87,8 +95,17 @@ export function UserFormDialog({
     [shifts, form.office_id]
   );
 
+  const createPasswordValid =
+    form.password.length >= MIN_PASSWORD_LENGTH && form.password === form.confirm_password;
+  const canSubmitCreate =
+    Boolean(form.email.trim() && form.role) && createPasswordValid;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === 'create') {
+      if (form.password.length < MIN_PASSWORD_LENGTH) return;
+      if (form.password !== form.confirm_password) return;
+    }
     await onSubmit(form);
   };
 
@@ -110,8 +127,42 @@ export function UserFormDialog({
                 placeholder="user@japancirculartrading.com"
                 required={mode === 'create'}
                 disabled={mode === 'edit'}
+                autoComplete={mode === 'create' ? 'off' : undefined}
               />
             </div>
+            {mode === 'create' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="user_password">Password *</Label>
+                  <Input
+                    id="user_password"
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="At least 8 characters"
+                    required
+                    minLength={MIN_PASSWORD_LENGTH}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user_confirm_password">Confirm password *</Label>
+                  <Input
+                    id="user_confirm_password"
+                    type="password"
+                    value={form.confirm_password}
+                    onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+                    placeholder="Re-enter password"
+                    required
+                    minLength={MIN_PASSWORD_LENGTH}
+                    autoComplete="new-password"
+                  />
+                  {form.confirm_password.length > 0 && form.password !== form.confirm_password && (
+                    <p className="text-xs text-destructive">Passwords do not match</p>
+                  )}
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label htmlFor="user_full_name">Full name</Label>
               <Input
@@ -242,7 +293,7 @@ export function UserFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={submitting || (mode === 'create' && (!form.email.trim() || !form.role))}
+              disabled={submitting || (mode === 'create' && !canSubmitCreate)}
             >
               {submitting ? (
                 <>

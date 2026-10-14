@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const MIN_PASSWORD_LENGTH = 8;
+
 const bodySchema = z.object({
   email: z.string().trim().email().max(254),
+  password: z.string().min(MIN_PASSWORD_LENGTH).max(72),
   full_name: z.string().trim().max(200).optional().default(''),
   phone: z.string().trim().max(50).optional().nullable(),
   job_title: z.string().trim().max(120).optional().nullable(),
@@ -15,10 +17,6 @@ const bodySchema = z.object({
   office_id: z.string().uuid().optional().nullable(),
   shift_id: z.string().uuid().optional().nullable(),
 });
-
-function generateTempPassword(): string {
-  return `${randomBytes(12).toString('base64url')}aA1!`;
-}
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -29,7 +27,10 @@ export async function POST(request: NextRequest) {
   try {
     parsed = bodySchema.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Valid email and a password of at least 8 characters are required' },
+      { status: 400 }
+    );
   }
 
   if (parsed.shift_id && parsed.office_id) {
@@ -43,10 +44,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const tempPassword = generateTempPassword();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: parsed.email,
-    password: tempPassword,
+    password: parsed.password,
     email_confirm: true,
     user_metadata: { full_name: parsed.full_name },
   });
@@ -85,13 +85,11 @@ export async function POST(request: NextRequest) {
   if (profileError) {
     return NextResponse.json({
       user_id: created.user.id,
-      temp_password: tempPassword,
       warning: 'User created but office/shift could not be saved: ' + profileError.message,
     });
   }
 
   return NextResponse.json({
     user_id: created.user.id,
-    temp_password: tempPassword,
   });
 }
