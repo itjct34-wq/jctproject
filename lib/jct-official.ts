@@ -40,7 +40,7 @@ export function extractChassis(text: string | null | undefined) {
 
 export const DEPOSIT_RATIOS = [30, 70, 100] as const;
 
-export function formatDepositRatio(discount?: number | null, unitPrice?: number | null) {
+export function formatDepositRatio(discount?: number | string | null, unitPrice?: number | string | null) {
   const n = Number(discount || 0);
   if (!n) return '—';
   if (n === 30 || n === 70 || n === 100) return `${n}%`;
@@ -50,7 +50,7 @@ export function formatDepositRatio(discount?: number | null, unitPrice?: number 
   return '—';
 }
 
-export function normalizeDepositRatio(discount?: number | null, unitPrice?: number | null): (typeof DEPOSIT_RATIOS)[number] {
+export function normalizeDepositRatio(discount?: number | string | null, unitPrice?: number | string | null): (typeof DEPOSIT_RATIOS)[number] {
   const n = Number(discount || 0);
   if (n === 30 || n === 70 || n === 100) return n;
   let pct = n;
