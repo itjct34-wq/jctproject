@@ -30,7 +30,6 @@ type Props = {
   portOfDischarge?: string | null;
   lines: TradeLine[];
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'>[];
-  freightTotal?: number;
   grandTotal: number;
   notes?: string | null;
   verificationUrl?: string;
@@ -54,6 +53,15 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+function BankLine({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="text-[8px] leading-[1.35] text-slate-700">
+      <span className="font-semibold text-slate-500">{label}: </span>
+      <span className="font-medium text-slate-800">{value}</span>
+    </p>
+  );
+}
+
 export function OfficialTradeDocument({
   kind,
   title,
@@ -71,7 +79,6 @@ export function OfficialTradeDocument({
   portOfDischarge,
   lines,
   vehicles = [],
-  freightTotal = 0,
   grandTotal,
   notes,
   verificationUrl,
@@ -148,7 +155,6 @@ export function OfficialTradeDocument({
             <tr className="bg-slate-900 text-white">
               <th className="px-2 py-1.5 text-left font-semibold">Chassis</th>
               <th className="px-2 py-1.5 text-left font-semibold">Stock</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Freight</th>
               <th className="px-2 py-1.5 text-center font-semibold">Deposit</th>
               <th className="px-2 py-1.5 text-right font-semibold">Vehicle cost</th>
             </tr>
@@ -168,9 +174,6 @@ export function OfficialTradeDocument({
                 <tr key={idx} className={idx % 2 ? 'bg-slate-50' : 'bg-white'}>
                   <td className="border-b border-slate-200 px-2 py-1 font-mono text-[9px]">{chassis}</td>
                   <td className="border-b border-slate-200 px-2 py-1">{stock}</td>
-                  <td className="border-b border-slate-200 px-2 py-1 text-right">
-                    {idx === 0 && freightTotal ? formatMoney(freightTotal, currency) : '—'}
-                  </td>
                   <td className="border-b border-slate-200 px-2 py-1 text-center">{deposit}</td>
                   <td className="border-b border-slate-200 px-2 py-1 text-right font-medium">
                     {formatMoney(line.unit_price, currency)}
@@ -179,7 +182,7 @@ export function OfficialTradeDocument({
               );
             })}
             <tr className="bg-[#c4161c] text-white">
-              <td colSpan={4} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
+              <td colSpan={3} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
                 TOTAL
               </td>
               <td className="px-2 py-1.5 text-right text-[12px] font-black">{formatMoney(grandTotal, currency)}</td>
@@ -187,25 +190,30 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-md border border-slate-200 p-2">
-          <div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Beneficiary bank</p>
-            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.name}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.branch}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.swift}</p>
+        <section className="mt-2.5 rounded-md border border-slate-200 p-2">
+          <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#c4161c]">Banking details</p>
+          <div className="grid grid-cols-3 gap-2.5">
+            <div>
+              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Beneficiary Bank (Account with Institution)</p>
+              <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.name} />
+              <BankLine label="Branch Name" value={JCT_OFFICIAL.bank.branch} />
+              <BankLine label="Bank Address" value={JCT_OFFICIAL.bank.address} />
+              <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.swift} />
+            </div>
+            <div>
+              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Beneficiary Information</p>
+              <BankLine label="Account Number" value={JCT_OFFICIAL.bank.account} />
+              <BankLine label="Beneficiary Name" value={JCT_OFFICIAL.bank.beneficiary} />
+              <BankLine label="Beneficiary Address" value={JCT_OFFICIAL.bank.beneficiaryAddress} />
+            </div>
+            <div>
+              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Intermediary Bank</p>
+              <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.intermediaryName} />
+              <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.intermediarySwift} />
+              <BankLine label="Intermediary Bank address" value={JCT_OFFICIAL.bank.intermediaryAddress} />
+            </div>
           </div>
-          <div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Beneficiary</p>
-            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.beneficiary}</p>
-            <p className="text-[9px] leading-snug font-mono">A/C {JCT_OFFICIAL.bank.account}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.beneficiaryAddress}</p>
-          </div>
-          <div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#c4161c]">Intermediary</p>
-            <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.bank.intermediaryName}</p>
-            <p className="text-[9px] leading-snug">{JCT_OFFICIAL.bank.intermediarySwift}</p>
-          </div>
-        </div>
+        </section>
 
         {notes && <p className="mt-1.5 text-[9px] text-slate-600 line-clamp-2">Notes: {notes}</p>}
 

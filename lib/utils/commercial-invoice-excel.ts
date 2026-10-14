@@ -189,7 +189,6 @@ export async function exportCommercialInvoiceExcel(opts: {
   const totals: [string, number][] = [
     ['Subtotal', Number(invoice.subtotal)],
     ['Tax', Number(invoice.tax)],
-    ['Freight', freight],
     ['Insurance', insurance],
     ['Other charges', other],
     ['Discount', -discount],
