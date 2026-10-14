@@ -341,7 +341,7 @@ export default function OfficesPage() {
       )}
 
       <Dialog open={officeOpen} onOpenChange={setOfficeOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent fullscreen className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingOffice ? 'Edit office' : 'New office'}</DialogTitle>
           </DialogHeader>
@@ -387,7 +387,7 @@ export default function OfficesPage() {
       </Dialog>
 
       <Dialog open={shiftOpen} onOpenChange={setShiftOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent fullscreen className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingShift ? 'Edit shift' : 'New shift'}</DialogTitle>
           </DialogHeader>

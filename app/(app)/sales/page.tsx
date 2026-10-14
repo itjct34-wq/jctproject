@@ -442,7 +442,7 @@ export default function SalesPage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Reserve vehicle for customer</DialogTitle>
           </DialogHeader>
@@ -547,7 +547,7 @@ export default function SalesPage() {
       </Sheet>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent fullscreen>
           <DialogHeader><DialogTitle>Edit sale</DialogTitle></DialogHeader>
           <form onSubmit={submitEdit} className="space-y-4">
             <div className="space-y-2"><Label>Sale price</Label><Input type="number" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} /></div>

@@ -20,10 +20,10 @@ import { RecordAttachments } from '@/components/shared/record-attachments';
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-import { SUPPORTED_CURRENCIES } from '@/lib/utils/currencies';
 import { ChevronRight, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
+import { decodeInvoiceVehicle, describeInvoiceVehicle } from '@/lib/jct-official';
 
 const statusStyles: Record<Quotation['status'], string> = {
   draft: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -46,6 +46,11 @@ const emptyForm = {
   valid_until: '',
   notes: '',
   description: '',
+  chassis_number: '',
+  stock_number: '',
+  make: '',
+  model: '',
+  colour: '',
 };
 
 export default function QuotationsPage() {
@@ -107,33 +112,35 @@ export default function QuotationsPage() {
   const customerName = (id: string) => customers.find((c) => c.id === id)?.full_name || 'Unknown';
   const customerOf = (id: string) => customers.find((c) => c.id === id) || null;
 
-  const buildDescription = () => {
-    if (form.description.trim()) return form.description.trim();
-    const v = vehicles.find((x) => x.id === form.vehicle_id);
-    if (!v) return `${form.price_type} quotation`;
-    return [
-      `${v.make} ${v.model}`,
-      v.model_year ? `Year: ${v.model_year}` : null,
-      v.chassis_number ? `Chassis: ${v.chassis_number}` : null,
-      v.stock_number ? `Stock: ${v.stock_number}` : null,
-      v.color ? `Color: ${v.color}` : null,
-      `Terms: ${form.price_type}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
+  const applyQuoteVehicle = (vehicleId: string) => {
+    const v = vehicles.find((x) => x.id === vehicleId);
+    if (!v) {
+      setForm((f) => ({ ...f, vehicle_id: '' }));
+      return;
+    }
+    setForm((f) => ({
+      ...f,
+      vehicle_id: v.id,
+      chassis_number: v.chassis_number || '',
+      stock_number: v.stock_number || '',
+      make: v.make || '',
+      model: v.model || '',
+      colour: v.color || '',
+      subtotal: f.subtotal || String(v.listed_price || ''),
+      currency: v.listed_currency || f.currency,
+    }));
   };
 
-  useEffect(() => {
-    if (!form.vehicle_id) return;
-    const v = vehicles.find((x) => x.id === form.vehicle_id);
-    if (v?.listed_price != null && !form.subtotal) {
-      setForm((f) => ({
-        ...f,
-        subtotal: String(v.listed_price),
-        currency: v.listed_currency || f.currency,
-      }));
-    }
-  }, [form.vehicle_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const encodedLineDescription = () =>
+    describeInvoiceVehicle({
+      chassis_number: form.chassis_number,
+      stock_number: form.stock_number,
+      make: form.make,
+      model: form.model,
+      colour: form.colour,
+      notes: form.description,
+    });
+
 
   const submitQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +150,6 @@ export default function QuotationsPage() {
     const insurance = Number(form.insurance) || 0;
     const otherFees = Number(form.other_fees) || 0;
     const total = subtotal + freight + insurance + otherFees;
-    const notes = [form.notes.trim(), form.vehicle_id ? `Vehicle: ${form.vehicle_id}` : '', buildDescription()]
-      .filter(Boolean)
-      .join('\n---\n');
     setSubmitting(true);
     const { data, error } = await supabase
       .from('quotations')
@@ -159,16 +163,27 @@ export default function QuotationsPage() {
         total,
         currency: form.currency,
         valid_until: form.valid_until || null,
-        notes: notes || null,
+        notes: form.notes.trim() || null,
         created_by: profile.id,
       })
       .select()
       .maybeSingle();
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast.error(`Could not create quotation: ${error.message}`);
       return;
     }
+    if (data) {
+      await supabase.from('quotation_items').insert({
+        quotation_id: data.id,
+        vehicle_id: form.vehicle_id || null,
+        description: encodedLineDescription(),
+        quantity: 1,
+        unit_price: subtotal,
+        line_total: subtotal,
+      });
+    }
+    setSubmitting(false);
     toast.success('Quotation created');
     setForm(emptyForm);
     setCreateOpen(false);
@@ -176,11 +191,15 @@ export default function QuotationsPage() {
     if (data) setSelected(data as Quotation);
   };
 
-  const openEdit = () => {
+  const openEdit = async () => {
     if (!selected) return;
+    const { data } = await supabase.from('quotation_items').select('*').eq('quotation_id', selected.id);
+    const item = (data || [])[0] as { description?: string; vehicle_id?: string | null } | undefined;
+    const bits = decodeInvoiceVehicle(item?.description || selected.notes);
+    const v = vehicles.find((x) => x.id === item?.vehicle_id);
     setForm({
       customer_id: selected.customer_id,
-      vehicle_id: '',
+      vehicle_id: item?.vehicle_id || '',
       price_type: selected.price_type,
       subtotal: String(selected.subtotal),
       freight: String(selected.freight),
@@ -189,7 +208,12 @@ export default function QuotationsPage() {
       currency: selected.currency,
       valid_until: selected.valid_until || '',
       notes: selected.notes || '',
-      description: '',
+      description: bits.notes || '',
+      chassis_number: bits.chassis_number || v?.chassis_number || '',
+      stock_number: bits.stock_number || v?.stock_number || '',
+      make: bits.make || v?.make || '',
+      model: bits.model || v?.model || '',
+      colour: bits.colour || v?.color || '',
     });
     setEditOpen(true);
   };
@@ -219,11 +243,21 @@ export default function QuotationsPage() {
         updated_at: new Date().toISOString(),
       })
       .eq('id', selected.id);
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast.error(`Could not update: ${error.message}`);
       return;
     }
+    await supabase.from('quotation_items').delete().eq('quotation_id', selected.id);
+    await supabase.from('quotation_items').insert({
+      quotation_id: selected.id,
+      vehicle_id: form.vehicle_id || null,
+      description: encodedLineDescription(),
+      quantity: 1,
+      unit_price: subtotal,
+      line_total: subtotal,
+    });
+    setSubmitting(false);
     const updated = {
       ...selected,
       customer_id: form.customer_id,
@@ -329,20 +363,42 @@ export default function QuotationsPage() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Vehicle (optional)</Label>
-          <Select value={form.vehicle_id || 'none'} onValueChange={(v) => setForm({ ...form, vehicle_id: v === 'none' ? '' : v })}>
+          <Label>From stock (optional)</Label>
+          <Select value={form.vehicle_id || 'none'} onValueChange={(v) => (v === 'none' ? setForm({ ...form, vehicle_id: '' }) : applyQuoteVehicle(v))}>
             <SelectTrigger>
               <SelectValue placeholder="Link vehicle" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No vehicle</SelectItem>
+              <SelectItem value="none">Not in database — enter below</SelectItem>
               {vehicles.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
-                  {v.make} {v.model} ({v.stock_number})
+                  {v.stock_number} · {v.make} {v.model} · {v.chassis_number}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Chassis</Label>
+          <Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis number" />
+        </div>
+        <div className="space-y-2">
+          <Label>Stock no.</Label>
+          <Input value={form.stock_number} onChange={(e) => setForm({ ...form, stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" />
+        </div>
+        <div className="space-y-2">
+          <Label>Make</Label>
+          <Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value, vehicle_id: '' })} placeholder="Make" />
+        </div>
+        <div className="space-y-2">
+          <Label>Model</Label>
+          <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value, vehicle_id: '' })} placeholder="Model" />
+        </div>
+        <div className="space-y-2">
+          <Label>Colour</Label>
+          <Input value={form.colour} onChange={(e) => setForm({ ...form, colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -392,12 +448,12 @@ export default function QuotationsPage() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Line description (optional override)</Label>
+        <Label>Notes / description (optional extra text only)</Label>
         <Textarea
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={2}
-          placeholder="Auto-filled from vehicle if linked"
+          placeholder="Not chassis, stock, make, or colour"
         />
       </div>
       <div className="space-y-2">
@@ -514,7 +570,7 @@ export default function QuotationsPage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>New quotation</DialogTitle>
           </DialogHeader>
@@ -537,7 +593,7 @@ export default function QuotationsPage() {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>Edit quotation</DialogTitle>
           </DialogHeader>
@@ -653,7 +709,7 @@ export default function QuotationsPage() {
       </Sheet>
 
       <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-        <DialogContent className="max-h-[95vh] overflow-y-auto sm:max-w-4xl print:max-w-none print:border-0 print:shadow-none">
+        <DialogContent fullscreen className="print:max-w-none print:border-0 print:shadow-none">
           <DialogHeader className="print:hidden">
             <DialogTitle>Print quotation</DialogTitle>
           </DialogHeader>
