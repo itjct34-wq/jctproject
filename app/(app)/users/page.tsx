@@ -16,20 +16,20 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Search, Users, UserCog, Shield, Loader2, Pencil, Building2, Clock } from 'lucide-react';
-import { AssignOfficeShiftDialog } from '@/components/users/assign-office-shift';
+import { Plus, Search, Users, UserCog, Shield, Loader2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import type { Profile, Role, Team, TeamMember, RoleName } from '@/lib/types';
+import type { Office, Profile, Role, Shift, Team, TeamMember, RoleName } from '@/lib/types';
 import { ROLE_COLORS } from '@/lib/types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { AssignOfficeShiftDialog } from '@/components/users/assign-office-shift';
+import { UserFormDialog, type UserFormValues } from '@/components/users/user-form-dialog';
 
 interface UserWithRoles extends Profile {
   roles: Role[];
   team_name?: string | null;
-  office_name?: string | null;
-  shift_name?: string | null;
 }
 
 export default function UsersPage() {
@@ -38,21 +38,19 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [offices, setOffices] = useState<{ id: string; name: string }[]>([]);
-  const [shifts, setShifts] = useState<{ id: string; name: string; office_id: string | null }[]>([]);
-  const [assignOfficeUser, setAssignOfficeUser] = useState<UserWithRoles | null>(null);
-  const [editingProfile, setEditingProfile] = useState<UserWithRoles | null>(null);
-  const [profileForm, setProfileForm] = useState({ full_name: '', phone: '', job_title: '', department: '', office_id: 'none', shift_id: 'none' });
   const [teamMembers, setTeamMembers] = useState<(TeamMember & { user_name: string; user_email: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [editUser, setEditUser] = useState<UserWithRoles | null>(null);
+  const [assignUser, setAssignUser] = useState<UserWithRoles | null>(null);
   const [teamOpen, setTeamOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [roleDialogUser, setRoleDialogUser] = useState<UserWithRoles | null>(null);
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
 
-  const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: '', team: '', office: 'none', shift: 'none' });
   const [teamForm, setTeamForm] = useState({ name: '', description: '', department: '', manager_id: '' });
 
   const loadData = useCallback(async () => {
@@ -64,8 +62,8 @@ export default function UsersPage() {
       supabase.from('user_roles').select('user_id, role_id, is_active, roles(id, name, display_name, description, sort_order, is_system_role, created_at, updated_at)'),
       supabase.from('teams').select('*').order('name', { ascending: true }),
       supabase.from('team_members').select('*, profiles!inner(full_name, email)'),
-      supabase.from('offices').select('id, name').eq('is_active', true).order('name'),
-      supabase.from('shifts').select('id, name, office_id').eq('is_active', true).order('name'),
+      supabase.from('offices').select('*').order('name', { ascending: true }),
+      supabase.from('shifts').select('*').order('name', { ascending: true }),
     ]);
 
     const roleMap: Record<string, Role[]> = {};
@@ -76,22 +74,16 @@ export default function UsersPage() {
       }
     });
 
-    const officeRows = (officesRes.data || []) as { id: string; name: string }[];
-    const shiftRows = (shiftsRes.data || []) as { id: string; name: string; office_id: string | null }[];
-
-    setOffices(officeRows);
-    setShifts(shiftRows);
-
     const enriched: UserWithRoles[] = (profilesRes.data as Profile[] || []).map((p) => ({
       ...p,
       roles: roleMap[p.id] || [],
-      office_name: officeRows.find((o) => o.id === p.office_id)?.name || null,
-      shift_name: shiftRows.find((s) => s.id === p.shift_id)?.name || null,
     }));
 
     setUsers(enriched);
     setRoles(rolesRes.data as Role[] || []);
     setTeams(teamsRes.data as Team[] || []);
+    setOffices((officesRes.data || []) as Office[]);
+    setShifts((shiftsRes.data || []) as Shift[]);
 
     const tmEnriched = (teamMembersRes.data || []).map((tm: Record<string, unknown>) => ({
       ...tm,
@@ -107,12 +99,13 @@ export default function UsersPage() {
     loadData();
   }, [loadData]);
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const officeName = (id: string | null) => offices.find((o) => o.id === id)?.name || '—';
+  const shiftName = (id: string | null) => shifts.find((s) => s.id === id)?.name || '—';
+
+  const handleInvite = async (inviteForm: UserFormValues) => {
     if (!inviteForm.email.trim() || !inviteForm.role || !currentUser) return;
     setSubmitting(true);
 
-    // User creation needs the service-role key, so it runs on the server.
     let newUserId: string;
     let tempPassword: string;
     try {
@@ -125,6 +118,11 @@ export default function UsersPage() {
         body: JSON.stringify({
           email: inviteForm.email.trim(),
           full_name: inviteForm.full_name.trim(),
+          phone: inviteForm.phone.trim() || null,
+          job_title: inviteForm.job_title.trim() || null,
+          department: inviteForm.department.trim() || null,
+          office_id: inviteForm.office_id === 'none' ? null : inviteForm.office_id,
+          shift_id: inviteForm.shift_id === 'none' ? null : inviteForm.shift_id,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -133,6 +131,7 @@ export default function UsersPage() {
         setSubmitting(false);
         return;
       }
+      if (body.warning) toast.warning(body.warning);
       newUserId = body.user_id as string;
       tempPassword = body.temp_password as string;
     } catch (err) {
@@ -141,16 +140,7 @@ export default function UsersPage() {
       return;
     }
 
-    const { error: assignmentError } = await supabase.from('profiles').update({
-      office_id: inviteForm.office === 'none' ? null : inviteForm.office,
-      shift_id: inviteForm.shift === 'none' ? null : inviteForm.shift,
-      updated_at: new Date().toISOString(),
-    }).eq('id', newUserId);
-    if (assignmentError) {
-      toast.error('User was created, but office/shift assignment failed: ' + assignmentError.message);
-    }
-
-    if (inviteForm.team) {
+    if (inviteForm.team && inviteForm.team !== 'none') {
       await supabase.from('team_members').insert({
         team_id: inviteForm.team,
         user_id: newUserId,
@@ -171,9 +161,44 @@ export default function UsersPage() {
         `Temporary password (shown once, share it securely): ${tempPassword}`,
       { duration: 60000 }
     );
-    setInviteForm({ email: '', full_name: '', role: '', team: '', office: 'none', shift: 'none' });
     setSubmitting(false);
     setInviteOpen(false);
+    loadData();
+  };
+
+  const handleEditUser = async (values: UserFormValues) => {
+    if (!editUser) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/update-user', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({
+          user_id: editUser.id,
+          full_name: values.full_name.trim() || null,
+          phone: values.phone.trim() || null,
+          job_title: values.job_title.trim() || null,
+          department: values.department.trim() || null,
+          office_id: values.office_id === 'none' ? null : values.office_id,
+          shift_id: values.shift_id === 'none' ? null : values.shift_id,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      setSubmitting(false);
+      if (!res.ok) {
+        toast.error(body.error || 'Could not update user');
+        return;
+      }
+    } catch (err) {
+      setSubmitting(false);
+      toast.error(err instanceof Error ? err.message : 'Could not update user');
+      return;
+    }
+    toast.success('User profile updated');
+    setEditUser(null);
     loadData();
   };
 
@@ -236,42 +261,6 @@ export default function UsersPage() {
     loadData();
   };
 
-  const openProfileEditor = (user: UserWithRoles) => {
-    setEditingProfile(user);
-    setProfileForm({
-      full_name: user.full_name || '',
-      phone: user.phone || '',
-      job_title: user.job_title || '',
-      department: user.department || '',
-      office_id: user.office_id || 'none',
-      shift_id: user.shift_id || 'none',
-    });
-  };
-
-  const saveUserProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProfile) return;
-    if (profileForm.shift_id !== 'none' && !shifts.some((shift) => shift.id === profileForm.shift_id && shift.office_id === profileForm.office_id)) {
-      toast.error('Choose a shift that belongs to the selected office.');
-      return;
-    }
-    setSubmitting(true);
-    const { error } = await supabase.from('profiles').update({
-      full_name: profileForm.full_name.trim() || null,
-      phone: profileForm.phone.trim() || null,
-      job_title: profileForm.job_title.trim() || null,
-      department: profileForm.department.trim() || null,
-      office_id: profileForm.office_id === 'none' ? null : profileForm.office_id,
-      shift_id: profileForm.shift_id === 'none' ? null : profileForm.shift_id,
-      updated_at: new Date().toISOString(),
-    }).eq('id', editingProfile.id);
-    setSubmitting(false);
-    if (error) { toast.error('Could not update user profile: ' + error.message); return; }
-    toast.success('User profile updated');
-    setEditingProfile(null);
-    loadData();
-  };
-
   const toggleUserActive = async (userId: string, isActive: boolean) => {
     const { error } = await supabase
       .from('profiles')
@@ -308,112 +297,10 @@ export default function UsersPage() {
         actions={
           <>
             {isAdmin() && (
-              <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Create New User</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleInvite} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={inviteForm.email}
-                        onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                        placeholder="user@japancirculartrading.com"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="full_name">Full Name</Label>
-                      <Input
-                        id="full_name"
-                        value={inviteForm.full_name}
-                        onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Role *</Label>
-                      <Select
-                        value={inviteForm.role}
-                        onValueChange={(v) => setInviteForm({ ...inviteForm, role: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.display_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Team</Label>
-                      <Select
-                        value={inviteForm.team}
-                        onValueChange={(v) => setInviteForm({ ...inviteForm, team: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="No team" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teams.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Office</Label>
-                      <Select value={inviteForm.office} onValueChange={(v) => setInviteForm({ ...inviteForm, office: v, shift: 'none' })}>
-                        <SelectTrigger><SelectValue placeholder="Select office" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Unassigned</SelectItem>
-                          {offices.map((office) => <SelectItem key={office.id} value={office.id}>{office.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Shift</Label>
-                      <Select value={inviteForm.shift} onValueChange={(v) => setInviteForm({ ...inviteForm, shift: v })} disabled={inviteForm.office === 'none'}>
-                        <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Unassigned</SelectItem>
-                          {shifts.filter((shift) => shift.office_id === inviteForm.office).map((shift) => (
-                            <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">Only shifts belonging to the selected office are available.</p>
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit" disabled={submitting || !inviteForm.email.trim() || !inviteForm.role}>
-                        {submitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                            Creating...
-                          </>
-                        ) : (
-                          'Create User'
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <Button size="sm" onClick={() => setInviteOpen(true)}>
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add User
+              </Button>
             )}
             {isAdmin() && (
               <Dialog open={teamOpen} onOpenChange={setTeamOpen}>
@@ -494,51 +381,6 @@ export default function UsersPage() {
         }
       />
 
-      <AssignOfficeShiftDialog
-        open={!!assignOfficeUser}
-        onOpenChange={(open) => !open && setAssignOfficeUser(null)}
-        user={assignOfficeUser}
-        onDone={() => { setAssignOfficeUser(null); loadData(); }}
-      />
-
-      <Dialog open={!!editingProfile} onOpenChange={(open) => !open && setEditingProfile(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>Edit User Profile</DialogTitle></DialogHeader>
-          <form onSubmit={saveUserProfile} className="space-y-4">
-            <p className="text-sm text-muted-foreground">{editingProfile?.email}</p>
-            <div className="space-y-2"><Label htmlFor="edit-user-full-name">Full name</Label><Input id="edit-user-full-name" value={profileForm.full_name} onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })} /></div>
-            <div className="space-y-2"><Label htmlFor="edit-user-phone">Phone</Label><Input id="edit-user-phone" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} /></div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="edit-user-job-title">Job title</Label><Input id="edit-user-job-title" value={profileForm.job_title} onChange={(e) => setProfileForm({ ...profileForm, job_title: e.target.value })} /></div>
-              <div className="space-y-2"><Label htmlFor="edit-user-department">Department</Label><Input id="edit-user-department" value={profileForm.department} onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })} /></div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Office</Label>
-                <Select value={profileForm.office_id} onValueChange={(v) => setProfileForm({ ...profileForm, office_id: v, shift_id: 'none' })}>
-                  <SelectTrigger><SelectValue placeholder="Select office" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Unassigned</SelectItem>
-                    {offices.map((office) => <SelectItem key={office.id} value={office.id}>{office.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Shift</Label>
-                <Select value={profileForm.shift_id} onValueChange={(v) => setProfileForm({ ...profileForm, shift_id: v })} disabled={profileForm.office_id === 'none'}>
-                  <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Unassigned</SelectItem>
-                    {shifts.filter((shift) => shift.office_id === profileForm.office_id).map((shift) => <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setEditingProfile(null)}>Cancel</Button><Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Profile'}</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       <Tabs defaultValue="users">
         <TabsList>
           <TabsTrigger value="users">
@@ -595,9 +437,9 @@ export default function UsersPage() {
                     <TableRow>
                       <TableHead>User</TableHead>
                       <TableHead>Roles</TableHead>
-                      <TableHead>Department</TableHead>
                       <TableHead>Office</TableHead>
                       <TableHead>Shift</TableHead>
+                      <TableHead>Department</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined</TableHead>
                       {isAdmin() && <TableHead className="w-10"></TableHead>}
@@ -609,15 +451,18 @@ export default function UsersPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8">
-                              {u.avatar_url && <AvatarImage src={u.avatar_url} alt={u.full_name || u.email} />}
+                              {u.avatar_url && <AvatarImage src={u.avatar_url} alt="" />}
                               <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
                                 {initials(u.full_name || u.email)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
+                              <Link
+                                href={`/users/${u.id}`}
+                                className="text-sm font-medium text-foreground truncate hover:underline block"
+                              >
                                 {u.full_name || 'Unnamed'}
-                              </p>
+                              </Link>
                               <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                             </div>
                           </div>
@@ -642,17 +487,13 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
+                          {officeName(u.office_id)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {shiftName(u.shift_id)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
                           {u.department || '—'}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                            <Building2 className="h-3.5 w-3.5" /> {u.office_name || 'Unassigned'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                            <Clock className="h-3.5 w-3.5" /> {u.shift_name || 'Unassigned'}
-                          </span>
                         </TableCell>
                         <TableCell>
                           {u.is_active ? (
@@ -670,18 +511,21 @@ export default function UsersPage() {
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <button className="flex items-center justify-center w-7 h-7 rounded-md hover:bg-accent">
-                                    <Shield className="w-4 h-4 text-muted-foreground" />
+                                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                                   </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => openProfileEditor(u)}>
-                                    <Pencil className="mr-2 h-4 w-4" /> Edit Profile
+                                  <DropdownMenuItem onClick={() => setEditUser(u)}>
+                                    Edit user / profile
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => setAssignOfficeUser(u)}>
-                                    <Building2 className="mr-2 h-4 w-4" /> Assign Office & Shift
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/users/${u.id}`}>View profile</Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setAssignUser(u)}>
+                                    Assign office & shift
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => setRoleDialogUser(u)}>
-                                    <Shield className="mr-2 h-4 w-4" /> Manage Roles
+                                    Manage Roles
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => toggleUserActive(u.id, u.is_active)}
@@ -826,6 +670,36 @@ export default function UsersPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <UserFormDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        mode="create"
+        roles={roles}
+        teams={teams}
+        offices={offices}
+        shifts={shifts}
+        submitting={submitting}
+        onSubmit={handleInvite}
+      />
+      <UserFormDialog
+        open={!!editUser}
+        onOpenChange={(open) => !open && setEditUser(null)}
+        mode="edit"
+        user={editUser}
+        roles={roles}
+        teams={teams}
+        offices={offices}
+        shifts={shifts}
+        submitting={submitting}
+        onSubmit={handleEditUser}
+      />
+      <AssignOfficeShiftDialog
+        open={!!assignUser}
+        onOpenChange={(open) => !open && setAssignUser(null)}
+        user={assignUser}
+        onDone={loadData}
+      />
     </div>
   );
 }

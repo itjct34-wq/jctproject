@@ -16,6 +16,7 @@ import {
   BarChart3,
   Bell,
   UserCog,
+  User,
   Settings,
   ScrollText,
   BadgeCheck,
@@ -44,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Overview',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
+      { label: 'My profile', href: '/profile', icon: User },
     ],
   },
   {

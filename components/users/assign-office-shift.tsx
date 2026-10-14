@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth-provider';
 import type { Office, Shift, Profile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export function AssignOfficeShiftDialog({ open, onOpenChange, user, onDone }: Props) {
+  const { session } = useAuth();
   const [offices, setOffices] = useState<Office[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [officeId, setOfficeId] = useState<string>('none');
@@ -43,28 +45,31 @@ export function AssignOfficeShiftDialog({ open, onOpenChange, user, onDone }: Pr
     }
   }, [user]);
 
-  const filteredShifts = officeId === 'none' ? [] : shifts.filter((s) => s.office_id === officeId);
+  const filteredShifts = shifts.filter((s) => officeId !== 'none' && s.office_id === officeId);
 
   const save = async () => {
     if (!user) return;
-    if (shiftId !== 'none' && !filteredShifts.some((s) => s.id === shiftId)) {
-      toast.error('Choose a shift that belongs to the selected office.');
-      return;
-    }
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
+    const res = await fetch('/api/admin/update-user', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        full_name: user.full_name,
+        phone: user.phone,
+        job_title: user.job_title,
+        department: user.department,
         office_id: officeId === 'none' ? null : officeId,
         shift_id: shiftId === 'none' ? null : shiftId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
     setSaving(false);
-    if (error) {
-      toast.error(error.message.includes('column') || error.message.includes('does not exist')
-        ? 'Run the offices/shifts migration in Supabase SQL Editor first'
-        : error.message);
+    if (!res.ok) {
+      toast.error(body.error || 'Could not assign office / shift');
       return;
     }
     toast.success('Office / shift updated');
@@ -94,8 +99,10 @@ export function AssignOfficeShiftDialog({ open, onOpenChange, user, onDone }: Pr
           </div>
           <div className="space-y-2">
             <Label>Shift</Label>
-            <Select value={shiftId} onValueChange={setShiftId} disabled={officeId === "none"}>
-              <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
+            <Select value={shiftId} onValueChange={setShiftId} disabled={officeId === 'none'}>
+              <SelectTrigger>
+                <SelectValue placeholder={officeId === 'none' ? 'Select an office first' : 'Select shift'} />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
                 {filteredShifts.map((s) => (

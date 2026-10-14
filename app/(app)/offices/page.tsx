@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase/client';
 import { Building2, Clock, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 type Office = {
   id: string;
@@ -70,17 +71,20 @@ export default function OfficesPage() {
   const [officeForm, setOfficeForm] = useState(emptyOffice);
   const [shiftForm, setShiftForm] = useState(emptyShift);
   const [officeFilter, setOfficeFilter] = useState('all');
+  const [staff, setStaff] = useState<{ id: string; full_name: string | null; email: string; office_id: string | null; shift_id: string | null }[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [oRes, sRes] = await Promise.all([
+    const [oRes, sRes, pRes] = await Promise.all([
       supabase.from('offices').select('*').order('name'),
       supabase.from('shifts').select('*').order('start_time'),
+      supabase.from('profiles').select('id, full_name, email, office_id, shift_id').eq('is_active', true),
     ]);
     if (oRes.error) toast.error(oRes.error.message);
     else setOffices((oRes.data || []) as Office[]);
     if (sRes.error) toast.error(sRes.error.message);
     else setShifts((sRes.data || []) as Shift[]);
+    setStaff((pRes.data || []) as typeof staff);
     setLoading(false);
   }, []);
 
@@ -233,6 +237,7 @@ export default function OfficesPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {offices.map((o) => {
               const count = shifts.filter((s) => s.office_id === o.id).length;
+              const people = staff.filter((p) => p.office_id === o.id);
               return (
                 <Card key={o.id} className="border-border/60">
                   <CardContent className="p-4 space-y-2">
@@ -252,7 +257,21 @@ export default function OfficesPage() {
                       {[o.city, o.country].filter(Boolean).join(', ') || 'Location not set'}
                     </p>
                     {o.address && <p className="text-xs text-muted-foreground line-clamp-2">{o.address}</p>}
-                    <p className="text-xs text-muted-foreground">{o.timezone || 'No timezone'} · {count} shift{count === 1 ? '' : 's'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {o.timezone || 'No timezone'} · {count} shift{count === 1 ? '' : 's'} · {people.length} staff
+                    </p>
+                    {people.length > 0 && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {people.map((p, i) => (
+                          <span key={p.id}>
+                            {i > 0 ? ', ' : ''}
+                            <Link href={`/users/${p.id}`} className="hover:underline text-foreground">
+                              {p.full_name || p.email}
+                            </Link>
+                          </span>
+                        ))}
+                      </p>
+                    )}
                     <div className="flex gap-2 pt-1">
                       <Button size="sm" variant="outline" onClick={() => openEditOffice(o)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
