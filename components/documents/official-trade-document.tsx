@@ -11,6 +11,10 @@ export type TradeLine = {
   line_total: number;
   discount?: number;
   vehicle_id?: string | null;
+  chassis_number?: string | null;
+  stock_number?: string | null;
+  make?: string | null;
+  model?: string | null;
 };
 
 type Props = {
@@ -162,10 +166,12 @@ export function OfficialTradeDocument({
           <tbody>
             {(lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }]).map((line, idx) => {
               const vehicle = vehicles.find((v) => v.id === line.vehicle_id);
-              const chassis = vehicle?.chassis_number || extractChassis(line.description) || '—';
-              const stock = vehicle
-                ? [vehicle.stock_number, vehicle.make, vehicle.model].filter(Boolean).join(' · ')
-                : line.description;
+              const chassis =
+                vehicle?.chassis_number || line.chassis_number || extractChassis(line.description) || '—';
+              const stock =
+                [vehicle?.stock_number || line.stock_number, vehicle?.make || line.make, vehicle?.model || line.model]
+                  .filter(Boolean)
+                  .join(' · ') || line.description;
               const deposit =
                 line.discount && line.unit_price
                   ? `${Math.round((Number(line.discount) / Number(line.unit_price)) * 100)}%`
@@ -218,7 +224,7 @@ export function OfficialTradeDocument({
         {notes && <p className="mt-1.5 text-[9px] text-slate-600 line-clamp-2">Notes: {notes}</p>}
 
         <footer className="mt-auto pt-3">
-          <div className="grid grid-cols-[72px_1fr_72px] items-center gap-2">
+          <div className="grid grid-cols-[64px_1fr_108px] items-center gap-2">
             <div className="flex justify-start">
               <JctHanko className="!h-[64px] !w-[64px]" />
             </div>
@@ -237,9 +243,9 @@ export function OfficialTradeDocument({
             </div>
             <div className="flex justify-end">
               {showQr && verificationUrl ? (
-                <div className="flex flex-col items-center">
-                  <InvoiceQRCode value={verificationUrl} size={52} />
-                  <p className="mt-0.5 text-[6px] text-slate-400">Verify</p>
+                <div className="invoice-qr-wrap flex flex-col items-center">
+                  <InvoiceQRCode value={verificationUrl} size={100} className="invoice-qr" />
+                  <p className="mt-0.5 text-[8px] font-semibold tracking-wide text-slate-700">Scan to verify</p>
                 </div>
               ) : (
                 <span />

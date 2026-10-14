@@ -135,6 +135,20 @@
   }
   body.printing-document #print-layer tr,
   body.printing-document #print-layer img { break-inside: avoid; }
+  body.printing-document #print-layer .invoice-qr-wrap {
+    break-inside: avoid;
+  }
+  body.printing-document #print-layer .invoice-qr {
+    width: 26mm !important;
+    height: 26mm !important;
+    min-width: 26mm !important;
+    min-height: 26mm !important;
+    padding: 1.5mm !important;
+    background: #fff !important;
+    border: 0.4mm solid #111 !important;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
   body.printing-document #print-layer .print-page-break {
     break-before: page;
     page-break-before: always;

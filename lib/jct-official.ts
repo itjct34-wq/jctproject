@@ -37,3 +37,26 @@ export function extractChassis(text: string | null | undefined) {
   const match = text.match(/(?:chassis|chassic|vin)[:\s#-]*([A-Z0-9]{8,20})/i);
   return match?.[1] || '';
 }
+
+export function describeInvoiceVehicle(parts: {
+  stock_number?: string | null;
+  make?: string | null;
+  model?: string | null;
+  chassis_number?: string | null;
+  description?: string | null;
+}) {
+  const stock = [parts.stock_number, parts.make, parts.model]
+    .map((s) => s?.trim())
+    .filter(Boolean)
+    .join(' · ');
+  const chassis = parts.chassis_number?.trim();
+  const chassisBit = chassis
+    ? /^chassis\b/i.test(chassis)
+      ? chassis
+      : `CHASSIS ${chassis}`
+    : '';
+  const extra = parts.description?.trim() || '';
+  const bits = [stock, chassisBit].filter(Boolean);
+  if (extra && extra !== stock && !bits.some((bit) => extra.includes(bit))) bits.push(extra);
+  return bits.join(' / ') || extra || 'Vehicle';
+}

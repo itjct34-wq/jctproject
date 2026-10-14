@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import type { Invoice, InvoiceItem, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument } from '@/components/documents/official-trade-document';
+import { extractChassis } from '@/lib/jct-official';
 import { buildVerifyUrl } from './qr-code';
 
 type Props = {
@@ -55,6 +56,7 @@ export function CommercialInvoiceTemplate({
         line_total: item.line_total,
         discount: item.discount,
         vehicle_id: item.vehicle_id,
+        chassis_number: extractChassis(item.description),
       }))}
       vehicles={vehicles}
       grandTotal={grand}

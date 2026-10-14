@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 /**
  * QR code for invoice verification links.
- * Uses a public QR image API (no extra npm dependency).
+ * Renders a high-resolution PNG so print/PDF stays scannable.
  */
 export function InvoiceQRCode({
   value,
@@ -17,7 +17,8 @@ export function InvoiceQRCode({
 }) {
   const src = useMemo(() => {
     const encoded = encodeURIComponent(value);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&margin=8`;
+    const pixels = Math.max(240, size * 4);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${pixels}x${pixels}&ecc=H&margin=1&color=000000&bgcolor=FFFFFF&data=${encoded}`;
   }, [value, size]);
 
   return (
@@ -27,8 +28,9 @@ export function InvoiceQRCode({
       width={size}
       height={size}
       alt="Document verification QR code"
-      className={`rounded border border-border bg-white ${className}`}
+      className={`invoice-qr rounded-sm border-2 border-slate-900 bg-white p-1 ${className}`}
       loading="eager"
+      decoding="sync"
     />
   );
 }
