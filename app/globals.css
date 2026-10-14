@@ -214,6 +214,8 @@
   }
   body.printing-document #print-layer .invoice-sheet {
     width: 194mm !important;
+    padding: 8mm !important;
+    box-sizing: border-box !important;
     min-height: 0 !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;

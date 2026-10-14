@@ -151,7 +151,7 @@ export function OfficialTradeDocument({
 
   return (
     <div className="invoice-print-root bg-white text-[#0b1f3a] max-w-[210mm] mx-auto">
-      <div className="invoice-sheet flex flex-col bg-white p-[8mm] print:p-0">
+      <div className="invoice-sheet flex flex-col bg-white p-[8mm]">
         <header className="flex items-center justify-between gap-4 border-b-2 border-[#c4161c] pb-3">
           <img
             src={JCT_OFFICIAL.logo}
@@ -284,12 +284,12 @@ export function OfficialTradeDocument({
                   <td className="px-2 py-1.5 font-mono text-[9px] align-top">{chassis}</td>
                   <td className="px-2 py-1.5 align-top">
                     <LabeledLine label="Make" value={make} />
-                    <LabeledLine label="model" value={model} />
+                    <LabeledLine label="Model" value={model} />
                     <LabeledLine label="Year" value={year} />
                     <LabeledLine label="Engine" value={engine} />
                   </td>
                   <td className="px-2 py-1.5 align-top">
-                    <LabeledLine label="color" value={colour} />
+                    <LabeledLine label="Colour" value={colour} />
                     <p className="text-[10px] leading-[1.45]">{cellText(transmission)}</p>
                   </td>
                   {showDeposit && <td className="px-2 py-1.5 text-center align-middle font-semibold">{deposit}</td>}
