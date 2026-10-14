@@ -35,40 +35,40 @@ export default function BlogIndexPage() {
 
   return (
     <PublicShell>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 md:py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">Insights</p>
-        <h1 className="mt-2 text-3xl md:text-4xl font-bold text-white">Export blog</h1>
-        <p className="mt-3 text-sm text-zinc-400 max-w-xl">
+      <section className="jct-home-wrap py-12 md:py-16">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--jct-vermilion)]">Insights</p>
+        <h1 className="mt-2 font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">Export blog</h1>
+        <p className="mt-3 max-w-xl text-sm text-[var(--jct-muted)]">
           Practical guides for importers, dealers, and fleet buyers sourcing from Japan.
         </p>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-zinc-500">
+          <div className="flex items-center justify-center gap-2 py-20 text-[var(--jct-muted-2)]">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading posts…
           </div>
         ) : posts.length === 0 ? (
-          <p className="mt-12 text-sm text-zinc-500">No published posts yet.</p>
+          <p className="mt-12 text-sm text-[var(--jct-muted-2)]">No published posts yet.</p>
         ) : (
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => (
               <Link
                 key={post.id}
                 href={`/blog/${post.slug}`}
-                className="group rounded-2xl border border-white/10 overflow-hidden hover:border-red-500/40 transition-colors bg-zinc-900/40"
+                className="group overflow-hidden rounded-2xl border border-[var(--jct-border)] bg-white hover:border-[var(--jct-navy)]/30"
               >
-                <div className="h-36 bg-zinc-900 overflow-hidden">
+                <div className="h-36 overflow-hidden bg-[var(--jct-panel)]">
                   {post.cover_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={post.cover_image_url} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={post.cover_image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-red-900/40 via-zinc-900 to-zinc-950" />
+                    <div className="h-full w-full bg-[var(--jct-navy)]" />
                   )}
                 </div>
                 <div className="p-5">
-                  <p className="text-[10px] uppercase tracking-wider text-red-400">{post.category || 'Guide'}</p>
-                  <h2 className="mt-1 text-lg font-semibold text-white group-hover:text-red-50 line-clamp-2">{post.title}</h2>
-                  {post.excerpt && <p className="mt-2 text-sm text-zinc-400 line-clamp-2">{post.excerpt}</p>}
-                  <p className="mt-3 text-xs text-zinc-500">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--jct-vermilion)]">{post.category || 'Guide'}</p>
+                  <h2 className="mt-1 line-clamp-2 text-lg font-semibold text-[var(--jct-navy)]">{post.title}</h2>
+                  {post.excerpt && <p className="mt-2 line-clamp-2 text-sm text-[var(--jct-muted)]">{post.excerpt}</p>}
+                  <p className="mt-3 text-xs text-[var(--jct-muted-2)]">
                     {post.published_at ? new Date(post.published_at).toLocaleDateString() : ''}{post.author_name ? ` · ${post.author_name}` : ''}
                   </p>
                 </div>

@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { AssignOfficeShiftDialog } from '@/components/users/assign-office-shift';
-import { UserFormDialog, type UserFormValues } from '@/components/users/user-form-dialog';
+import { optionalPasswordUpdate, UserFormDialog, type UserFormValues } from '@/components/users/user-form-dialog';
 
 interface UserWithRoles extends Profile {
   roles: Role[];
@@ -169,6 +169,11 @@ export default function UsersPage() {
 
   const handleEditUser = async (values: UserFormValues) => {
     if (!editUser) return;
+    const passwordUpdate = optionalPasswordUpdate(values);
+    if (passwordUpdate.error) {
+      toast.error(passwordUpdate.error);
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/admin/update-user', {
@@ -185,12 +190,13 @@ export default function UsersPage() {
           department: values.department.trim() || null,
           office_id: values.office_id === 'none' ? null : values.office_id,
           shift_id: values.shift_id === 'none' ? null : values.shift_id,
+          ...(passwordUpdate.password ? { password: passwordUpdate.password } : {}),
         }),
       });
       const body = await res.json().catch(() => ({}));
       setSubmitting(false);
       if (!res.ok) {
-        toast.error(body.error || 'Could not update user');
+        toast.error(typeof body.error === 'string' ? body.error : 'Could not update user');
         return;
       }
     } catch (err) {
@@ -198,7 +204,7 @@ export default function UsersPage() {
       toast.error(err instanceof Error ? err.message : 'Could not update user');
       return;
     }
-    toast.success('User profile updated');
+    toast.success(passwordUpdate.password ? 'User profile and password updated' : 'User profile updated');
     setEditUser(null);
     loadData();
   };

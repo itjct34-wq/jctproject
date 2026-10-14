@@ -5,15 +5,16 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Download, Loader2, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { parseCSV, downloadCSVTemplate } from '@/lib/utils/csv-import';
+import { downloadCSVTemplate, parseSpreadsheetFile } from '@/lib/utils/csv-import';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   headers: string[];
-  sampleRow: string[];
+  sampleRow: string[] | string[][];
   templateFilename: string;
+  hint?: string;
   onImport: (rows: Record<string, string>[]) => Promise<{ ok: number; failed: number; errors: string[] }>;
 };
 
@@ -24,10 +25,12 @@ export function BulkImportDialog({
   headers,
   sampleRow,
   templateFilename,
+  hint,
   onImport,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
+  const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [preview, setPreview] = useState<Record<string, string>[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: number; failed: number; errors: string[] } | null>(null);
@@ -35,6 +38,7 @@ export function BulkImportDialog({
 
   const reset = () => {
     setFileName('');
+    setRows([]);
     setPreview([]);
     setResult(null);
     setParseError('');
@@ -45,28 +49,41 @@ export function BulkImportDialog({
     setResult(null);
     setParseError('');
     setFileName(file.name);
-    const text = await file.text();
-    const { rows } = parseCSV(text);
-    if (rows.length === 0) {
-      setParseError('No data rows found. Check the CSV format.');
+    try {
+      const parsed = await parseSpreadsheetFile(file);
+      if (parsed.rows.length === 0) {
+        setParseError('No data rows found. Use the template CSV (or .xlsx with a header row).');
+        setRows([]);
+        setPreview([]);
+        return;
+      }
+      setRows(parsed.rows);
+      setPreview(parsed.rows.slice(0, 5));
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : 'Could not read that file');
+      setRows([]);
       setPreview([]);
-      return;
     }
-    setPreview(rows.slice(0, 5));
-    (window as unknown as { __bulkRows?: Record<string, string>[] }).__bulkRows = rows;
   };
 
   const handleImport = async () => {
-    const rows = (window as unknown as { __bulkRows?: Record<string, string>[] }).__bulkRows || [];
     if (rows.length === 0) return;
     setLoading(true);
     try {
       const res = await onImport(rows);
       setResult(res);
+    } catch (err) {
+      setResult({
+        ok: 0,
+        failed: rows.length,
+        errors: [err instanceof Error ? err.message : 'Import failed'],
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  const importedOk = Boolean(result && result.ok > 0 && result.failed === 0);
 
   return (
     <Dialog
@@ -84,7 +101,7 @@ export function BulkImportDialog({
         <div className="space-y-4">
           <div className="rounded-lg border border-dashed border-border p-4 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Upload a CSV file. Download the template for the required columns.
+              {hint || 'Upload a CSV or Excel file. Download the template for the required columns. One sheet can include stock from many countries.'}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -98,23 +115,28 @@ export function BulkImportDialog({
               </Button>
               <Button type="button" size="sm" onClick={() => inputRef.current?.click()}>
                 <Upload className="mr-1.5 h-4 w-4" />
-                Choose CSV
+                Choose file
               </Button>
               <input
                 ref={inputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) handleFile(f);
+                  if (f) void handleFile(f);
                 }}
               />
+              {(parseError || result) && (
+                <Button type="button" variant="ghost" size="sm" onClick={reset}>
+                  Clear
+                </Button>
+              )}
             </div>
             {fileName && (
               <p className="text-xs flex items-center gap-1.5 text-muted-foreground">
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                {fileName} · {(window as unknown as { __bulkRows?: unknown[] }).__bulkRows?.length || 0} rows
+                {fileName} · {rows.length} rows
               </p>
             )}
           </div>
@@ -159,16 +181,23 @@ export function BulkImportDialog({
                 Imported {result.ok} row(s)
               </p>
               {result.failed > 0 && <p className="text-destructive">Failed: {result.failed}</p>}
-              {result.errors.slice(0, 5).map((e, i) => (
+              {result.errors.slice(0, 20).map((e, i) => (
                 <p key={i} className="text-xs text-muted-foreground">{e}</p>
               ))}
+              {result.errors.length > 20 && (
+                <p className="text-xs text-muted-foreground">…and {result.errors.length - 20} more</p>
+              )}
             </div>
           )}
         </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button type="button" disabled={loading || !fileName || !!parseError} onClick={handleImport}>
+          <Button
+            type="button"
+            disabled={loading || rows.length === 0 || !!parseError || importedOk}
+            onClick={() => void handleImport()}
+          >
             {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importing...</>) : 'Import'}
           </Button>
         </DialogFooter>

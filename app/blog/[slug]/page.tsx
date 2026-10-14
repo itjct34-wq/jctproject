@@ -41,33 +41,33 @@ export default function BlogPostPage() {
 
   return (
     <PublicShell>
-      <article className="mx-auto max-w-3xl px-4 sm:px-6 py-12 md:py-16">
-        <Link href="/blog" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white">
+      <article className="jct-home-wrap max-w-3xl py-12 md:py-16">
+        <Link href="/blog" className="inline-flex min-h-11 items-center gap-2 text-sm text-[var(--jct-muted)] hover:text-[var(--jct-navy)]">
           <ArrowLeft className="h-4 w-4" /> All posts
         </Link>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-zinc-500">
+          <div className="flex items-center justify-center gap-2 py-20 text-[var(--jct-muted-2)]">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading…
           </div>
         ) : !post ? (
           <div className="mt-12 text-center">
-            <p className="text-white font-medium">Post not found</p>
-            <Link href="/blog" className="mt-4 inline-block text-sm text-red-400">Back to blog</Link>
+            <p className="font-medium text-[var(--jct-navy)]">Post not found</p>
+            <Link href="/blog" className="mt-4 inline-block text-sm text-[var(--jct-vermilion)]">Back to blog</Link>
           </div>
         ) : (
           <>
-            <p className="mt-8 text-[10px] uppercase tracking-wider text-red-400">{post.category || 'Guide'}</p>
-            <h1 className="mt-2 text-3xl md:text-4xl font-bold text-white leading-tight">{post.title}</h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-8 text-[10px] uppercase tracking-wider text-[var(--jct-vermilion)]">{post.category || 'Guide'}</p>
+            <h1 className="mt-2 font-display text-3xl font-bold leading-tight text-[var(--jct-navy)] md:text-4xl">{post.title}</h1>
+            <p className="mt-3 text-sm text-[var(--jct-muted-2)]">
               {post.published_at ? new Date(post.published_at).toLocaleDateString() : ''}
               {post.author_name ? ` · ${post.author_name}` : ''}
             </p>
             {post.cover_image_url && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={post.cover_image_url} alt="" className="mt-8 w-full rounded-2xl border border-white/10 object-cover max-h-80" />
+              <img src={post.cover_image_url} alt="" className="mt-8 max-h-80 w-full rounded-2xl border border-[var(--jct-border)] object-cover" />
             )}
-            <div className="mt-8 prose prose-invert prose-sm max-w-none text-zinc-300 whitespace-pre-wrap leading-relaxed">
+            <div className="mt-8 max-w-none whitespace-pre-wrap text-sm leading-relaxed text-[var(--jct-muted)]">
               {post.body}
             </div>
           </>

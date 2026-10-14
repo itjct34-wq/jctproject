@@ -4,192 +4,137 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { PublicShell } from '@/components/public/public-shell';
+import { CountryFlag } from '@/components/public/country-flag';
 import { PublicPriceEstimator } from '@/components/public/public-price-estimator';
+import { VehicleGallery } from '@/components/public/vehicle-gallery';
 import { supabase } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils/currencies';
-import { ArrowLeft, CarFront, Fuel, Gauge, Loader2, MapPin, Settings2 } from 'lucide-react';
-
-type PublicVehicle = {
-  id: string;
-  stock_number: string;
-  chassis_number: string;
-  make: string;
-  model: string;
-  model_grade: string | null;
-  model_year: number | null;
-  registration_year: number | null;
-  mileage_km: number | null;
-  listed_price: number | null;
-  listed_currency: string;
-  transmission: string | null;
-  fuel_type: string | null;
-  color: string | null;
-  status: string;
-  primary_image_url: string | null;
-  source_country: string | null;
-  notes: string | null;
-};
-
-type GalleryRow = { image_url: string; is_primary: boolean | null; sort_order: number };
+import {
+  attachGallery,
+  publicEngineFromNotes,
+  selectListedVehicles,
+  sourceCountryCode,
+  sourceCountryLabel,
+  type PublicVehicle,
+  type VehicleImageRow,
+} from '@/lib/public/vehicles';
+import { ArrowLeft, CarFront, Fuel, Gauge, Loader2, Palette, Settings2 } from 'lucide-react';
 
 export default function PublicVehicleDetailPage() {
   const params = useParams();
   const id = String(params?.id || '');
   const [vehicle, setVehicle] = useState<PublicVehicle | null>(null);
-  const [gallery, setGallery] = useState<string[]>([]);
-  const [active, setActive] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const [vRes, gRes] = await Promise.all([
-        supabase
-          .from('vehicles')
-          .select(
-            'id, stock_number, chassis_number, make, model, model_grade, model_year, registration_year, mileage_km, listed_price, listed_currency, transmission, fuel_type, color, status, primary_image_url, source_country, notes'
-          )
-          .eq('id', id)
-          .in('status', ['in_stock', 'reserved'])
-          .maybeSingle(),
-        supabase
-          .from('vehicle_images')
-          .select('image_url, is_primary, sort_order')
-          .eq('vehicle_id', id)
-          .order('sort_order', { ascending: true }),
-      ]);
-      const v = (vRes.data as PublicVehicle) || null;
-      setVehicle(v);
-      const imgs = ((gRes.data || []) as GalleryRow[]).map((r) => r.image_url);
-      if (imgs.length) setGallery(imgs);
-      else if (v?.primary_image_url) setGallery([v.primary_image_url]);
-      else setGallery([]);
-      setActive(0);
+      const { data } = await selectListedVehicles(supabase, { id });
+      const row = (data as unknown as Omit<PublicVehicle, 'gallery'> | null) || null;
+      if (!row) {
+        setVehicle(null);
+        setLoading(false);
+        return;
+      }
+      const { data: gallery } = await supabase
+        .from('vehicle_images')
+        .select('vehicle_id, image_url, sort_order, is_primary')
+        .eq('vehicle_id', id);
+      const attached = attachGallery([row], (gallery || []) as VehicleImageRow[])[0];
+      setVehicle(attached);
       setLoading(false);
     })();
   }, [id]);
 
+  const engine = publicEngineFromNotes(vehicle?.notes);
+  const source = vehicle ? sourceCountryLabel(vehicle) : 'Japan';
+  const sourceCode = vehicle ? sourceCountryCode(vehicle) : 'jp';
+
   return (
     <PublicShell>
-      <section className="mx-auto max-w-5xl px-4 sm:px-6 py-10 md:py-14">
-        <Link href="/inventory" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white">
+      <section className="jct-home-wrap py-10 md:py-14">
+        <Link href="/inventory" className="inline-flex min-h-11 items-center gap-2 text-sm text-[var(--jct-muted)] hover:text-[var(--jct-navy)]">
           <ArrowLeft className="h-4 w-4" /> Back to inventory
         </Link>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-24 text-zinc-500">
+          <div className="flex items-center justify-center gap-2 py-24 text-[var(--jct-muted-2)]">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading vehicle…
           </div>
         ) : !vehicle ? (
-          <div className="mt-12 rounded-2xl border border-white/10 bg-zinc-900/50 p-10 text-center">
-            <CarFront className="mx-auto h-10 w-10 text-zinc-600" />
-            <p className="mt-3 text-white font-medium">Vehicle not available</p>
-            <Link href="/inventory" className="mt-5 inline-flex rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white">
+          <div className="mt-12 rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-10 text-center">
+            <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
+            <p className="mt-3 font-medium text-[var(--jct-navy)]">Vehicle not available</p>
+            <Link href="/inventory" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white">
               Browse stock
             </Link>
           </div>
         ) : (
           <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <div className="space-y-3">
-              <div className="relative aspect-[16/11] rounded-2xl overflow-hidden border border-white/10 bg-zinc-950">
-                {gallery[active] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={gallery[active]} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="h-full w-full flex flex-col items-center justify-center gap-2">
-                    <CarFront className="h-16 w-16 text-zinc-600" />
-                    <span className="text-[10px] uppercase tracking-widest text-zinc-600">Photo coming soon</span>
-                  </div>
-                )}
-              </div>
-              {gallery.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {gallery.map((url, i) => (
-                    <button
-                      key={url + i}
-                      type="button"
-                      onClick={() => setActive(i)}
-                      className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border ${
-                        i === active ? 'border-red-500 ring-1 ring-red-500' : 'border-white/10'
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <VehicleGallery images={vehicle.gallery} alt={`${vehicle.make} ${vehicle.model}`} />
 
             <div className="space-y-6">
               <div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {vehicle.source_country && (
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-zinc-200">
-                      <MapPin className="h-3 w-3" /> {vehicle.source_country}
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--jct-border)] bg-white px-2.5 py-1">
+                    <CountryFlag country={source} code={sourceCode} size="sm" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--jct-navy)]">
+                      {source}
                     </span>
-                  )}
-                  <span className={`text-[10px] uppercase tracking-wider rounded-full border px-2.5 py-1 font-medium ${
-                    vehicle.status === 'in_stock'
-                      ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
-                      : 'border-amber-500/40 bg-amber-500/20 text-amber-300'
-                  }`}>
+                  </span>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider ${
+                      vehicle.status === 'in_stock'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-amber-200 bg-amber-50 text-amber-800'
+                    }`}
+                  >
                     {vehicle.status === 'in_stock' ? 'Available' : 'Reserved'}
                   </span>
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white">
+                <h1 className="font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">
                   {vehicle.make} {vehicle.model}
                   {vehicle.model_grade ? ` ${vehicle.model_grade}` : ''}
                 </h1>
-                <p className="mt-2 text-sm text-zinc-400">
+                <p className="mt-2 text-sm text-[var(--jct-muted)]">
                   {vehicle.stock_number}
                   {vehicle.model_year ? ` · ${vehicle.model_year}` : ''}
-                  {vehicle.color ? ` · ${vehicle.color}` : ''}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-5">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500">FOB price</p>
-                <p className="mt-1 text-3xl font-bold text-white">
+              <div className="rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-5">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">FOB price</p>
+                <p className="mt-1 font-display text-3xl font-bold text-[var(--jct-navy)]">
                   {vehicle.listed_price != null
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency)
                     : 'Ask for quote'}
                 </p>
-                <p className="mt-2 text-xs text-zinc-500">C&F / CIF on request · RORO or container</p>
+                <p className="mt-2 text-xs text-[var(--jct-muted)]">C&amp;F / CIF on request · RORO or container</p>
               </div>
 
               <PublicPriceEstimator listedPrice={vehicle.listed_price} currency={vehicle.listed_currency || 'USD'} />
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {[
-                  vehicle.mileage_km != null && { icon: Gauge, label: 'Mileage', value: `${vehicle.mileage_km.toLocaleString()} km` },
-                  vehicle.transmission && { icon: Settings2, label: 'Transmission', value: vehicle.transmission },
-                  vehicle.fuel_type && { icon: Fuel, label: 'Fuel', value: vehicle.fuel_type },
-                  vehicle.chassis_number && { icon: CarFront, label: 'Chassis', value: vehicle.chassis_number },
-                ]
-                  .filter(Boolean)
-                  .map((item) => {
-                    const it = item as { icon: typeof Gauge; label: string; value: string };
-                    const Icon = it.icon;
-                    return (
-                      <div key={it.label} className="rounded-xl border border-white/10 bg-zinc-900/40 p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                          <Icon className="h-3 w-3" /> {it.label}
-                        </p>
-                        <p className="mt-1 text-white font-medium capitalize">{it.value}</p>
-                      </div>
-                    );
-                  })}
-              </div>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                {vehicle.model_year ? spec('Year', String(vehicle.model_year), Gauge) : null}
+                {vehicle.color ? spec('Colour', vehicle.color, Palette) : null}
+                {engine ? spec('Engine', engine, Settings2) : null}
+                {vehicle.transmission ? spec('Transmission', vehicle.transmission, Settings2) : null}
+                {vehicle.fuel_type ? spec('Fuel', vehicle.fuel_type, Fuel) : null}
+                {vehicle.mileage_km != null ? spec('Mileage', `${vehicle.mileage_km.toLocaleString()} km`, Gauge) : null}
+                {spec('Source country', source, CarFront)}
+              </dl>
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link
                   href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
-                  className="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500"
+                  className="inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-6 text-sm font-semibold text-white hover:bg-[#c23024]"
                 >
                   Inquire about this vehicle
                 </Link>
-                <Link href="/verify-agent" className="rounded-full border border-emerald-500/40 px-6 py-3 text-sm font-medium text-emerald-300">
+                <Link
+                  href="/verify-agent"
+                  className="inline-flex min-h-11 items-center rounded-lg border border-[var(--jct-navy)] px-6 text-sm font-medium text-[var(--jct-navy)]"
+                >
                   Verify agent
                 </Link>
               </div>
@@ -198,5 +143,16 @@ export default function PublicVehicleDetailPage() {
         )}
       </section>
     </PublicShell>
+  );
+}
+
+function spec(label: string, value: string, Icon: typeof Gauge) {
+  return (
+    <div key={label} className="rounded-xl border border-[var(--jct-border)] bg-white p-3">
+      <dt className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">
+        <Icon className="h-3 w-3" /> {label}
+      </dt>
+      <dd className="mt-1 font-medium capitalize text-[var(--jct-navy)]">{value}</dd>
+    </div>
   );
 }

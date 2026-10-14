@@ -47,34 +47,60 @@ export default function VerifyQuotationPage() {
 
   return (
     <PublicShell>
-      <section className="mx-auto max-w-xl px-4 py-14 sm:px-6 md:py-20">
+      <section className="jct-home-wrap max-w-xl py-14 md:py-20">
         <div className="mb-8 text-center">
-          <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-red-600/20">
-            <ShieldCheck className="h-7 w-7 text-red-400" />
+          <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--jct-vermilion)]/10">
+            <ShieldCheck className="h-7 w-7 text-[var(--jct-vermilion)]" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-white">Quotation authenticity verification</h1>
-          <p className="mt-2 text-sm text-zinc-400">Japan Circular Trading · Nagoya, Japan</p>
+          <h1 className="mt-4 font-display text-2xl font-bold text-[var(--jct-navy)]">Quotation authenticity verification</h1>
+          <p className="mt-2 text-sm text-[var(--jct-muted)]">Japan Circular Trading · Nagoya, Japan</p>
         </div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-          {loading && <div className="flex flex-col items-center gap-3 py-10"><Loader2 className="h-8 w-8 animate-spin text-red-500" /><p className="text-sm text-zinc-400">Verifying quotation…</p></div>}
-          {!loading && result?.valid && <div className="space-y-5">
-            <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-              <BadgeCheck className="h-8 w-8 shrink-0 text-emerald-400" />
-              <div><p className="font-semibold text-emerald-400">Authentic quotation</p><p className="text-xs text-emerald-300/80">This quotation number was issued by Japan Circular Trading.</p></div>
+        <div className="rounded-2xl border border-[var(--jct-border)] bg-white p-6">
+          {loading && (
+            <div className="flex flex-col items-center gap-3 py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-[var(--jct-vermilion)]" />
+              <p className="text-sm text-[var(--jct-muted)]">Verifying quotation…</p>
             </div>
-            <dl className="space-y-3 text-sm">
-              {[
-                ['Quotation No.', result.quotation_code],
-                ['Price terms', result.price_type],
-                ['Issue date', result.created_at ? new Date(result.created_at).toLocaleDateString() : null],
-                ['Total', result.total != null ? `${result.currency} ${Number(result.total).toLocaleString()}` : null],
-                ['Status', result.status],
-                ['Valid until', result.valid_until ? new Date(result.valid_until).toLocaleDateString() : null],
-              ].filter(([, value]) => value).map(([label, value]) => <div key={label as string} className="flex justify-between gap-4 border-b border-zinc-800 pb-2"><dt className="text-zinc-500">{label}</dt><dd className="text-right font-medium capitalize text-zinc-100">{value}</dd></div>)}
-            </dl>
-            <p className="text-xs leading-relaxed text-zinc-500">This confirms the quotation record only. Final vehicle availability and shipping costs remain subject to written confirmation.</p>
-          </div>}
-          {!loading && result && !result.valid && <div className="flex flex-col items-center gap-3 py-8 text-center"><XCircle className="h-12 w-12 text-red-500" /><p className="font-semibold text-red-300">Invalid or unknown quotation</p><p className="text-sm text-zinc-400">{result.message || 'This verification code does not match an active quotation.'}</p><ShieldAlert className="h-5 w-5 text-zinc-600" /></div>}
+          )}
+          {!loading && result?.valid && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <BadgeCheck className="h-8 w-8 shrink-0 text-emerald-700" />
+                <div>
+                  <p className="font-semibold text-emerald-800">Authentic quotation</p>
+                  <p className="text-xs text-emerald-800/80">This quotation number was issued by Japan Circular Trading.</p>
+                </div>
+              </div>
+              <dl className="space-y-3 text-sm">
+                {[
+                  ['Quotation No.', result.quotation_code],
+                  ['Price terms', result.price_type],
+                  ['Issue date', result.created_at ? new Date(result.created_at).toLocaleDateString() : null],
+                  ['Total', result.total != null ? `${result.currency} ${Number(result.total).toLocaleString()}` : null],
+                  ['Status', result.status],
+                  ['Valid until', result.valid_until ? new Date(result.valid_until).toLocaleDateString() : null],
+                ]
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <div key={label as string} className="flex justify-between gap-4 border-b border-[var(--jct-border)] pb-2">
+                      <dt className="text-[var(--jct-muted-2)]">{label}</dt>
+                      <dd className="text-right font-medium capitalize text-[var(--jct-navy)]">{value}</dd>
+                    </div>
+                  ))}
+              </dl>
+              <p className="text-xs leading-relaxed text-[var(--jct-muted-2)]">
+                This confirms the quotation record only. Final vehicle availability and shipping costs remain subject to written confirmation.
+              </p>
+            </div>
+          )}
+          {!loading && result && !result.valid && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <XCircle className="h-12 w-12 text-[var(--jct-vermilion)]" />
+              <p className="font-semibold text-[var(--jct-navy)]">Invalid or unknown quotation</p>
+              <p className="text-sm text-[var(--jct-muted)]">{result.message || 'This verification code does not match an active quotation.'}</p>
+              <ShieldAlert className="h-5 w-5 text-[var(--jct-muted-2)]" />
+            </div>
+          )}
         </div>
       </section>
     </PublicShell>

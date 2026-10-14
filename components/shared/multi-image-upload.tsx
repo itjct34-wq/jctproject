@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Camera, Loader2, Star, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { chassisStorageFolder } from '@/lib/utils/chassis';
 
 export type GalleryImage = {
   id?: string;
@@ -53,7 +54,7 @@ export function MultiImageUpload({
         continue;
       }
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const path = `${chassisStorageFolder(folder)}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const { error } = await supabase.storage.from('vehicle-images').upload(path, file, {
         upsert: true,
         contentType: file.type,

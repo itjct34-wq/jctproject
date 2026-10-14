@@ -23,7 +23,15 @@ export type UserFormValues = {
   shift_id: string;
 };
 
-const MIN_PASSWORD_LENGTH = 8;
+export const MIN_PASSWORD_LENGTH = 8;
+
+export function optionalPasswordUpdate(values: UserFormValues): { password?: string; error?: string } {
+  if (!values.password && !values.confirm_password) return {};
+  if (values.password.length < MIN_PASSWORD_LENGTH || values.password !== values.confirm_password) {
+    return { error: `Enter a new password of at least ${MIN_PASSWORD_LENGTH} characters and confirm it` };
+  }
+  return { password: values.password };
+}
 
 const emptyForm: UserFormValues = {
   email: '',
@@ -97,12 +105,20 @@ export function UserFormDialog({
 
   const createPasswordValid =
     form.password.length >= MIN_PASSWORD_LENGTH && form.password === form.confirm_password;
+  const editPasswordTouched = form.password.length > 0 || form.confirm_password.length > 0;
+  const editPasswordValid =
+    !editPasswordTouched ||
+    (form.password.length >= MIN_PASSWORD_LENGTH && form.password === form.confirm_password);
   const canSubmitCreate =
     Boolean(form.email.trim() && form.role) && createPasswordValid;
+  const canSubmitEdit = editPasswordValid;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'create') {
+      if (form.password.length < MIN_PASSWORD_LENGTH) return;
+      if (form.password !== form.confirm_password) return;
+    } else if (editPasswordTouched) {
       if (form.password.length < MIN_PASSWORD_LENGTH) return;
       if (form.password !== form.confirm_password) return;
     }
@@ -130,39 +146,42 @@ export function UserFormDialog({
                 autoComplete={mode === 'create' ? 'off' : undefined}
               />
             </div>
-            {mode === 'create' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="user_password">Password *</Label>
-                  <Input
-                    id="user_password"
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="At least 8 characters"
-                    required
-                    minLength={MIN_PASSWORD_LENGTH}
-                    autoComplete="new-password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="user_confirm_password">Confirm password *</Label>
-                  <Input
-                    id="user_confirm_password"
-                    type="password"
-                    value={form.confirm_password}
-                    onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
-                    placeholder="Re-enter password"
-                    required
-                    minLength={MIN_PASSWORD_LENGTH}
-                    autoComplete="new-password"
-                  />
-                  {form.confirm_password.length > 0 && form.password !== form.confirm_password && (
-                    <p className="text-xs text-destructive">Passwords do not match</p>
-                  )}
-                </div>
-              </>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="user_password">
+                {mode === 'create' ? 'Password *' : 'New password'}
+              </Label>
+              <Input
+                id="user_password"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder={mode === 'create' ? 'At least 8 characters' : 'Leave blank to keep current'}
+                required={mode === 'create'}
+                minLength={MIN_PASSWORD_LENGTH}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user_confirm_password">
+                {mode === 'create' ? 'Confirm password *' : 'Confirm new password'}
+              </Label>
+              <Input
+                id="user_confirm_password"
+                type="password"
+                value={form.confirm_password}
+                onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+                placeholder="Re-enter password"
+                required={mode === 'create'}
+                minLength={MIN_PASSWORD_LENGTH}
+                autoComplete="new-password"
+              />
+              {form.confirm_password.length > 0 && form.password !== form.confirm_password && (
+                <p className="text-xs text-destructive">Passwords do not match</p>
+              )}
+              {mode === 'edit' && form.password.length > 0 && form.password.length < MIN_PASSWORD_LENGTH && (
+                <p className="text-xs text-destructive">Password must be at least {MIN_PASSWORD_LENGTH} characters</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="user_full_name">Full name</Label>
               <Input
@@ -293,7 +312,7 @@ export function UserFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={submitting || (mode === 'create' && !canSubmitCreate)}
+              disabled={submitting || (mode === 'create' ? !canSubmitCreate : !canSubmitEdit)}
             >
               {submitting ? (
                 <>

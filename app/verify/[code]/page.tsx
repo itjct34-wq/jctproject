@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { InvoiceVerifyResult } from '@/lib/types';
+import { PublicShell } from '@/components/public/public-shell';
 import { CheckCircle2, XCircle, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function VerifyInvoicePage() {
@@ -34,31 +35,31 @@ export default function VerifyInvoicePage() {
   }, [code]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-zinc-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-600/20 mb-3">
-            <ShieldCheck className="w-7 h-7 text-red-500" />
+    <PublicShell>
+      <section className="jct-home-wrap flex max-w-md flex-col items-center py-14 md:py-20">
+        <div className="mb-8 text-center">
+          <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--jct-vermilion)]/10">
+            <ShieldCheck className="h-7 w-7 text-[var(--jct-vermilion)]" />
           </div>
-          <h1 className="text-xl font-bold text-white">Japan Circular Trading</h1>
-          <p className="text-sm text-zinc-400 mt-1">Invoice authenticity check · no login required</p>
+          <h1 className="font-display text-xl font-bold text-[var(--jct-navy)]">Invoice authenticity check</h1>
+          <p className="mt-1 text-sm text-[var(--jct-muted)]">Japan Circular Trading · no login required</p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+        <div className="w-full rounded-2xl border border-[var(--jct-border)] bg-white p-6">
           {loading && (
-            <div className="flex flex-col items-center py-10 gap-3">
-              <Loader2 className="w-8 h-8 text-red-500 animate-spin" />
-              <p className="text-sm text-zinc-400">Verifying invoice…</p>
+            <div className="flex flex-col items-center gap-3 py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-[var(--jct-vermilion)]" />
+              <p className="text-sm text-[var(--jct-muted)]">Verifying invoice…</p>
             </div>
           )}
 
           {!loading && result?.valid && (
             <div className="space-y-5">
-              <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 shrink-0" />
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-700" />
                 <div>
-                  <p className="font-semibold text-emerald-400">Authentic Invoice</p>
-                  <p className="text-xs text-emerald-400/70">This document was issued by Japan Circular Trading</p>
+                  <p className="font-semibold text-emerald-800">Authentic Invoice</p>
+                  <p className="text-xs text-emerald-800/70">This document was issued by Japan Circular Trading</p>
                 </div>
               </div>
 
@@ -78,15 +79,15 @@ export default function VerifyInvoicePage() {
                 ]
                   .filter(([, v]) => v)
                   .map(([label, value]) => (
-                    <div key={label as string} className="flex justify-between border-b border-zinc-800 pb-2">
-                      <dt className="text-zinc-500">{label}</dt>
-                      <dd className="text-zinc-100 font-medium capitalize text-right">{value}</dd>
+                    <div key={label as string} className="flex justify-between border-b border-[var(--jct-border)] pb-2">
+                      <dt className="text-[var(--jct-muted-2)]">{label}</dt>
+                      <dd className="text-right font-medium capitalize text-[var(--jct-navy)]">{value}</dd>
                     </div>
                   ))}
               </dl>
 
               {result.verified_at && (
-                <p className="text-[10px] text-zinc-600 text-center pt-2">
+                <p className="pt-2 text-center text-[10px] text-[var(--jct-muted-2)]">
                   Verified at {new Date(result.verified_at).toLocaleString()}
                 </p>
               )}
@@ -94,20 +95,16 @@ export default function VerifyInvoicePage() {
           )}
 
           {!loading && result && !result.valid && (
-            <div className="flex flex-col items-center py-8 gap-3">
-              <XCircle className="w-12 h-12 text-red-500" />
-              <p className="font-semibold text-red-400">Invalid or Unknown Invoice</p>
-              <p className="text-sm text-zinc-500 text-center">
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <XCircle className="h-12 w-12 text-[var(--jct-vermilion)]" />
+              <p className="font-semibold text-[var(--jct-navy)]">Invalid or unknown invoice</p>
+              <p className="text-center text-sm text-[var(--jct-muted)]">
                 {result.message || 'This verification code does not match any issued invoice.'}
               </p>
             </div>
           )}
         </div>
-
-        <p className="text-center text-[11px] text-zinc-600 mt-6">
-          © Japan Circular Trading · Nagoya, Japan · info@japancirculartrading.com
-        </p>
-      </div>
-    </div>
+      </section>
+    </PublicShell>
   );
 }

@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { CustomersBulkImportButton } from '@/components/customers/customers-bulk-import-button';
 import type { Customer, CustomerCommunication, CustomerContact, CustomerRequirement } from '@/lib/types';
 import { CarFront, Check, ChevronRight, CircleUserRound, Download, FileText, Loader2, Mail, MessageSquare, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
@@ -201,7 +202,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Customers / CRM" description="Manage relationships, vehicle requirements, and customer conversations" actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={handleExport}><Download className="mr-1.5 h-4 w-4" />Export</Button><Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New Customer</Button></div>} />
+      <PageHeader title="Customers / CRM" description="Manage relationships, vehicle requirements, and customer conversations" actions={<div className="flex gap-2"><CustomersBulkImportButton onDone={loadCustomers} /><Button size="sm" variant="outline" onClick={handleExport}><Download className="mr-1.5 h-4 w-4" />Export</Button><Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New Customer</Button></div>} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
         { label: 'Total customers', value: stats.total, tone: 'bg-blue-50 text-blue-600' }, { label: 'Open leads', value: stats.leads, tone: 'bg-amber-50 text-amber-600' }, { label: 'Active accounts', value: stats.active, tone: 'bg-emerald-50 text-emerald-600' }, { label: 'Requirements', value: stats.requirements, tone: 'bg-cyan-50 text-cyan-600' },
       ].map((s) => <Card key={s.label} className="border-border/60"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.label}</p><p className="text-xl font-bold">{s.value}</p></CardContent></Card>)}</div>

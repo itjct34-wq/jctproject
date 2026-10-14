@@ -297,6 +297,7 @@ export interface Vehicle {
   transmission: 'automatic' | 'manual' | 'cvt' | 'other' | null;
   fuel_type: 'petrol' | 'diesel' | 'hybrid' | 'electric' | 'other' | null;
   source_country: string | null;
+  source_country_code: string | null;
   source_supplier: string | null;
   purchase_price: number | null;
   purchase_currency: string;
@@ -311,6 +312,15 @@ export interface Vehicle {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface VehicleImage {
+  id: string;
+  vehicle_id: string;
+  image_url: string;
+  sort_order: number;
+  is_primary: boolean;
+  created_at: string;
 }
 
 export interface VehicleStatusHistory {

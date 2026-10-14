@@ -16,7 +16,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
 import type { Quotation, Customer, Vehicle } from '@/lib/types';
 import { CommercialQuotationTemplate } from '@/components/quotations/commercial-quotation-template';
-import { RecordAttachments } from '@/components/shared/record-attachments';
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -725,7 +724,6 @@ export default function QuotationsPage() {
                     {selected.notes}
                   </p>
                 )}
-                <RecordAttachments entityType="quotations" entityId={selected.id} />
               </div>
             </>
           )}
