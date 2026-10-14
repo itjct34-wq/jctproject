@@ -59,7 +59,7 @@ export async function printDocumentPdf(fileName: string) {
     window.removeEventListener('afterprint', restore);
   };
   window.addEventListener('afterprint', restore, { once: true });
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50)));
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 180)));
   window.print();
   // Some browsers do not emit afterprint consistently; keep the filename title
   // until the print dialog has closed, then restore it.

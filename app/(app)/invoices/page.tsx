@@ -26,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } from '@/lib/types';
 import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
+import { describeInvoiceVehicle, extractChassis } from '@/lib/jct-official';
 import { toast } from 'sonner';
 
 const statusStyles: Record<Invoice['payment_status'], string> = {
@@ -33,6 +34,7 @@ const statusStyles: Record<Invoice['payment_status'], string> = {
 };
 const typeLabels: Record<Invoice['invoice_type'], string> = { proforma: 'Proforma', commercial: 'Commercial', credit_note: 'Credit Note' };
 const emptyForm = {
+  customer_mode: 'existing' as 'existing' | 'manual',
   customer_id: '', sale_id: '', invoice_type: 'commercial' as Invoice['invoice_type'],
   invoice_code_mode: 'auto' as 'auto' | 'manual', invoice_code: '',
   issue_date: '', due_date: '', tax: '', currency: 'USD', notes: '',
@@ -40,8 +42,17 @@ const emptyForm = {
   port_of_loading: 'Nagoya, Japan', port_of_discharge: '', vessel_name: '', bl_number: '',
   freight_total: '0', insurance_total: '0', other_charges: '0', discount_total: '0',
   payment_terms: '100% T/T in advance / LC at sight', bank_details: '',
+  guest_name: '', guest_company: '', guest_email: '', guest_phone: '',
+  guest_country: '', guest_city: '', guest_address: '',
 };
-const emptyItem = { description: '', quantity: '1', unit_price: '', discount: '0', vehicle_id: '' };
+type LineDraft = {
+  description: string; quantity: string; unit_price: string; discount: string; vehicle_id: string;
+  chassis_number: string; stock_number: string; make: string; model: string;
+};
+const emptyItem: LineDraft = {
+  description: '', quantity: '1', unit_price: '', discount: '0', vehicle_id: '',
+  chassis_number: '', stock_number: '', make: '', model: '',
+};
 
 export default function InvoicesPage() {
   const { profile } = useAuth();
@@ -61,7 +72,7 @@ export default function InvoicesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [lineItems, setLineItems] = useState<Array<{ description: string; quantity: string; unit_price: string; discount: string; vehicle_id: string }>>([]);
+  const [lineItems, setLineItems] = useState<LineDraft[]>([]);
   const [companySettings, setCompanySettings] = useState<Pick<CompanySettings, 'id' | 'invoice_prefix' | 'invoice_next_number'> | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
   const [printBankNotice, setPrintBankNotice] = useState(false);
@@ -122,7 +133,16 @@ export default function InvoicesPage() {
     next[idx] = {
       ...next[idx],
       vehicle_id: v.id,
-      description: [v.stock_number, v.make, v.model, `CHASSIS ${v.chassis_number}`].filter(Boolean).join(' / '),
+      chassis_number: v.chassis_number || '',
+      stock_number: v.stock_number || '',
+      make: v.make || '',
+      model: v.model || '',
+      description: describeInvoiceVehicle({
+        stock_number: v.stock_number,
+        make: v.make,
+        model: v.model,
+        chassis_number: v.chassis_number,
+      }),
       unit_price: next[idx].unit_price || String(v.listed_price || ''),
     };
     setLineItems(next);
@@ -148,6 +168,9 @@ export default function InvoicesPage() {
   const openEdit = () => {
     if (!selected) return;
     setForm({
+      customer_mode: 'existing',
+      guest_name: '', guest_company: '', guest_email: '', guest_phone: '',
+      guest_country: '', guest_city: '', guest_address: '',
       customer_id: selected.customer_id, sale_id: selected.sale_id || '', invoice_type: selected.invoice_type,
       invoice_code_mode: 'manual', invoice_code: selected.invoice_code,
       issue_date: selected.issue_date, due_date: selected.due_date || '', tax: String(selected.tax),
@@ -162,14 +185,95 @@ export default function InvoicesPage() {
       payment_terms: selected.payment_terms || '100% T/T in advance / LC at sight',
       bank_details: selected.bank_details || '',
     });
-    setLineItems(items.map((i) => ({ description: i.description, quantity: String(i.quantity), unit_price: String(i.unit_price), discount: String(i.discount), vehicle_id: i.vehicle_id || '' })));
+    setLineItems(items.map((i) => {
+      const v = vehicles.find((x) => x.id === i.vehicle_id);
+      return {
+        description: i.description,
+        quantity: String(i.quantity),
+        unit_price: String(i.unit_price),
+        discount: String(i.discount),
+        vehicle_id: i.vehicle_id || '',
+        chassis_number: v?.chassis_number || extractChassis(i.description) || '',
+        stock_number: v?.stock_number || '',
+        make: v?.make || '',
+        model: v?.model || '',
+      };
+    }));
     if (items.length === 0) setLineItems([{ ...emptyItem }]);
     setEditOpen(true);
   };
 
+  const resolveCustomerId = async () => {
+    if (form.customer_mode === 'existing') {
+      if (!form.customer_id) {
+        toast.error('Select a customer, or enter customer details');
+        return null;
+      }
+      return form.customer_id;
+    }
+    if (!profile) return null;
+    const name = form.guest_name.trim();
+    const email = form.guest_email.trim();
+    const phone = form.guest_phone.trim();
+    if (!name) {
+      toast.error('Enter the customer name');
+      return null;
+    }
+    if (!email && !phone) {
+      toast.error('Enter customer email or phone');
+      return null;
+    }
+    const payload = {
+      full_name: name,
+      company_name: form.guest_company.trim() || null,
+      email: email || null,
+      phone: phone || null,
+      country: form.guest_country.trim() || null,
+      city: form.guest_city.trim() || null,
+      address_line1: form.guest_address.trim() || null,
+      customer_type: form.guest_company.trim() ? 'company' : 'individual',
+      status: 'active',
+      created_by: profile.id,
+      assigned_to: profile.id,
+    };
+    const { data, error } = await supabase.from('customers').insert(payload).select().maybeSingle();
+    if (!error && data) {
+      const created = data as Customer;
+      setCustomers((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created]));
+      return created.id;
+    }
+    if (email) {
+      const { data: existing } = await supabase.from('customers').select('*').ilike('email', email).maybeSingle();
+      if (existing) {
+        const found = existing as Customer;
+        setCustomers((prev) => (prev.some((c) => c.id === found.id) ? prev : [...prev, found]));
+        toast.message('Used the existing customer with that email');
+        return found.id;
+      }
+    }
+    toast.error(error?.message || 'Could not save customer details');
+    return null;
+  };
+
+  const linePayload = (invoiceId: string) =>
+    lineItems
+      .filter((i) => i.description.trim() || i.vehicle_id || i.chassis_number.trim() || i.make.trim() || i.stock_number.trim())
+      .map((item, idx) => ({
+        invoice_id: invoiceId,
+        vehicle_id: item.vehicle_id || null,
+        description: describeInvoiceVehicle(item),
+        quantity: Number(item.quantity) || 1,
+        unit_price: Number(item.unit_price) || 0,
+        discount: Number(item.discount) || 0,
+        line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0) - (Number(item.discount) || 0),
+        sort_order: idx,
+      }));
+
   const submitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !form.customer_id) return;
+    if (!profile) return;
+    const customerId = await resolveCustomerId();
+    if (!customerId) return;
     setSubmitting(true);
     const subtotal = calcSubtotal(lineItems);
     const tax = Number(form.tax) || 0;
@@ -179,11 +283,11 @@ export default function InvoicesPage() {
     const discount = Number(form.discount_total) || 0;
     const total = subtotal + tax + freight + insurance + other - discount;
     const invoiceCode = form.invoice_code.trim() || nextAutoInvoiceCode();
-    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: form.customer_id, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: 'unpaid', notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: form.payment_terms || null, bank_details: form.bank_details || null, created_by: profile.id }).select().maybeSingle();
+    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: 'unpaid', notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: form.payment_terms || null, bank_details: form.bank_details || null, created_by: profile.id }).select().maybeSingle();
     if (error) { setSubmitting(false); toast.error(`Could not create invoice: ${error.message}`); return; }
     const inv = data as Invoice;
-    if (lineItems.filter((i) => i.description.trim()).length > 0) {
-      const itemRows = lineItems.filter((i) => i.description.trim() || i.vehicle_id).map((item, idx) => ({ invoice_id: inv.id, vehicle_id: item.vehicle_id || null, description: item.description.trim(), quantity: Number(item.quantity) || 1, unit_price: Number(item.unit_price) || 0, discount: Number(item.discount) || 0, line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0) - (Number(item.discount) || 0), sort_order: idx }));
+    const itemRows = linePayload(inv.id);
+    if (itemRows.length > 0) {
       const { error: itemError } = await supabase.from('invoice_items').insert(itemRows);
       if (itemError) toast.error(`Invoice created but line items failed: ${itemError.message}`);
     }
@@ -202,12 +306,14 @@ export default function InvoicesPage() {
     const other = Number(form.other_charges) || 0;
     const discount = Number(form.discount_total) || 0;
     const total = subtotal + tax + freight + insurance + other - discount;
-    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: form.customer_id, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: form.payment_terms || null, bank_details: form.bank_details || null, updated_at: new Date().toISOString() }).eq('id', selected.id);
+    const customerId = await resolveCustomerId();
+    if (!customerId) { setSubmitting(false); return; }
+    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: form.payment_terms || null, bank_details: form.bank_details || null, updated_at: new Date().toISOString() }).eq('id', selected.id);
     if (error) { setSubmitting(false); toast.error(`Could not update: ${error.message}`); return; }
     const { error: delError } = await supabase.from('invoice_items').delete().eq('invoice_id', selected.id);
     if (delError) { setSubmitting(false); toast.error(`Could not update line items: ${delError.message}`); return; }
-    if (lineItems.filter((i) => i.description.trim()).length > 0) {
-      const itemRows = lineItems.filter((i) => i.description.trim() || i.vehicle_id).map((item, idx) => ({ invoice_id: selected.id, vehicle_id: item.vehicle_id || null, description: item.description.trim(), quantity: Number(item.quantity) || 1, unit_price: Number(item.unit_price) || 0, discount: Number(item.discount) || 0, line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0) - (Number(item.discount) || 0), sort_order: idx }));
+    const itemRows = linePayload(selected.id);
+    if (itemRows.length > 0) {
       const { error: insError } = await supabase.from('invoice_items').insert(itemRows);
       if (insError) toast.error(`Line items failed to save: ${insError.message}`);
     }
@@ -265,8 +371,62 @@ export default function InvoicesPage() {
 
   const stats = { total: invoices.length, unpaid: invoices.filter((i) => i.payment_status === 'unpaid').length, paid: invoices.filter((i) => i.payment_status === 'paid').length, outstanding: invoices.filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial').reduce((sum, i) => sum + i.total, 0) };
 
+  const canSaveInvoice =
+    form.customer_mode === 'manual'
+      ? Boolean(form.guest_name.trim() && (form.guest_email.trim() || form.guest_phone.trim()))
+      : Boolean(form.customer_id);
+
+  const updateLine = (idx: number, patch: Partial<LineDraft>) => {
+    const next = [...lineItems];
+    next[idx] = { ...next[idx], ...patch };
+    setLineItems(next);
+  };
+
   const lineItemForm = (isOpen: boolean, onClose: () => void, onSubmit: (e: React.FormEvent) => void, title: string) => (
-    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Customer *</Label><Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}><SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger><SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Sale (optional)</Label><Select value={form.sale_id} onValueChange={(v) => setForm({ ...form, sale_id: v })}><SelectTrigger><SelectValue placeholder="Link to sale" /></SelectTrigger><SelectContent>{sales.map((s) => <SelectItem key={s.id} value={s.id}>{s.sale_code}</SelectItem>)}</SelectContent></Select></div></div>
+    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-3 rounded-md border border-border/60 p-3">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Customer source</Label>
+              <Select
+                value={form.customer_mode}
+                onValueChange={(v: 'existing' | 'manual') => setForm({ ...form, customer_mode: v, customer_id: v === 'manual' ? '' : form.customer_id })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="existing">Select from database</SelectItem>
+                  <SelectItem value="manual">Enter details (not in database)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Sale (optional)</Label>
+              <Select value={form.sale_id} onValueChange={(v) => setForm({ ...form, sale_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Link to sale" /></SelectTrigger>
+                <SelectContent>{sales.map((s) => <SelectItem key={s.id} value={s.id}>{s.sale_code}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          {form.customer_mode === 'existing' ? (
+            <div className="space-y-2">
+              <Label>Customer *</Label>
+              <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}{c.customer_code ? ` · ${c.customer_code}` : ''}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1 sm:col-span-2"><Label>Full name *</Label><Input value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Customer name" /></div>
+              <div className="space-y-1"><Label>Company</Label><Input value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Company (optional)" /></div>
+              <div className="space-y-1"><Label>Phone *</Label><Input value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone or email required" /></div>
+              <div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email or phone required" /></div>
+              <div className="space-y-1"><Label>Country</Label><Input value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} /></div>
+              <div className="space-y-1"><Label>City</Label><Input value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} /></div>
+              <div className="space-y-1 sm:col-span-2"><Label>Address</Label><Input value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} /></div>
+            </div>
+          )}
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label>Invoice number</Label>
@@ -296,7 +456,60 @@ export default function InvoicesPage() {
             />
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label>Invoice type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div><div className="space-y-2"><Label>Tax</Label><Input type="number" value={form.tax} onChange={(e) => setForm({ ...form, tax: e.target.value })} /></div></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div><div className="space-y-2"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div></div><div className="space-y-2"><div className="flex items-center justify-between"><Label>Line items</Label><Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, { ...emptyItem }])}><Plus className="mr-1 h-3.5 w-3.5" />Add line</Button></div><div className="space-y-3">{lineItems.map((item, idx) => (<div key={idx} className="rounded-md border border-border/60 p-2 space-y-2"><div className="grid grid-cols-12 gap-2 items-end"><div className="col-span-12 sm:col-span-5"><Label className="text-[11px]">Vehicle (one or many)</Label><Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyVehicle(idx, v === 'none' ? '' : v)}><SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger><SelectContent><SelectItem value="none">No vehicle / custom line</SelectItem>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.stock_number} · {v.make} {v.model} · {v.chassis_number}</SelectItem>)}</SelectContent></Select></div><div className="col-span-12 sm:col-span-7"><Label className="text-[11px]">Stock / description</Label><Input value={item.description} onChange={(e) => { const next = [...lineItems]; next[idx] = { ...item, description: e.target.value }; setLineItems(next); }} placeholder="Stock info / chassis / description" /></div><div className="col-span-3"><Input type="number" value={item.quantity} onChange={(e) => { const next = [...lineItems]; next[idx] = { ...item, quantity: e.target.value }; setLineItems(next); }} placeholder="Qty" /></div><div className="col-span-3"><Input type="number" value={item.unit_price} onChange={(e) => { const next = [...lineItems]; next[idx] = { ...item, unit_price: e.target.value }; setLineItems(next); }} placeholder="Vehicle cost" /></div><div className="col-span-4"><Input type="number" value={item.discount} onChange={(e) => { const next = [...lineItems]; next[idx] = { ...item, discount: e.target.value }; setLineItems(next); }} placeholder="Deposit / discount" /></div><div className="col-span-2"><Button type="button" size="sm" variant="ghost" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div></div>))}</div></div><div className="rounded-lg bg-muted/50 p-3 space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax</span><span>{form.currency} {(Number(form.tax) || 0).toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Freight / Ins / Other</span><span>{form.currency} {((Number(form.freight_total)||0)+(Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{form.currency} {(calcSubtotal(lineItems) + (Number(form.tax) || 0) + (Number(form.freight_total)||0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span></div></div><div className="border-t pt-4 space-y-3">
+        <div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label>Invoice type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div><div className="space-y-2"><Label>Tax</Label><Input type="number" value={form.tax} onChange={(e) => setForm({ ...form, tax: e.target.value })} /></div></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div><div className="space-y-2"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div></div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Vehicles</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, { ...emptyItem }])}><Plus className="mr-1 h-3.5 w-3.5" />Add vehicle</Button>
+          </div>
+          <div className="space-y-3">
+            {lineItems.map((item, idx) => (
+              <div key={idx} className="space-y-2 rounded-md border border-border/60 p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">From stock (optional)</Label>
+                    <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyVehicle(idx, v === 'none' ? '' : v)}>
+                      <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not in database — enter below</SelectItem>
+                        {vehicles.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>{v.stock_number} · {v.make} {v.model} · {v.chassis_number}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Chassis</Label>
+                    <Input value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis number" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Stock no.</Label>
+                    <Input value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Make</Label>
+                    <Input value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Model</Label>
+                    <Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Notes / description</Label>
+                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional extra text" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-3"><Label className="text-[11px]">Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
+                  <div className="col-span-4"><Label className="text-[11px]">Vehicle cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} /></div>
+                  <div className="col-span-3"><Label className="text-[11px]">Deposit</Label><Input type="number" value={item.discount} onChange={(e) => updateLine(idx, { discount: e.target.value })} /></div>
+                  <div className="col-span-2"><Button type="button" size="sm" variant="ghost" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-3 space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax</span><span>{form.currency} {(Number(form.tax) || 0).toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="text-muted-foreground">Insurance / Other</span><span>{form.currency} {((Number(form.freight_total)||0)+(Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{form.currency} {(calcSubtotal(lineItems) + (Number(form.tax) || 0) + (Number(form.freight_total)||0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span></div></div><div className="border-t pt-4 space-y-3">
           <p className="text-sm font-semibold text-muted-foreground">Shipping Terms</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1"><Label>Incoterms</Label>
@@ -344,7 +557,7 @@ export default function InvoicesPage() {
           </div>
           <div className="space-y-1"><Label>Bank Details</Label><Textarea value={form.bank_details} onChange={(e) => setForm({ ...form, bank_details: e.target.value })} rows={2} placeholder="Bank, account, SWIFT..." /></div>
         </div>
-        <div className="space-y-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div><DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={submitting || !form.customer_id}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : title.includes('Edit') ? 'Save changes' : 'Create invoice'}</Button></DialogFooter></form></DialogContent></Dialog>
+        <div className="space-y-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div><DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={submitting || !canSaveInvoice}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : title.includes('Edit') ? 'Save changes' : 'Create invoice'}</Button></DialogFooter></form></DialogContent></Dialog>
   );
 
   return (
