@@ -64,7 +64,7 @@ export default function QuotationsPage() {
   const [printOpen, setPrintOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [printItems, setPrintItems] = useState<
-    Array<{ description: string; quantity: number; unit_price: number; line_total: number }>
+    Array<{ description: string; quantity: number; unit_price: number; line_total: number; vehicle_id?: string | null }>
   >([]);
 
   const loadData = useCallback(async () => {
@@ -73,7 +73,7 @@ export default function QuotationsPage() {
       supabase.from('quotations').select('*').order('created_at', { ascending: false }),
       supabase
         .from('customers')
-        .select('id, full_name, customer_code, email, phone, country, city, address_line1')
+        .select('id, full_name, customer_code, company_name, email, phone, country, city, address_line1, address_line2')
         .order('full_name'),
       supabase
         .from('vehicles')
@@ -274,19 +274,30 @@ export default function QuotationsPage() {
     toast.success('Quotation status updated');
   };
 
-  const openPrint = () => {
+  const openPrint = async () => {
     if (!selected) return;
-    const desc =
-      selected.notes?.split('\n---\n').pop() ||
-      `${selected.price_type} quotation`;
-    setPrintItems([
-      {
-        description: desc,
-        quantity: 1,
-        unit_price: selected.subtotal,
-        line_total: selected.subtotal,
-      },
-    ]);
+    const { data } = await supabase.from('quotation_items').select('*').eq('quotation_id', selected.id);
+    const rows = (data || []) as Array<{
+      description: string;
+      quantity: number;
+      unit_price: number;
+      line_total: number;
+      vehicle_id?: string | null;
+    }>;
+    if (rows.length > 0) {
+      setPrintItems(rows);
+    } else {
+      const desc = selected.notes?.split('\n---\n').pop() || `${selected.price_type} quotation`;
+      setPrintItems([
+        {
+          description: desc,
+          quantity: 1,
+          unit_price: selected.subtotal,
+          line_total: selected.subtotal,
+          vehicle_id: form.vehicle_id || null,
+        },
+      ]);
+    }
     setPrintOpen(true);
   };
 
@@ -642,7 +653,7 @@ export default function QuotationsPage() {
       </Sheet>
 
       <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-        <DialogContent className="max-h-[95vh] overflow-y-auto sm:max-w-3xl print:max-w-none print:border-0 print:shadow-none">
+        <DialogContent className="max-h-[95vh] overflow-y-auto sm:max-w-4xl print:max-w-none print:border-0 print:shadow-none">
           <DialogHeader className="print:hidden">
             <DialogTitle>Print quotation</DialogTitle>
           </DialogHeader>
@@ -653,6 +664,8 @@ export default function QuotationsPage() {
                   quotation={selected}
                   items={printItems}
                   customer={customerOf(selected.customer_id)}
+                  vehicles={vehicles}
+                  salesAgent={profile?.full_name || profile?.email}
                   verificationUrl={selected.verification_token ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/') : undefined}
                 />
               </div>
