@@ -490,6 +490,7 @@ export interface Invoice {
   verification_token: string | null;
   bank_details: string | null;
   payment_terms: string | null;
+  sales_agent_name: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

@@ -53,6 +53,7 @@ const emptyForm = {
   port_of_loading: 'Nagoya, Japan', port_of_discharge: '', vessel_name: '', bl_number: '',
   freight_total: '0', insurance_total: '0', other_charges: '0', discount_total: '0',
   payment_terms: '100% T/T in advance / LC at sight', bank_details: '',
+  sales_agent: '',
   guest_name: '', guest_company: '', guest_email: '', guest_phone: '',
   guest_country: '', guest_city: '', guest_address: '',
 };
@@ -208,6 +209,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       other_charges: String(selected.other_charges ?? 0), discount_total: String(selected.discount_total ?? 0),
       payment_terms: selected.payment_terms || defaultPaymentTerms(kind),
       bank_details: selected.bank_details || '',
+      sales_agent: selected.sales_agent_name || '',
     });
     setLineItems(items.map((i) => {
       const v = vehicles.find((x) => x.id === i.vehicle_id);
@@ -314,7 +316,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: 'unpaid', notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, created_by: profile.id }).select().maybeSingle();
+    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: 'unpaid', notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
     if (error) { setSubmitting(false); toast.error(`Could not create invoice: ${error.message}`); return; }
     const inv = data as Invoice;
     const itemRows = linePayload(inv.id);
@@ -344,7 +346,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, updated_at: new Date().toISOString() }).eq('id', selected.id);
+    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, updated_at: new Date().toISOString() }).eq('id', selected.id);
     if (error) { setSubmitting(false); toast.error(`Could not update: ${error.message}`); return; }
     const { error: delError } = await supabase.from('invoice_items').delete().eq('invoice_id', selected.id);
     if (delError) { setSubmitting(false); toast.error(`Could not update line items: ${delError.message}`); return; }
@@ -494,6 +496,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Invoice type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div><div className="space-y-2"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div></div>
+        <div className="space-y-2">
+          <Label>Sales agent</Label>
+          <Input
+            value={form.sales_agent}
+            onChange={(e) => setForm({ ...form, sales_agent: e.target.value })}
+            placeholder="Type the sales agent name"
+          />
+        </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>Vehicles</Label>
@@ -653,7 +663,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   items={items}
                   customer={customers.find((c) => c.id === selected.customer_id) || null}
                   vehicles={vehicles}
-                  salesAgent={profile?.full_name || profile?.email}
+                  salesAgent={selected.sales_agent_name || form.sales_agent || null}
                   showQr={printShowQr}
                   includeBankNotice={printBankNotice}
                   variant={isAuction ? 'auction_deposit' : 'commercial'}
