@@ -129,5 +129,9 @@
   }
   body.printing-document #print-layer tr,
   body.printing-document #print-layer img { break-inside: avoid; }
+  body.printing-document #print-layer .print-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
 }
 @media screen { #print-layer { display: none; } }

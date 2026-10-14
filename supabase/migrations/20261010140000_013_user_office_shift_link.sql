@@ -62,6 +62,26 @@ CREATE TRIGGER protect_profile_scoping
 
 REVOKE EXECUTE ON FUNCTION public.protect_profile_scoping() FROM PUBLIC, anon, authenticated;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'shifts'
+      AND c.contype = 'u'
+      AND pg_get_constraintdef(c.oid) ILIKE '%(office_id, code)%'
+  ) THEN
+    ALTER TABLE public.shifts
+      ADD CONSTRAINT shifts_office_id_code_key UNIQUE (office_id, code);
+  END IF;
+EXCEPTION
+  WHEN unique_violation OR duplicate_table OR duplicate_object THEN
+    NULL;
+END $$;
+
 INSERT INTO public.shifts (office_id, code, name, start_time, end_time, is_active)
 SELECT o.id, v.code, v.name, v.start_time::time, v.end_time::time, true
 FROM public.offices o
@@ -70,4 +90,9 @@ CROSS JOIN (VALUES
   ('NIGHT', 'Night shift', '18:00', '03:00')
 ) AS v(code, name, start_time, end_time)
 WHERE o.code IN ('NGO', 'KHI')
-ON CONFLICT (office_id, code) DO NOTHING;
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.shifts s
+    WHERE s.office_id = o.id
+      AND s.code = v.code
+  );
