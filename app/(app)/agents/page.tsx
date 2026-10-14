@@ -196,7 +196,7 @@ export default function AgentsPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent fullscreen className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit agent' : 'New agent code'}</DialogTitle>
           </DialogHeader>

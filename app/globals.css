@@ -109,6 +109,61 @@
 /* Public marketing pages use a dark palette; header and footer provide light contrast. */
 .public-site { color-scheme: dark; }
 
+/* Full-screen create/edit work forms */
+[data-dialog-workform='true'] {
+  display: flex;
+  flex-direction: column;
+}
+[data-dialog-workform='true'] > [data-slot='dialog-header'] {
+  flex-shrink: 0;
+  padding: 1rem 3.5rem 1rem 1.5rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+}
+[data-dialog-workform='true'] > form,
+[data-dialog-workform='true'] > div:not([data-slot]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+[data-dialog-workform='true'] [data-slot='dialog-footer'] {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 1rem -1.5rem -1.25rem;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+}
+
+.invoice-print-root {
+  color: #0b1f3a;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.invoice-print-root table.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #0b1f3a;
+}
+.invoice-print-root table.inv-table th,
+.invoice-print-root table.inv-table td {
+  border: 1px solid #0b1f3a;
+  vertical-align: top;
+}
+.invoice-print-root table.inv-table thead th {
+  background: #0b1f3a;
+  color: #fff;
+  font-weight: 700;
+}
+.invoice-print-root table.inv-table tfoot td,
+.invoice-print-root table.inv-table tr.inv-total td {
+  background: #c4161c;
+  color: #fff;
+  border-color: #7a0e12;
+}
+
 @media print {
   @page { size: A4 portrait; margin: 8mm; }
   html, body {
@@ -152,6 +207,21 @@
   body.printing-document #print-layer .print-page-break {
     break-before: page;
     page-break-before: always;
+  }
+  body.printing-document #print-layer .invoice-print-root,
+  body.printing-document #print-layer table.inv-table,
+  body.printing-document #print-layer table.inv-table th,
+  body.printing-document #print-layer table.inv-table td {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body.printing-document #print-layer table.inv-table {
+    border-collapse: collapse !important;
+    border: 1.5px solid #0b1f3a !important;
+  }
+  body.printing-document #print-layer table.inv-table th,
+  body.printing-document #print-layer table.inv-table td {
+    border: 1px solid #0b1f3a !important;
   }
 }
 @media screen { #print-layer { display: none; } }

@@ -26,7 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } from '@/lib/types';
 import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
-import { DEPOSIT_RATIOS, describeInvoiceVehicle, extractChassis, normalizeDepositRatio } from '@/lib/jct-official';
+import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, normalizeDepositRatio } from '@/lib/jct-official';
 import { toast } from 'sonner';
 
 export type InvoiceWorkspaceKind = 'commercial' | 'auction';
@@ -36,7 +36,7 @@ const AUCTION_DEPOSIT_TERMS = 'AUCTION DEPOSIT';
 export function isAuctionDepositInvoice(inv: Pick<Invoice, 'payment_terms' | 'invoice_code'>) {
   return (
     (inv.payment_terms || '').toUpperCase().startsWith(AUCTION_DEPOSIT_TERMS) ||
-    /-AD-\d/i.test(inv.invoice_code || '')
+    /AD\d/i.test(inv.invoice_code || '')
   );
 }
 
@@ -59,12 +59,12 @@ const emptyForm = {
 };
 type LineDraft = {
   description: string; quantity: string; unit_price: string; discount: string; vehicle_id: string;
-  chassis_number: string; stock_number: string; make: string; model: string;
+  chassis_number: string; stock_number: string; make: string; model: string; colour: string;
 };
 function emptyLine(kind: InvoiceWorkspaceKind): LineDraft {
   return {
     description: '', quantity: '1', unit_price: '', discount: kind === 'auction' ? '' : '30', vehicle_id: '',
-    chassis_number: '', stock_number: '', make: '', model: '',
+    chassis_number: '', stock_number: '', make: '', model: '', colour: '',
   };
 }
 
@@ -102,7 +102,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       supabase.from('invoices').select('*').order('created_at', { ascending: false }),
       supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, country, city, address_line1, address_line2').order('full_name'),
       supabase.from('sales').select('id, sale_code').order('created_at', { ascending: false }),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, listed_price').order('created_at', { ascending: false }),
+      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price').order('created_at', { ascending: false }),
       supabase.from('company_settings').select('id, invoice_prefix, invoice_next_number').limit(1).maybeSingle(),
     ]);
     if (iRes.error) toast.error(`Unable to load invoices: ${iRes.error.message}`);
@@ -157,12 +157,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       stock_number: v.stock_number || '',
       make: v.make || '',
       model: v.model || '',
-      description: describeInvoiceVehicle({
-        stock_number: v.stock_number,
-        make: v.make,
-        model: v.model,
-        chassis_number: v.chassis_number,
-      }),
+      colour: v.color || '',
       unit_price: next[idx].unit_price || String(v.listed_price || ''),
     };
     setLineItems(next);
@@ -213,16 +208,18 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     });
     setLineItems(items.map((i) => {
       const v = vehicles.find((x) => x.id === i.vehicle_id);
+      const bits = decodeInvoiceVehicle(i.description);
       return {
-        description: i.description,
+        description: bits.notes || '',
         quantity: String(i.quantity),
         unit_price: String(i.unit_price),
         discount: isAuction ? String(i.discount ?? 0) : String(normalizeDepositRatio(i.discount, i.unit_price)),
         vehicle_id: i.vehicle_id || '',
-        chassis_number: v?.chassis_number || extractChassis(i.description) || '',
-        stock_number: v?.stock_number || '',
-        make: v?.make || '',
-        model: v?.model || '',
+        chassis_number: bits.chassis_number || v?.chassis_number || '',
+        stock_number: bits.stock_number || v?.stock_number || '',
+        make: bits.make || v?.make || '',
+        model: bits.model || v?.model || '',
+        colour: bits.colour || v?.color || '',
       };
     }));
     if (items.length === 0) setLineItems([{ ...emptyLine(kind) }]);
@@ -283,11 +280,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
   const linePayload = (invoiceId: string) =>
     lineItems
-      .filter((i) => i.description.trim() || i.vehicle_id || i.chassis_number.trim() || i.make.trim() || i.stock_number.trim())
+      .filter((i) => i.description.trim() || i.vehicle_id || i.chassis_number.trim() || i.make.trim() || i.stock_number.trim() || i.colour.trim())
       .map((item, idx) => ({
         invoice_id: invoiceId,
         vehicle_id: item.vehicle_id || null,
-        description: describeInvoiceVehicle(item),
+        description: describeInvoiceVehicle({ ...item, notes: item.description }),
         quantity: Number(item.quantity) || 1,
         unit_price: Number(item.unit_price) || 0,
         discount: isAuction
@@ -422,7 +419,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   };
 
   const lineItemForm = (isOpen: boolean, onClose: () => void, onSubmit: (e: React.FormEvent) => void, title: string) => (
-    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-4">
+    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-3 rounded-md border border-border/60 p-3">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -491,7 +488,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <Input
               value={form.invoice_code}
               onChange={(e) => setForm({ ...form, invoice_code: e.target.value, invoice_code_mode: 'manual' })}
-              placeholder="JCT-0001"
+              placeholder="JCT0003"
             />
           </div>
         </div>
@@ -542,8 +539,12 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                     <Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" />
                   </div>
                   <div className="space-y-1">
+                    <Label className="text-[11px]">Colour</Label>
+                    <Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Notes / description</Label>
-                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional extra text" />
+                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional extra text only — not chassis or stock" />
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-2 items-end">
@@ -640,7 +641,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete invoice?" description="This will permanently remove the invoice and its line items." onConfirm={confirmDelete} loading={submitting} />
       <Sheet open={Boolean(selected)} onOpenChange={(o) => { if (!o) setSelected(null); }}><SheetContent className="w-full overflow-y-auto sm:max-w-lg"><SheetHeader><SheetTitle>{selected?.invoice_code}</SheetTitle><SheetDescription>{selected && typeLabels[selected.invoice_type]}</SheetDescription></SheetHeader>{selected && (<><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={printInvoice}><Printer className="mr-1.5 h-4 w-4" />Print</Button><Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-4 w-4" />Edit</Button><Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" />Delete</Button></div><div className="mt-6 space-y-4">{detailLoading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div> : (<><div className="flex flex-wrap gap-2"><Badge variant="outline" className={statusStyles[selected.payment_status]}>{selected.payment_status}</Badge>{['unpaid','partial','paid','cancelled','credited'].map((s) => <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s as Invoice['payment_status'])}>{s}</Button>)}</div><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p><p className="mt-1 font-medium">{customerName(selected.customer_id)}</p></div>{items.length > 0 && <Table><TableHeader><TableRow><TableHead>Description</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader><TableBody>{items.map((item) => <TableRow key={item.id}><TableCell>{item.description}</TableCell><TableCell className="text-right">{item.quantity}</TableCell><TableCell className="text-right">{item.line_total.toLocaleString()}</TableCell></TableRow>)}</TableBody></Table>}<div className="space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{selected.currency} {selected.subtotal.toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{selected.currency} {selected.total.toLocaleString()}</span></div></div></>)}</div></>)}</SheetContent></Sheet>
       <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto print:max-w-none print:shadow-none print:border-0">
+        <DialogContent fullscreen className="print:max-w-none print:shadow-none print:border-0">
           <DialogHeader className="print:hidden">
             <DialogTitle>{isAuction ? 'Auction deposit invoice preview' : 'Commercial Invoice Preview'}</DialogTitle>
           </DialogHeader>

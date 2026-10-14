@@ -79,7 +79,7 @@ export function AssignOfficeShiftDialog({ open, onOpenChange, user, onDone }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent fullscreen className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign office & shift</DialogTitle>
         </DialogHeader>

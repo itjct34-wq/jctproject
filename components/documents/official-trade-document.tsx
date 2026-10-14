@@ -1,5 +1,12 @@
 import type { Customer, Vehicle } from '@/lib/types';
-import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney } from '@/lib/jct-official';
+import {
+  JCT_OFFICIAL,
+  decodeInvoiceVehicle,
+  extractChassis,
+  formatDepositRatio,
+  formatDocumentNo,
+  formatMoney,
+} from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
 import { PaymentInformationNotice } from './payment-information-notice';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
@@ -15,6 +22,7 @@ export type TradeLine = {
   stock_number?: string | null;
   make?: string | null;
   model?: string | null;
+  colour?: string | null;
 };
 
 type Props = {
@@ -33,7 +41,7 @@ type Props = {
   portOfLoading?: string | null;
   portOfDischarge?: string | null;
   lines: TradeLine[];
-  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'>[];
+  vehicles?: (Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'> & { color?: string | null })[];
   grandTotal: number;
   notes?: string | null;
   verificationUrl?: string;
@@ -49,22 +57,18 @@ function customerAddress(customer?: Customer | null) {
     .join(', ') || '—';
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
+function BankLine({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
-      <p className="mt-0.5 text-[10.5px] font-medium text-slate-800 break-words">{value || '—'}</p>
-    </div>
+    <p className="text-[8px] leading-[1.4] text-[#0b1f3a]">
+      <span className="font-bold">{label}: </span>
+      <span>{value}</span>
+    </p>
   );
 }
 
-function BankLine({ label, value }: { label: string; value: string }) {
-  return (
-    <p className="text-[8px] leading-[1.35] text-slate-700">
-      <span className="font-semibold text-slate-500">{label}: </span>
-      <span className="font-medium text-slate-800">{value}</span>
-    </p>
-  );
+function cellText(value?: string | null) {
+  const v = value?.trim();
+  return v || '—';
 }
 
 export function OfficialTradeDocument({
@@ -95,9 +99,12 @@ export function OfficialTradeDocument({
   const addr = customerAddress(customer);
   const consignee = customer?.company_name || customer?.full_name;
   const mode = shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel');
+  const printedNo = formatDocumentNo(documentNo);
+  const showDeposit = kind === 'invoice';
+  const lineColSpan = showDeposit ? 5 : 4;
 
   return (
-    <div className="invoice-print-root bg-white text-slate-900 max-w-[210mm] mx-auto">
+    <div className="invoice-print-root bg-white text-[#0b1f3a] max-w-[210mm] mx-auto">
       <div className="invoice-sheet flex flex-col bg-white p-[8mm] print:p-0">
         <header className="flex items-center justify-between gap-4 border-b-2 border-[#c4161c] pb-3">
           <img
@@ -106,73 +113,105 @@ export function OfficialTradeDocument({
             className="h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0"
           />
           <div className="text-right shrink-0">
-            <h1 className="text-[26px] font-black leading-none tracking-tight text-slate-900">{title}</h1>
-            <p className="mt-1 font-mono text-[12px] font-bold text-slate-800">{documentNo}</p>
+            <h1 className="text-[26px] font-black leading-none tracking-tight text-[#0b1f3a]">{title}</h1>
+            <p className="mt-1 font-mono text-[12px] font-bold text-[#0b1f3a]">{printedNo}</p>
           </div>
         </header>
 
-        <div className="mt-2.5 grid grid-cols-4 gap-1.5 rounded-md bg-slate-50 px-2.5 py-2">
-          <Field label={kind === 'invoice' ? 'Issue date' : 'Date'} value={issueDate} />
-          <Field label={kind === 'invoice' ? 'Due date' : 'Valid until'} value={dueDate || validDate} />
-          <Field label="Sales agent" value={salesAgent} />
-          <Field label="Currency" value={currency} />
-        </div>
-
-        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          <section className="rounded-md border border-slate-200 p-2.5">
-            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.18em] text-[#c4161c]">Bill to</p>
-            <p className="text-[12px] font-bold leading-tight">{customer?.full_name || '—'}</p>
-            <p className="text-[9px] text-slate-500">{customer?.customer_code}</p>
-            <p className="mt-1 text-[10px] leading-snug text-slate-700">{addr}</p>
-            <p className="text-[10px] text-slate-700">{[customer?.phone, customer?.email].filter(Boolean).join(' · ') || '—'}</p>
-            {consignee && consignee !== customer?.full_name && (
-              <p className="mt-1 text-[10px] text-slate-600">Consignee: {consignee}</p>
-            )}
-          </section>
-          <section className="rounded-md border border-slate-200 p-2.5">
-            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.18em] text-[#c4161c]">Bill from</p>
-            <p className="text-[12px] font-bold leading-tight">{JCT_OFFICIAL.shortName}</p>
-            <p className="mt-1 text-[10px] leading-snug text-slate-700">{JCT_OFFICIAL.address}</p>
-            <p className="text-[10px] text-slate-700">Fax {JCT_OFFICIAL.fax} · Tel {JCT_OFFICIAL.phone}</p>
-            <p className="text-[10px] text-slate-700">{JCT_OFFICIAL.email}</p>
-            <p className="text-[10px] text-slate-700">{JCT_OFFICIAL.website}</p>
-          </section>
-        </div>
-
-        <div className="mt-2.5 grid grid-cols-5 gap-px overflow-hidden rounded-md border border-slate-200 bg-slate-200">
-          {[
-            ['Type', shipmentType || 'RORO'],
-            ['Mode', mode],
-            ['Term', shipmentTerm || 'FOB'],
-            ['POL', portOfLoading || 'Nagoya, Japan'],
-            ['POD', portOfDischarge || '—'],
-          ].map(([label, value]) => (
-            <div key={label} className="bg-white px-2 py-1.5">
-              <p className="text-[7.5px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-              <p className="text-[10px] font-semibold leading-tight text-slate-800">{value}</p>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-2 mb-1 text-[9px] font-semibold text-slate-500">Vehicles · {units} unit{units === 1 ? '' : 's'}</p>
-        <table className="w-full border-collapse text-[10px]">
+        <table className="inv-table mt-2.5 text-[10px]">
           <thead>
-            <tr className="bg-slate-900 text-white">
-              <th className="px-2 py-1.5 text-left font-semibold">Chassis</th>
-              <th className="px-2 py-1.5 text-left font-semibold">Stock</th>
-              <th className="px-2 py-1.5 text-center font-semibold">Deposit</th>
-              <th className="px-2 py-1.5 text-right font-semibold">Vehicle cost</th>
+            <tr>
+              <th className="px-2 py-1 text-left">{kind === 'invoice' ? 'Issue date' : 'Date'}</th>
+              <th className="px-2 py-1 text-left">{kind === 'invoice' ? 'Due date' : 'Valid until'}</th>
+              <th className="px-2 py-1 text-left">Sales agent</th>
+              <th className="px-2 py-1 text-left">Currency</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="px-2 py-1.5 font-semibold">{cellText(issueDate)}</td>
+              <td className="px-2 py-1.5 font-semibold">{cellText(dueDate || validDate)}</td>
+              <td className="px-2 py-1.5 font-semibold">{cellText(salesAgent)}</td>
+              <td className="px-2 py-1.5 font-semibold">{cellText(currency)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="inv-table mt-2.5 text-[10px]">
+          <thead>
+            <tr>
+              <th className="px-2 py-1 text-left">Bill to / Consignee</th>
+              <th className="px-2 py-1 text-left">Bill from</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="px-2 py-1.5">
+                <p className="text-[12px] font-bold leading-tight">{cellText(customer?.full_name)}</p>
+                {customer?.customer_code && <p className="text-[9px]">{customer.customer_code}</p>}
+                <p className="mt-1 text-[10px] leading-snug">{addr}</p>
+                <p className="text-[10px]">{[customer?.phone, customer?.email].filter(Boolean).join(' · ') || '—'}</p>
+                {consignee && consignee !== customer?.full_name && (
+                  <p className="mt-1 text-[10px] font-semibold">Consignee: {consignee}</p>
+                )}
+              </td>
+              <td className="px-2 py-1.5">
+                <p className="text-[12px] font-bold leading-tight">{JCT_OFFICIAL.shortName}</p>
+                <p className="mt-1 text-[10px] leading-snug">{JCT_OFFICIAL.address}</p>
+                <p className="text-[10px]">Fax {JCT_OFFICIAL.fax} · Tel {JCT_OFFICIAL.phone}</p>
+                <p className="text-[10px]">{JCT_OFFICIAL.email}</p>
+                <p className="text-[10px]">{JCT_OFFICIAL.website}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="inv-table mt-2.5 text-[10px]">
+          <thead>
+            <tr>
+              {['Type', 'Mode', 'Term', 'POL', 'POD'].map((label) => (
+                <th key={label} className="px-2 py-1 text-left">{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="px-2 py-1.5 font-semibold">{shipmentType || 'RORO'}</td>
+              <td className="px-2 py-1.5 font-semibold">{mode}</td>
+              <td className="px-2 py-1.5 font-semibold">{shipmentTerm || 'FOB'}</td>
+              <td className="px-2 py-1.5 font-semibold">{portOfLoading || 'Nagoya, Japan'}</td>
+              <td className="px-2 py-1.5 font-semibold">{portOfDischarge || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p className="mt-2 mb-1 text-[9px] font-bold uppercase tracking-wide text-[#0b1f3a]">
+          Vehicles · {units} unit{units === 1 ? '' : 's'}
+        </p>
+        <table className="inv-table text-[10px]">
+          <thead>
+            <tr>
+              <th className="px-2 py-1.5 text-left">Chassis</th>
+              <th className="px-2 py-1.5 text-left">Stock</th>
+              <th className="px-2 py-1.5 text-left">Vehicle</th>
+              <th className="px-2 py-1.5 text-left">Colour</th>
+              {showDeposit && <th className="px-2 py-1.5 text-center">Deposit</th>}
+              <th className="px-2 py-1.5 text-right">Vehicle cost</th>
             </tr>
           </thead>
           <tbody>
             {(lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }]).map((line, idx) => {
               const vehicle = vehicles.find((v) => v.id === line.vehicle_id);
-              const chassis =
-                vehicle?.chassis_number || line.chassis_number || extractChassis(line.description) || '—';
-              const stock =
-                [vehicle?.stock_number || line.stock_number, vehicle?.make || line.make, vehicle?.model || line.model]
-                  .filter(Boolean)
-                  .join(' · ') || line.description;
+              const bits = decodeInvoiceVehicle(line.description);
+              const chassis = cellText(
+                vehicle?.chassis_number || line.chassis_number || bits.chassis_number || extractChassis(line.description)
+              );
+              const stock = cellText(vehicle?.stock_number || line.stock_number || bits.stock_number);
+              const vehicleInfo = [vehicle?.make || line.make || bits.make, vehicle?.model || line.model || bits.model]
+                .map((s) => s?.trim())
+                .filter(Boolean)
+                .join(' ') || '—';
+              const colour = cellText(line.colour || bits.colour || vehicle?.color);
               const deposit =
                 depositMode === 'amount'
                   ? line.discount
@@ -180,18 +219,18 @@ export function OfficialTradeDocument({
                     : '—'
                   : formatDepositRatio(line.discount, line.unit_price);
               return (
-                <tr key={idx} className={idx % 2 ? 'bg-slate-50' : 'bg-white'}>
-                  <td className="border-b border-slate-200 px-2 py-1 font-mono text-[9px]">{chassis}</td>
-                  <td className="border-b border-slate-200 px-2 py-1">{stock}</td>
-                  <td className="border-b border-slate-200 px-2 py-1 text-center">{deposit}</td>
-                  <td className="border-b border-slate-200 px-2 py-1 text-right font-medium">
-                    {formatMoney(line.unit_price, currency)}
-                  </td>
+                <tr key={idx}>
+                  <td className="px-2 py-1 font-mono text-[9px]">{chassis}</td>
+                  <td className="px-2 py-1">{stock}</td>
+                  <td className="px-2 py-1">{vehicleInfo}</td>
+                  <td className="px-2 py-1">{colour}</td>
+                  {showDeposit && <td className="px-2 py-1 text-center">{deposit}</td>}
+                  <td className="px-2 py-1 text-right font-medium">{formatMoney(line.unit_price, currency)}</td>
                 </tr>
               );
             })}
-            <tr className="bg-[#c4161c] text-white">
-              <td colSpan={3} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
+            <tr className="inv-total">
+              <td colSpan={lineColSpan} className="px-2 py-1.5 text-right text-[10px] font-bold tracking-wide">
                 TOTAL
               </td>
               <td className="px-2 py-1.5 text-right text-[12px] font-black">{formatMoney(grandTotal, currency)}</td>
@@ -199,32 +238,42 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        <section className="mt-2.5 rounded-md border border-slate-200 p-2">
-          <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#c4161c]">Banking details</p>
-          <div className="grid grid-cols-3 gap-2.5">
-            <div>
-              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Beneficiary Bank (Account with Institution)</p>
-              <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.name} />
-              <BankLine label="Branch Name" value={JCT_OFFICIAL.bank.branch} />
-              <BankLine label="Bank Address" value={JCT_OFFICIAL.bank.address} />
-              <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.swift} />
-            </div>
-            <div>
-              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Beneficiary Information</p>
-              <BankLine label="Account Number" value={JCT_OFFICIAL.bank.account} />
-              <BankLine label="Beneficiary Name" value={JCT_OFFICIAL.bank.beneficiary} />
-              <BankLine label="Beneficiary Address" value={JCT_OFFICIAL.bank.beneficiaryAddress} />
-            </div>
-            <div>
-              <p className="mb-0.5 text-[8px] font-bold text-slate-900">Intermediary Bank</p>
-              <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.intermediaryName} />
-              <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.intermediarySwift} />
-              <BankLine label="Intermediary Bank address" value={JCT_OFFICIAL.bank.intermediaryAddress} />
-            </div>
-          </div>
-        </section>
+        <table className="inv-table mt-2.5 text-[8px] leading-[1.35]">
+          <thead>
+            <tr>
+              <th colSpan={3} className="px-2 py-1.5 text-center text-[9px] font-bold uppercase tracking-[0.18em]">
+                BANKING DETAILS
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="align-top">
+              <td className="w-1/3 px-2 py-1.5">
+                <p className="mb-1 text-[8px] font-bold uppercase tracking-wide text-[#0b1f3a]">
+                  Beneficiary Bank (Account with Institution)
+                </p>
+                <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.name} />
+                <BankLine label="Branch Name" value={JCT_OFFICIAL.bank.branch} />
+                <BankLine label="Bank Address" value={JCT_OFFICIAL.bank.address} />
+                <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.swift} />
+              </td>
+              <td className="w-1/3 px-2 py-1.5">
+                <p className="mb-1 text-[8px] font-bold uppercase tracking-wide text-[#0b1f3a]">Beneficiary Information</p>
+                <BankLine label="Account Number" value={JCT_OFFICIAL.bank.account} />
+                <BankLine label="Beneficiary Name" value={JCT_OFFICIAL.bank.beneficiary} />
+                <BankLine label="Beneficiary Address" value={JCT_OFFICIAL.bank.beneficiaryAddress} />
+              </td>
+              <td className="w-1/3 px-2 py-1.5">
+                <p className="mb-1 text-[8px] font-bold uppercase tracking-wide text-[#0b1f3a]">Intermediary Bank</p>
+                <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.intermediaryName} />
+                <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.intermediarySwift} />
+                <BankLine label="Intermediary Bank address" value={JCT_OFFICIAL.bank.intermediaryAddress} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-        {notes && <p className="mt-1.5 text-[9px] text-slate-600 line-clamp-2">Notes: {notes}</p>}
+        {notes && <p className="mt-1.5 text-[9px] text-[#0b1f3a] line-clamp-2">Notes: {notes}</p>}
 
         <footer className="mt-auto pt-3">
           <div className="grid grid-cols-[64px_1fr_108px] items-center gap-2">
@@ -232,31 +281,31 @@ export function OfficialTradeDocument({
               <JctHanko className="!h-[64px] !w-[64px]" />
             </div>
             <div className="px-2 text-center">
-              <p className="text-[11px] font-bold leading-tight tracking-tight text-slate-900">
+              <p className="text-[11px] font-bold leading-tight tracking-tight text-[#0b1f3a]">
                 {JCT_OFFICIAL.legalName}
               </p>
-              <p className="mt-0.5 text-[9px] text-slate-700">
+              <p className="mt-0.5 text-[9px] text-[#0b1f3a]">
                 <span className="font-semibold">{JCT_OFFICIAL.directorTitle}</span>
-                <span className="ml-1.5 text-[12px] font-black tracking-tight text-slate-900">{JCT_OFFICIAL.director}</span>
+                <span className="ml-1.5 text-[12px] font-black tracking-tight">{JCT_OFFICIAL.director}</span>
               </p>
-              <p className="mt-0.5 text-[8px] leading-snug text-slate-600">
+              <p className="mt-0.5 text-[8px] leading-snug">
                 2-505-101, DAITOURO, NAKAGAWA-KU, NAGOYA-SHI, AICHI-KEN 454-0943 JAPAN
               </p>
-              <p className="text-[8px] text-slate-600">PHONE :+81 52-717-4476</p>
+              <p className="text-[8px]">PHONE :+81 52-717-4476</p>
             </div>
             <div className="flex justify-end">
               {showQr && verificationUrl ? (
                 <div className="invoice-qr-wrap flex flex-col items-center">
                   <InvoiceQRCode value={verificationUrl} size={100} className="invoice-qr" />
-                  <p className="mt-0.5 text-[8px] font-semibold tracking-wide text-slate-700">Scan to verify</p>
+                  <p className="mt-0.5 text-[8px] font-semibold tracking-wide">Scan to verify</p>
                 </div>
               ) : (
                 <span />
               )}
             </div>
           </div>
-          <div className="mt-2 border-t border-slate-300 pt-1.5 text-center">
-            <p className="text-[10px] font-semibold tracking-[0.14em] text-slate-700">SIGNATURE OF AUTHORISED PERSON</p>
+          <div className="mt-2 border-t-2 border-[#0b1f3a] pt-1.5 text-center">
+            <p className="text-[10px] font-semibold tracking-[0.14em]">SIGNATURE OF AUTHORISED PERSON</p>
           </div>
         </footer>
       </div>
@@ -264,7 +313,7 @@ export function OfficialTradeDocument({
       {includeBankNotice && (
         <PaymentInformationNotice
           customerName={customer?.full_name}
-          reference={documentNo}
+          reference={printedNo}
           issueDate={issueDate}
         />
       )}

@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import type { Invoice, InvoiceItem, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument } from '@/components/documents/official-trade-document';
-import { extractChassis } from '@/lib/jct-official';
+import { decodeInvoiceVehicle } from '@/lib/jct-official';
 import { buildVerifyUrl } from './qr-code';
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
   items: InvoiceItem[];
   customer?: Customer | null;
   company?: { name?: string; address?: string; phone?: string; email?: string };
-  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'>[];
+  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color'>[];
   salesAgent?: string | null;
   showQr?: boolean;
   includeBankNotice?: boolean;
@@ -51,15 +51,22 @@ export function CommercialInvoiceTemplate({
       shipmentTerm={invoice.incoterms || 'FOB'}
       portOfLoading={invoice.port_of_loading}
       portOfDischarge={invoice.port_of_discharge}
-      lines={items.map((item) => ({
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        line_total: item.line_total,
-        discount: item.discount,
-        vehicle_id: item.vehicle_id,
-        chassis_number: extractChassis(item.description),
-      }))}
+      lines={items.map((item) => {
+        const bits = decodeInvoiceVehicle(item.description);
+        return {
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          line_total: item.line_total,
+          discount: item.discount,
+          vehicle_id: item.vehicle_id,
+          chassis_number: bits.chassis_number,
+          stock_number: bits.stock_number,
+          make: bits.make,
+          model: bits.model,
+          colour: bits.colour,
+        };
+      })}
       vehicles={vehicles}
       grandTotal={grand}
       notes={invoice.notes}

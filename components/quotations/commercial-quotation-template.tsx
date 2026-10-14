@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import type { Quotation, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument, type TradeLine } from '@/components/documents/official-trade-document';
+import { decodeInvoiceVehicle } from '@/lib/jct-official';
 
 type Props = {
   quotation: Quotation;
@@ -10,7 +11,7 @@ type Props = {
   customer?: Customer | null;
   company?: { name?: string; address?: string; phone?: string; email?: string };
   verificationUrl?: string;
-  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'>[];
+  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color'>[];
   salesAgent?: string | null;
 };
 
@@ -22,15 +23,24 @@ export function CommercialQuotationTemplate({
   vehicles,
   salesAgent,
 }: Props) {
-  const freight = Number(quotation.freight || 0);
   const insurance = Number(quotation.insurance || 0);
   const other = Number(quotation.other_fees || 0);
   const subtotal = Number(quotation.subtotal || 0);
-  const grand = Number(quotation.total || subtotal + freight + insurance + other);
+  const grand = Number(quotation.total || subtotal + insurance + other);
 
   const lines: TradeLine[] =
     items.length > 0
-      ? items
+      ? items.map((item) => {
+          const bits = decodeInvoiceVehicle(item.description);
+          return {
+            ...item,
+            chassis_number: item.chassis_number || bits.chassis_number,
+            stock_number: item.stock_number || bits.stock_number,
+            make: item.make || bits.make,
+            model: item.model || bits.model,
+            colour: item.colour || bits.colour,
+          };
+        })
       : [
           {
             description: `${quotation.price_type} vehicle quotation`,

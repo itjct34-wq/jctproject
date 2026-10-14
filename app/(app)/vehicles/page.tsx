@@ -222,7 +222,7 @@ export default function VehiclesPage() {
           ))}</div>}
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>Add vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitCreate} className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
@@ -237,7 +237,7 @@ export default function VehiclesPage() {
         </form>
       </DialogContent></Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>Edit vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitEdit} className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
@@ -258,7 +258,7 @@ export default function VehiclesPage() {
         </>)}</SheetContent>
       </Sheet>
 
-      <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}><DialogContent>
+      <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}><DialogContent fullscreen>
         <DialogHeader><DialogTitle>Bulk status</DialogTitle></DialogHeader>
         <Select value={bulkStatus} onValueChange={(v: Vehicle['status']) => setBulkStatus(v)}><SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{Object.entries(statusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>

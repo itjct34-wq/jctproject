@@ -34,9 +34,28 @@ export function formatMoney(amount: number, currency: string) {
 
 export function extractChassis(text: string | null | undefined) {
   if (!text) return '';
-  const match = text.match(/(?:chassis|chassic|vin)[:\s#-]*([A-Z0-9]{8,20})/i);
+  const match = text.match(/(?:chassis|chassic|vin)[:\s#-]*([A-Z0-9-]{8,20})/i);
   return match?.[1] || '';
 }
+
+/** Print-only: prefix NO. in front of the exact stored/typed code. Does not strip hyphens or rewrite the code. */
+export function formatDocumentNo(code: string | null | undefined) {
+  const raw = (code || '').trim();
+  if (!raw) return 'NO.—';
+  const exact = raw.replace(/^NO\.?\s*/i, '').trim();
+  return exact ? `NO.${exact}` : 'NO.—';
+}
+
+export const formatInvoiceNumber = formatDocumentNo;
+
+export type InvoiceVehicleBits = {
+  chassis_number?: string | null;
+  stock_number?: string | null;
+  make?: string | null;
+  model?: string | null;
+  colour?: string | null;
+  notes?: string | null;
+};
 
 export const DEPOSIT_RATIOS = [30, 70, 100] as const;
 
@@ -60,25 +79,72 @@ export function normalizeDepositRatio(discount?: number | string | null, unitPri
   return 100;
 }
 
-export function describeInvoiceVehicle(parts: {
-  stock_number?: string | null;
-  make?: string | null;
-  model?: string | null;
-  chassis_number?: string | null;
-  description?: string | null;
-}) {
-  const stock = [parts.stock_number, parts.make, parts.model]
-    .map((s) => s?.trim())
-    .filter(Boolean)
-    .join(' · ');
-  const chassis = parts.chassis_number?.trim();
-  const chassisBit = chassis
-    ? /^chassis\b/i.test(chassis)
-      ? chassis
-      : `CHASSIS ${chassis}`
-    : '';
-  const extra = parts.description?.trim() || '';
-  const bits = [stock, chassisBit].filter(Boolean);
-  if (extra && extra !== stock && !bits.some((bit) => extra.includes(bit))) bits.push(extra);
-  return bits.join(' / ') || extra || 'Vehicle';
+export function describeInvoiceVehicle(parts: InvoiceVehicleBits & { description?: string | null }) {
+  const notes = (parts.notes ?? parts.description)?.trim() || '';
+  const fields = [
+    ['chassis', parts.chassis_number],
+    ['stock', parts.stock_number],
+    ['make', parts.make],
+    ['model', parts.model],
+    ['colour', parts.colour],
+  ] as const;
+  const encoded = fields
+    .filter(([, value]) => value?.trim())
+    .map(([key, value]) => `${key}=${String(value).trim().replace(/\|/g, '/')}`)
+    .join(' | ');
+  if (encoded && notes) return `[JCTV] ${encoded} || ${notes}`;
+  if (encoded) return `[JCTV] ${encoded}`;
+  return notes || 'Vehicle';
+}
+
+export function decodeInvoiceVehicle(description: string | null | undefined): InvoiceVehicleBits {
+  const text = (description || '').trim();
+  if (!text) return {};
+  if (text.startsWith('[JCTV]')) {
+    const rest = text.replace(/^\[JCTV\]\s*/, '');
+    const [meta, notes] = rest.split(/\s\|\|\s/);
+    const bits: Record<string, string> = {};
+    (meta || '').split(/\s\|\s/).forEach((part) => {
+      const idx = part.indexOf('=');
+      if (idx > 0) bits[part.slice(0, idx).trim()] = part.slice(idx + 1).trim();
+    });
+    return {
+      chassis_number: bits.chassis || '',
+      stock_number: bits.stock || '',
+      make: bits.make || '',
+      model: bits.model || '',
+      colour: bits.colour || '',
+      notes: (notes || '').trim(),
+    };
+  }
+  const chassis = extractChassis(text);
+  const colour = text.match(/(?:colou?r)[:\s]+([A-Za-z0-9 /-]+)/i)?.[1]?.trim() || '';
+  const stockMatch = text.match(/(?:stock(?:\s*(?:no\.?|number|#))?)[:\s]+([A-Z0-9-]+)/i);
+  const cleaned = text
+    .replace(/\/?\s*(?:chassis|chassic|vin)[:\s#-]*[A-Z0-9-]{8,20}/gi, '')
+    .replace(/(?:colou?r)[:\s]+[A-Za-z0-9 /-]+/gi, '')
+    .replace(/(?:stock(?:\s*(?:no\.?|number|#))?)[:\s]+[A-Z0-9-]+/gi, '')
+    .replace(/^[·/\s]+|[·/\s]+$/g, '')
+    .trim();
+  const chunks = cleaned.split(/\s·\s|\s\/\s|\n/).map((s) => s.trim()).filter(Boolean);
+  if (chunks.length >= 3) {
+    return {
+      chassis_number: chassis,
+      stock_number: stockMatch?.[1] || chunks[0],
+      make: chunks[1],
+      model: chunks.slice(2).join(' '),
+      colour,
+    };
+  }
+  if (chunks.length === 2) {
+    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], model: chunks[1], colour };
+  }
+  if (chunks.length === 1) {
+    const words = chunks[0].split(/\s+/);
+    if (words.length >= 2) {
+      return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: words[0], model: words.slice(1).join(' '), colour };
+    }
+    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], colour };
+  }
+  return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', colour };
 }
