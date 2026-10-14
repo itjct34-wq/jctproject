@@ -46,6 +46,17 @@ export default function InventoryPage() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const makeParam = params.get('make');
+    const qParam = params.get('q');
+    if (qParam) setQ(qParam);
+    if (!makeParam) return;
+    const match = vehicles.find((v) => v.make.toLowerCase() === makeParam.toLowerCase());
+    setMakeFilter(match?.make || makeParam);
+  }, [vehicles]);
+
   const countries = useMemo(() => {
     const set = new Set(vehicles.map((v) => v.source_country).filter(Boolean) as string[]);
     return Array.from(set).sort();
@@ -60,7 +71,7 @@ export default function InventoryPage() {
     const term = q.trim().toLowerCase();
     return vehicles.filter((v) => {
       if (country !== 'all' && v.source_country !== country) return false;
-      if (makeFilter !== 'all' && v.make !== makeFilter) return false;
+      if (makeFilter !== 'all' && v.make.toLowerCase() !== makeFilter.toLowerCase()) return false;
       if (!term) return true;
       return [v.make, v.model, v.stock_number, v.color, v.source_country, String(v.model_year || '')]
         .filter(Boolean)
@@ -104,6 +115,9 @@ export default function InventoryPage() {
             className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
           >
             <option value="all">All makes</option>
+            {makeFilter !== 'all' && !makes.includes(makeFilter) && (
+              <option value={makeFilter}>{makeFilter}</option>
+            )}
             {makes.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}

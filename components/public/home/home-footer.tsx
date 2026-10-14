@@ -1,0 +1,49 @@
+import Link from 'next/link';
+
+export function HomeFooter() {
+  return (
+    <footer className="border-t border-[var(--jct-border)] bg-white text-[var(--jct-muted)]">
+      <div className="jct-home-wrap grid gap-8 py-12 md:grid-cols-4">
+        <div className="md:col-span-2 space-y-3">
+          <p className="font-display font-semibold text-[var(--jct-navy)]">Japan Circular Trading Co., Ltd.</p>
+          <p className="max-w-md text-sm leading-relaxed">
+            Used vehicle export from Nagoya, Japan. Auction sourcing, inspection support, RORO and container shipping
+            under FOB, C&amp;F and CIF.
+          </p>
+        </div>
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Explore</p>
+          <ul className="space-y-2 text-sm">
+            <li><Link href="/inventory" className="hover:text-[var(--jct-navy)]">Inventory</Link></li>
+            <li><Link href="/blog" className="hover:text-[var(--jct-navy)]">Guides</Link></li>
+            <li><Link href="/verify-agent" className="hover:text-[var(--jct-navy)]">Verify agent</Link></li>
+            <li><Link href="/about" className="hover:text-[var(--jct-navy)]">About</Link></li>
+            <li><Link href="/contact" className="hover:text-[var(--jct-navy)]">Contact</Link></li>
+          </ul>
+        </div>
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Contact</p>
+          <ul className="space-y-2 text-sm">
+            <li>Nagoya, Aichi 454-0943, Japan</li>
+            <li><a href="tel:+817022416356" className="hover:text-[var(--jct-navy)]">+81 70-2241-6356</a></li>
+            <li>
+              <a href="mailto:info@japancirculartrading.com" className="hover:text-[var(--jct-navy)]">
+                info@japancirculartrading.com
+              </a>
+            </li>
+          </ul>
+          <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Staff</p>
+          <Link href="/login" className="text-sm hover:text-[var(--jct-navy)]">
+            ERP login
+          </Link>
+        </div>
+      </div>
+      <div className="border-t border-[var(--jct-border)] py-4 text-center text-xs text-[var(--jct-muted-2)]">
+        <p>© {new Date().getFullYear()} Japan Circular Trading Co., Ltd.</p>
+        <p className="mt-1">
+          Brand names, logos and flags belong to their respective owners. JCT is not affiliated with them.
+        </p>
+      </div>
+    </footer>
+  );
+}

@@ -109,6 +109,46 @@
 /* Public marketing pages use a dark palette; header and footer provide light contrast. */
 .public-site { color-scheme: dark; }
 
+/* Homepage redesign tokens — scoped so ERP and other public pages stay unchanged. */
+.jct-home {
+  --jct-navy: #0B1F33;
+  --jct-vermilion: #D8392B;
+  --jct-panel: #F3F5F7;
+  --jct-border: #DDE3E9;
+  --jct-muted: #3B4C5D;
+  --jct-muted-2: #4A5B6C;
+  color-scheme: light;
+  background: #ffffff;
+  color: var(--jct-navy);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.jct-home .font-display,
+.jct-home h1,
+.jct-home h2,
+.jct-home h3 {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.jct-home-wrap {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+@media (min-width: 768px) {
+  .jct-home-wrap {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (min-width: 1280px) {
+  .jct-home-wrap {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
 /* Full-screen create/edit work forms */
 [data-dialog-workform='true'] {
   display: flex;
