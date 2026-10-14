@@ -23,7 +23,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { ChevronRight, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
-import { decodeInvoiceVehicle, describeInvoiceVehicle } from '@/lib/jct-official';
+import { decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel } from '@/lib/jct-official';
 
 const statusStyles: Record<Quotation['status'], string> = {
   draft: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -51,6 +51,9 @@ const emptyForm = {
   make: '',
   model: '',
   colour: '',
+  year: '',
+  engine: '',
+  transmission: '',
 };
 
 export default function QuotationsPage() {
@@ -78,12 +81,12 @@ export default function QuotationsPage() {
       supabase.from('quotations').select('*').order('created_at', { ascending: false }),
       supabase
         .from('customers')
-        .select('id, full_name, customer_code, company_name, email, phone, country, city, address_line1, address_line2')
+        .select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2')
         .order('full_name'),
       supabase
         .from('vehicles')
         .select(
-          'id, stock_number, make, model, chassis_number, model_year, color, mileage_km, listed_price, listed_currency, status'
+          'id, stock_number, make, model, chassis_number, model_year, color, mileage_km, listed_price, listed_currency, status, transmission'
         )
         .in('status', ['in_stock', 'reserved'])
         .order('updated_at', { ascending: false }),
@@ -126,6 +129,9 @@ export default function QuotationsPage() {
       make: v.make || '',
       model: v.model || '',
       colour: v.color || '',
+      year: v.model_year != null ? String(v.model_year) : '',
+      engine: f.engine || '',
+      transmission: formatTransmissionLabel(v.transmission),
       subtotal: f.subtotal || String(v.listed_price || ''),
       currency: v.listed_currency || f.currency,
     }));
@@ -138,6 +144,9 @@ export default function QuotationsPage() {
       make: form.make,
       model: form.model,
       colour: form.colour,
+      year: form.year,
+      engine: form.engine,
+      transmission: form.transmission,
       notes: form.description,
     });
 
@@ -214,6 +223,9 @@ export default function QuotationsPage() {
       make: bits.make || v?.make || '',
       model: bits.model || v?.model || '',
       colour: bits.colour || v?.color || '',
+      year: bits.year || (v?.model_year != null ? String(v.model_year) : ''),
+      engine: bits.engine || '',
+      transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
     });
     setEditOpen(true);
   };
@@ -400,6 +412,18 @@ export default function QuotationsPage() {
           <Label>Colour</Label>
           <Input value={form.colour} onChange={(e) => setForm({ ...form, colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
         </div>
+        <div className="space-y-2">
+          <Label>Year</Label>
+          <Input value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value, vehicle_id: '' })} placeholder="2016" />
+        </div>
+        <div className="space-y-2">
+          <Label>Engine</Label>
+          <Input value={form.engine} onChange={(e) => setForm({ ...form, engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" />
+        </div>
+        <div className="space-y-2">
+          <Label>Transmission</Label>
+          <Input value={form.transmission} onChange={(e) => setForm({ ...form, transmission: e.target.value, vehicle_id: '' })} placeholder="Automatic" />
+        </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-2">
@@ -453,7 +477,7 @@ export default function QuotationsPage() {
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={2}
-          placeholder="Not chassis, stock, make, or colour"
+          placeholder="Not chassis, stock, make, year, or engine"
         />
       </div>
       <div className="space-y-2">

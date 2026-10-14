@@ -11,7 +11,7 @@ type Props = {
   items: InvoiceItem[];
   customer?: Customer | null;
   company?: { name?: string; address?: string; phone?: string; email?: string };
-  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color'>[];
+  vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color' | 'model_year' | 'transmission'>[];
   salesAgent?: string | null;
   showQr?: boolean;
   includeBankNotice?: boolean;
@@ -65,6 +65,9 @@ export function CommercialInvoiceTemplate({
           make: bits.make,
           model: bits.model,
           colour: bits.colour,
+          year: bits.year,
+          engine: bits.engine,
+          transmission: bits.transmission,
         };
       })}
       vehicles={vehicles}

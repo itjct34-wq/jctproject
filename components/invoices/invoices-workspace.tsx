@@ -26,7 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } from '@/lib/types';
 import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
-import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, normalizeDepositRatio } from '@/lib/jct-official';
+import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
 import { toast } from 'sonner';
 
 export type InvoiceWorkspaceKind = 'commercial' | 'auction';
@@ -60,11 +60,13 @@ const emptyForm = {
 type LineDraft = {
   description: string; quantity: string; unit_price: string; discount: string; vehicle_id: string;
   chassis_number: string; stock_number: string; make: string; model: string; colour: string;
+  year: string; engine: string; transmission: string;
 };
 function emptyLine(kind: InvoiceWorkspaceKind): LineDraft {
   return {
     description: '', quantity: '1', unit_price: '', discount: kind === 'auction' ? '' : '30', vehicle_id: '',
     chassis_number: '', stock_number: '', make: '', model: '', colour: '',
+    year: '', engine: '', transmission: '',
   };
 }
 
@@ -100,9 +102,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setLoading(true);
     const [iRes, cRes, sRes, vRes, setRes] = await Promise.all([
       supabase.from('invoices').select('*').order('created_at', { ascending: false }),
-      supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, country, city, address_line1, address_line2').order('full_name'),
+      supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2').order('full_name'),
       supabase.from('sales').select('id, sale_code').order('created_at', { ascending: false }),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price').order('created_at', { ascending: false }),
+      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, model_year, transmission').order('created_at', { ascending: false }),
       supabase.from('company_settings').select('id, invoice_prefix, invoice_next_number').limit(1).maybeSingle(),
     ]);
     if (iRes.error) toast.error(`Unable to load invoices: ${iRes.error.message}`);
@@ -158,6 +160,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       make: v.make || '',
       model: v.model || '',
       colour: v.color || '',
+      year: v.model_year != null ? String(v.model_year) : '',
+      engine: next[idx].engine || '',
+      transmission: formatTransmissionLabel(v.transmission),
       unit_price: next[idx].unit_price || String(v.listed_price || ''),
     };
     setLineItems(next);
@@ -220,6 +225,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         make: bits.make || v?.make || '',
         model: bits.model || v?.model || '',
         colour: bits.colour || v?.color || '',
+        year: bits.year || (v?.model_year != null ? String(v.model_year) : ''),
+        engine: bits.engine || '',
+        transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
       };
     }));
     if (items.length === 0) setLineItems([{ ...emptyLine(kind) }]);
@@ -280,7 +288,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
   const linePayload = (invoiceId: string) =>
     lineItems
-      .filter((i) => i.description.trim() || i.vehicle_id || i.chassis_number.trim() || i.make.trim() || i.stock_number.trim() || i.colour.trim())
+      .filter((i) => i.description.trim() || i.vehicle_id || i.chassis_number.trim() || i.make.trim() || i.stock_number.trim() || i.colour.trim() || i.year.trim() || i.engine.trim() || i.transmission.trim())
       .map((item, idx) => ({
         invoice_id: invoiceId,
         vehicle_id: item.vehicle_id || null,
@@ -542,9 +550,21 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                     <Label className="text-[11px]">Colour</Label>
                     <Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Year</Label>
+                    <Input value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="2016" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Engine</Label>
+                    <Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Transmission</Label>
+                    <Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="Automatic" />
+                  </div>
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-[11px]">Notes / description</Label>
-                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional extra text only — not chassis or stock" />
+                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional extra text only — not chassis, year, or engine" />
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-2 items-end">

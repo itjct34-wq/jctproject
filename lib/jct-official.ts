@@ -13,7 +13,7 @@ export const JCT_OFFICIAL = {
   directorTitle: 'Representative Director',
   corporateNumber: '8180001159348',
   license: 'Aichi Prefecture Public Safety Commission No. 541212314700',
-  logo: '/images/jct-cars-import-logo.png',
+  logo: '/images/jct-official-logo.png',
   bank: {
     name: 'RAKUTEN BANK, LTD.',
     branch: 'HEAD OFFICE',
@@ -54,8 +54,20 @@ export type InvoiceVehicleBits = {
   make?: string | null;
   model?: string | null;
   colour?: string | null;
+  year?: string | null;
+  engine?: string | null;
+  transmission?: string | null;
   notes?: string | null;
 };
+
+export function formatTransmissionLabel(value?: string | null) {
+  const v = (value || '').trim();
+  if (!v) return '';
+  const key = v.toLowerCase().replace(/\.$/, '');
+  if (key === 'automatic' || key === 'auto' || key === 'cvt') return 'Automatic';
+  if (key === 'manual') return 'Manual';
+  return v.replace(/\.$/, '');
+}
 
 export const DEPOSIT_RATIOS = [30, 70, 100] as const;
 
@@ -87,6 +99,9 @@ export function describeInvoiceVehicle(parts: InvoiceVehicleBits & { description
     ['make', parts.make],
     ['model', parts.model],
     ['colour', parts.colour],
+    ['year', parts.year],
+    ['engine', parts.engine],
+    ['transmission', parts.transmission],
   ] as const;
   const encoded = fields
     .filter(([, value]) => value?.trim())
@@ -114,16 +129,29 @@ export function decodeInvoiceVehicle(description: string | null | undefined): In
       make: bits.make || '',
       model: bits.model || '',
       colour: bits.colour || '',
+      year: bits.year || '',
+      engine: bits.engine || '',
+      transmission: bits.transmission || '',
       notes: (notes || '').trim(),
     };
   }
   const chassis = extractChassis(text);
   const colour = text.match(/(?:colou?r)[:\s]+([A-Za-z0-9 /-]+)/i)?.[1]?.trim() || '';
   const stockMatch = text.match(/(?:stock(?:\s*(?:no\.?|number|#))?)[:\s]+([A-Z0-9-]+)/i);
+  const year = text.match(/(?:year)[:\s]+(\d{4})/i)?.[1] || '';
+  const engine = text.match(/(?:engine)[:\s]+([A-Za-z0-9.]+(?:\s?cc)?)/i)?.[1] || '';
+  const transmission =
+    formatTransmissionLabel(text.match(/(?:transmission)[:\s]+([A-Za-z]+)/i)?.[1]) ||
+    (/\bautomatic\b/i.test(text) ? 'Automatic' : /\bmanual\b/i.test(text) ? 'Manual' : '');
+  const extras = { year, engine, transmission };
   const cleaned = text
     .replace(/\/?\s*(?:chassis|chassic|vin)[:\s#-]*[A-Z0-9-]{8,20}/gi, '')
     .replace(/(?:colou?r)[:\s]+[A-Za-z0-9 /-]+/gi, '')
     .replace(/(?:stock(?:\s*(?:no\.?|number|#))?)[:\s]+[A-Z0-9-]+/gi, '')
+    .replace(/(?:year)[:\s]+\d{4}/gi, '')
+    .replace(/(?:engine)[:\s]+[A-Za-z0-9.]+(?:\s?cc)?/gi, '')
+    .replace(/(?:transmission)[:\s]+[A-Za-z]+/gi, '')
+    .replace(/\b(?:automatic|manual|cvt)\b/gi, '')
     .replace(/^[·/\s]+|[·/\s]+$/g, '')
     .trim();
   const chunks = cleaned.split(/\s·\s|\s\/\s|\n/).map((s) => s.trim()).filter(Boolean);
@@ -134,17 +162,18 @@ export function decodeInvoiceVehicle(description: string | null | undefined): In
       make: chunks[1],
       model: chunks.slice(2).join(' '),
       colour,
+      ...extras,
     };
   }
   if (chunks.length === 2) {
-    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], model: chunks[1], colour };
+    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], model: chunks[1], colour, ...extras };
   }
   if (chunks.length === 1) {
     const words = chunks[0].split(/\s+/);
     if (words.length >= 2) {
-      return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: words[0], model: words.slice(1).join(' '), colour };
+      return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: words[0], model: words.slice(1).join(' '), colour, ...extras };
     }
-    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], colour };
+    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], colour, ...extras };
   }
-  return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', colour };
+  return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', colour, ...extras };
 }
