@@ -374,7 +374,7 @@ export default function InvoicesPage() {
               <Switch checked={printBankNotice} onCheckedChange={setPrintBankNotice} />
               Bank notice page {printBankNotice ? 'on' : 'off'}
             </label>
-            <p className="text-xs text-muted-foreground">One-page print when bank notice is off.</p>
+            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page. Keep bank notice off for a single page.</p>
           </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">

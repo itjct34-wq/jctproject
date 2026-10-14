@@ -33,6 +33,23 @@ export async function printDocumentPdf(fileName: string) {
     layer.appendChild(root.cloneNode(true));
     document.body.appendChild(layer);
     document.body.classList.add('printing-document');
+    const sheet = layer.querySelector('.invoice-sheet') as HTMLElement | null;
+    const extraPage = layer.querySelector('.print-page-break');
+    if (sheet && !extraPage) {
+      const maxW = 735;
+      const maxH = 1040;
+      const scale = Math.min(1, maxW / Math.max(sheet.scrollWidth, 1), maxH / Math.max(sheet.scrollHeight, 1));
+      if (scale < 0.995) {
+        sheet.style.transformOrigin = 'top left';
+        sheet.style.transform = `scale(${scale})`;
+        const wrap = sheet.parentElement as HTMLElement | null;
+        if (wrap) {
+          wrap.style.width = `${Math.ceil(sheet.scrollWidth * scale)}px`;
+          wrap.style.height = `${Math.ceil(sheet.scrollHeight * scale)}px`;
+          wrap.style.overflow = 'hidden';
+        }
+      }
+    }
   }
 
   const restore = () => {

@@ -110,7 +110,7 @@
 .public-site { color-scheme: dark; }
 
 @media print {
-  @page { size: A4; margin: 10mm; }
+  @page { size: A4 portrait; margin: 8mm; }
   html, body {
     background: white !important;
     -webkit-print-color-adjust: exact !important;
@@ -118,14 +118,20 @@
     height: auto !important;
     overflow: visible !important;
   }
-  /* While printing a document, show only the cloned print layer. */
   body.printing-document > *:not(#print-layer) { display: none !important; }
   body.printing-document #print-layer { display: block !important; }
   body.printing-document #print-layer .invoice-print-root {
-    max-width: 100% !important;
+    max-width: 194mm !important;
+    width: 194mm !important;
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
+  }
+  body.printing-document #print-layer .invoice-sheet {
+    width: 194mm !important;
+    min-height: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   body.printing-document #print-layer tr,
   body.printing-document #print-layer img { break-inside: avoid; }
