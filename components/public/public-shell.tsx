@@ -1,13 +1,15 @@
-import { SiteHeader } from './site-header';
-import { SiteFooter } from './site-footer';
+import { HomeFooter } from './home/home-footer';
+import { HomeHeader } from './home/home-header';
+import { TopNotice } from './home/top-notice';
 
-/** Public marketing site is always light, independent of ERP dark mode. */
+/** Public marketing site uses the JCT navy/red light shell, independent of ERP theme. */
 export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="public-site min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
-      <SiteHeader />
-      <main className="flex-1 bg-zinc-950 text-zinc-100">{children}</main>
-      <SiteFooter />
+    <div className="jct-home public-site min-h-screen flex flex-col">
+      <TopNotice />
+      <HomeHeader />
+      <main className="flex-1">{children}</main>
+      <HomeFooter />
     </div>
   );
 }

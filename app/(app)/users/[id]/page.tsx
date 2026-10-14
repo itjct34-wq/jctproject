@@ -16,7 +16,7 @@ import type { Office, Profile, Role, Shift } from '@/lib/types';
 import { ROLE_COLORS, type RoleName } from '@/lib/types';
 import { ArrowLeft, MapPin, Pencil, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { UserFormDialog, type UserFormValues } from '@/components/users/user-form-dialog';
+import { optionalPasswordUpdate, UserFormDialog, type UserFormValues } from '@/components/users/user-form-dialog';
 import { toast } from 'sonner';
 
 export default function UserProfilePage() {
@@ -77,6 +77,11 @@ export default function UserProfilePage() {
 
   const save = async (values: UserFormValues) => {
     if (!profile) return;
+    const passwordUpdate = optionalPasswordUpdate(values);
+    if (passwordUpdate.error) {
+      toast.error(passwordUpdate.error);
+      return;
+    }
     setSubmitting(true);
     const res = await fetch('/api/admin/update-user', {
       method: 'PATCH',
@@ -92,15 +97,16 @@ export default function UserProfilePage() {
         department: values.department.trim() || null,
         office_id: values.office_id === 'none' ? null : values.office_id,
         shift_id: values.shift_id === 'none' ? null : values.shift_id,
+        ...(passwordUpdate.password ? { password: passwordUpdate.password } : {}),
       }),
     });
     const body = await res.json().catch(() => ({}));
     setSubmitting(false);
     if (!res.ok) {
-      toast.error(body.error || 'Could not update profile');
+      toast.error(typeof body.error === 'string' ? body.error : 'Could not update profile');
       return;
     }
-    toast.success('Profile updated');
+    toast.success(passwordUpdate.password ? 'Profile and password updated' : 'Profile updated');
     setEditOpen(false);
     load();
   };

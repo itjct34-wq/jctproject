@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -19,24 +20,16 @@ export function HomeHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--jct-border)] bg-white/95 backdrop-blur-md">
-      <div className="jct-home-wrap flex h-16 items-center justify-between gap-4 md:h-[72px]">
-        <Link href="/" className="flex min-h-11 items-center gap-3">
-          <img
-            src="/images/jct-official-logo.png"
-            alt=""
-            aria-hidden="true"
-            className="h-10 w-10 rounded-lg object-contain"
-          />
-          <span className="leading-tight">
-            <span className="block font-display text-sm font-semibold text-[var(--jct-navy)] sm:text-base">
-              Japan Circular Trading
-            </span>
-            <span className="block text-[11px] text-[var(--jct-muted-2)]">Used vehicle export · Nagoya</span>
-          </span>
-          <span className="sr-only">Japan Circular Trading home</span>
+    <header className="sticky top-0 z-50 border-b border-[var(--jct-border)] bg-white">
+      <div className="jct-home-wrap flex min-h-[72px] items-center justify-between gap-4 py-2.5 sm:min-h-[88px] md:min-h-[104px] lg:min-h-[112px] lg:py-3">
+        <Link
+          href="/"
+          className="flex min-w-0 shrink items-center py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          aria-label="Japan Circular Trading home"
+        >
+          <BrandLogo placement="header" />
         </Link>
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+        <nav className="hidden shrink-0 items-center gap-1 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
             <Link
               key={item.href}
@@ -53,14 +46,14 @@ export function HomeHeader() {
           ))}
           <Link
             href="/contact"
-            className="ml-2 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-navy)]"
+            className="ml-2 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024]"
           >
             Request a car
           </Link>
         </nav>
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[var(--jct-navy)] hover:bg-[var(--jct-panel)] lg:hidden"
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-[var(--jct-navy)] hover:bg-[var(--jct-panel)] lg:hidden"
           aria-expanded={open}
           aria-controls="home-mobile-nav"
           aria-label={open ? 'Close menu' : 'Open menu'}

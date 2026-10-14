@@ -73,6 +73,7 @@ export function AuctionsBulkImportButton({ onDone }: Props) {
         headers={AUCTION_CSV_HEADERS}
         sampleRow={AUCTION_CSV_SAMPLE}
         templateFilename="jct-auctions-template.csv"
+        hint="Upload a CSV or Excel file of auction listings. Make and model are required."
         onImport={handleImport}
       />
     </>

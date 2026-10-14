@@ -106,8 +106,8 @@
   }
 }
 
-/* Public marketing pages use a dark palette; header and footer provide light contrast. */
-.public-site { color-scheme: dark; }
+/* Public marketing pages share the JCT light navy/red shell. */
+.public-site { color-scheme: light; }
 
 /* Homepage redesign tokens — scoped so ERP and other public pages stay unchanged. */
 .jct-home {

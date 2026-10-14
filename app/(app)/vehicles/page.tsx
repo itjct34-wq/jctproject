@@ -18,10 +18,13 @@ import { supabase } from '@/lib/supabase/client';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { formatMoney } from '@/lib/utils/format';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-import { MultiImageUpload, type GalleryImage } from '@/components/shared/multi-image-upload';
+import { type GalleryImage } from '@/components/shared/multi-image-upload';
 import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images';
 import { VehiclesBulkImportButton } from '@/components/vehicles/vehicles-bulk-import-button';
-import type { Vehicle, VehicleStatusHistory } from '@/lib/types';
+import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
+import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
+import { mergeEngineIntoNotes, publicEngineFromNotes, stripEngineFromNotes } from '@/lib/public/vehicles';
+import type { Vehicle } from '@/lib/types';
 import { CarFront, ChevronRight, DollarSign, Download, Loader2, MapPin, Pencil, Plus, Search, Trash2, Warehouse } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
@@ -40,8 +43,9 @@ const statusLabels: Record<Vehicle['status'], string> = {
   exported: 'Exported', on_hold: 'On hold', archived: 'Archived',
 };
 const emptyForm = {
-  chassis_number: '', make: '', model: '', model_year: '', listed_price: '', listed_currency: 'USD',
-  notes: '', primary_image_url: '',
+  chassis_number: '', stock_number: '', make: '', model: '', colour: '', model_year: '',
+  engine: '', transmission: '', listed_price: '', listed_currency: 'USD',
+  notes: '', primary_image_url: '', source_country_code: 'JP',
 };
 
 export default function VehiclesPage() {
@@ -88,13 +92,18 @@ export default function VehiclesPage() {
     setGallery(imgs.length ? imgs : (selected.primary_image_url ? [{ image_url: selected.primary_image_url, sort_order: 0, is_primary: true }] : []));
     setForm({
       chassis_number: selected.chassis_number,
+      stock_number: selected.stock_number || '',
       make: selected.make,
       model: selected.model,
+      colour: selected.color || '',
       model_year: selected.model_year ? String(selected.model_year) : '',
+      engine: publicEngineFromNotes(selected.notes) || '',
+      transmission: selected.transmission || '',
       listed_price: selected.listed_price ? String(selected.listed_price) : '',
       listed_currency: selected.listed_currency || 'USD',
-      notes: selected.notes || '',
+      notes: stripEngineFromNotes(selected.notes),
       primary_image_url: selected.primary_image_url || '',
+      source_country_code: selected.source_country_code || resolveSourceCountry(selected.source_country)?.code || 'JP',
     });
     setEditOpen(true);
   };
@@ -104,17 +113,29 @@ export default function VehiclesPage() {
     if (!profile || !form.chassis_number.trim() || !form.make.trim() || !form.model.trim()) return;
     setSubmitting(true);
     const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
-    const { data, error } = await supabase.from('vehicles').insert({
+    const origin = resolveSourceCountry(form.source_country_code);
+    const insertPayload: Record<string, unknown> = {
       chassis_number: form.chassis_number.trim(),
       make: form.make.trim(),
       model: form.model.trim(),
+      color: form.colour.trim() || null,
       model_year: form.model_year ? Number(form.model_year) : null,
+      transmission: mapTransmissionToDb(form.transmission),
       listed_price: form.listed_price ? Number(form.listed_price) : null,
       listed_currency: form.listed_currency,
-      notes: form.notes.trim() || null,
+      notes: mergeEngineIntoNotes(form.notes, form.engine),
       primary_image_url: primary,
+      source_country: origin?.name || 'Japan',
+      source_country_code: origin?.code || 'JP',
       created_by: profile.id,
-    }).select().maybeSingle();
+    };
+    if (form.stock_number.trim()) insertPayload.stock_number = form.stock_number.trim();
+    let { data, error } = await supabase.from('vehicles').insert(insertPayload).select().maybeSingle();
+    if (error && /source_country_code/i.test(error.message)) {
+      const { source_country_code: _c, ...rest } = insertPayload;
+      void _c;
+      ({ data, error } = await supabase.from('vehicles').insert(rest).select().maybeSingle());
+    }
     if (error) { setSubmitting(false); toast.error(error.message); return; }
     if (data && gallery.length) {
       try { await saveVehicleImages((data as Vehicle).id, gallery); } catch (err: unknown) {
@@ -138,17 +159,29 @@ export default function VehiclesPage() {
       toast.error(err instanceof Error ? err.message : 'Photos save failed');
     }
     const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
-    const { error } = await supabase.from('vehicles').update({
+    const origin = resolveSourceCountry(form.source_country_code);
+    const updatePayload: Record<string, unknown> = {
       chassis_number: form.chassis_number.trim(),
       make: form.make.trim(),
       model: form.model.trim(),
+      color: form.colour.trim() || null,
       model_year: form.model_year ? Number(form.model_year) : null,
+      transmission: mapTransmissionToDb(form.transmission),
       listed_price: form.listed_price ? Number(form.listed_price) : null,
       listed_currency: form.listed_currency,
-      notes: form.notes.trim() || null,
+      notes: mergeEngineIntoNotes(form.notes, form.engine),
       primary_image_url: primary,
+      source_country: origin?.name || selected.source_country,
+      source_country_code: origin?.code || selected.source_country_code,
       updated_at: new Date().toISOString(),
-    }).eq('id', selected.id);
+    };
+    if (form.stock_number.trim()) updatePayload.stock_number = form.stock_number.trim();
+    let { error } = await supabase.from('vehicles').update(updatePayload).eq('id', selected.id);
+    if (error && /source_country_code/i.test(error.message)) {
+      const { source_country_code: _c, ...rest } = updatePayload;
+      void _c;
+      ({ error } = await supabase.from('vehicles').update(rest).eq('id', selected.id));
+    }
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Vehicle updated');
@@ -214,7 +247,7 @@ export default function VehiclesPage() {
                 <div className="h-10 w-10 rounded-lg overflow-hidden bg-primary/10 flex items-center justify-center">
                   {v.primary_image_url ? <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" /> : <CarFront className="h-5 w-5 text-primary" />}
                 </div>
-                <div className="min-w-0 flex-1"><p className="font-medium">{v.make} {v.model}</p><p className="text-xs text-muted-foreground">{v.stock_number} · {v.chassis_number}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-medium">{v.make} {v.model}</p><p className="text-xs text-muted-foreground">{v.stock_number} · {v.chassis_number}{v.source_country ? ` · ${v.source_country}` : ''}{v.source_country_code ? ` (${v.source_country_code})` : ''}</p></div>
                 <Badge variant="outline" className={statusStyles[v.status]}>{statusLabels[v.status]}</Badge>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
@@ -222,29 +255,44 @@ export default function VehiclesPage() {
           ))}</div>}
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>Add vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitCreate} className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
-            <div className="space-y-1"><Label>Year</Label><Input type="number" value={form.model_year} onChange={(e) => setForm({ ...form, model_year: e.target.value })} /></div></div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
-            <div className="space-y-1"><Label>Model *</Label><Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required /></div></div>
+          <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} gallery={gallery} onGalleryChange={setGallery} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Listed price</Label><Input type="number" value={form.listed_price} onChange={(e) => setForm({ ...form, listed_price: e.target.value })} /></div>
             <div className="space-y-1"><Label>Currency</Label><CurrencySelect value={form.listed_currency} onValueChange={(v) => setForm({ ...form, listed_currency: v })} /></div></div>
-          <MultiImageUpload folder={form.chassis_number.trim() || 'new'} images={gallery} onChange={setGallery} label="Vehicle photos (multiple)" />
+          <div className="space-y-1"><Label>Source country *</Label>
+            <Select value={form.source_country_code} onValueChange={(v) => setForm({ ...form, source_country_code: v })}>
+              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+              <SelectContent>
+                {SOURCE_COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Save'}</Button></DialogFooter>
         </form>
       </DialogContent></Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>Edit vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitEdit} className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Chassis *</Label><Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value })} required /></div>
-            <div className="space-y-1"><Label>Year</Label><Input type="number" value={form.model_year} onChange={(e) => setForm({ ...form, model_year: e.target.value })} /></div></div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Make *</Label><Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required /></div>
-            <div className="space-y-1"><Label>Model *</Label><Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required /></div></div>
-          <MultiImageUpload folder={selected?.id || 'edit'} images={gallery} onChange={setGallery} label="Vehicle photos (multiple)" />
+          <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} gallery={gallery} onGalleryChange={setGallery} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Listed price</Label><Input type="number" value={form.listed_price} onChange={(e) => setForm({ ...form, listed_price: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Currency</Label><CurrencySelect value={form.listed_currency} onValueChange={(v) => setForm({ ...form, listed_currency: v })} /></div></div>
+          <div className="space-y-1"><Label>Source country *</Label>
+            <Select value={form.source_country_code} onValueChange={(v) => setForm({ ...form, source_country_code: v })}>
+              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+              <SelectContent>
+                {SOURCE_COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
           <DialogFooter><Button type="submit" disabled={submitting}>Save</Button></DialogFooter>
         </form>
       </DialogContent></Dialog>

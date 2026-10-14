@@ -1,15 +1,32 @@
 import Link from 'next/link';
+import { BrandLogo } from '@/components/public/brand-logo';
+import { CountryFlag } from '@/components/public/country-flag';
+import { DESTINATION_COUNTRIES } from '@/lib/public/countries';
 
 export function HomeFooter() {
   return (
     <footer className="border-t border-[var(--jct-border)] bg-white text-[var(--jct-muted)]">
       <div className="jct-home-wrap grid gap-8 py-12 md:grid-cols-4">
-        <div className="md:col-span-2 space-y-3">
-          <p className="font-display font-semibold text-[var(--jct-navy)]">Japan Circular Trading Co., Ltd.</p>
+        <div className="space-y-4 md:col-span-2">
+          <BrandLogo placement="footer" />
           <p className="max-w-md text-sm leading-relaxed">
             Used vehicle export from Nagoya, Japan. Auction sourcing, inspection support, RORO and container shipping
             under FOB, C&amp;F and CIF.
           </p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Export destinations</p>
+          <ul className="flex flex-wrap gap-2">
+            {DESTINATION_COUNTRIES.map((country) => (
+              <li key={country.iso2}>
+                <Link
+                  href={`/inventory`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--jct-border)] bg-[var(--jct-panel)] px-2 py-1"
+                >
+                  <CountryFlag country={country.name} size="sm" />
+                  <span className="text-xs text-[var(--jct-navy)]">{country.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Explore</p>

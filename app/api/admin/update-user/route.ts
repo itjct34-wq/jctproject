@@ -5,6 +5,8 @@ import { requireAdmin } from '@/lib/admin-auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const MIN_PASSWORD_LENGTH = 8;
+
 const bodySchema = z.object({
   user_id: z.string().uuid(),
   full_name: z.string().trim().max(200).optional().nullable(),
@@ -15,6 +17,7 @@ const bodySchema = z.object({
   office_id: z.string().uuid().optional().nullable(),
   shift_id: z.string().uuid().optional().nullable(),
   is_active: z.boolean().optional(),
+  password: z.string().max(72).optional(),
 });
 
 export async function PATCH(request: NextRequest) {
@@ -59,5 +62,25 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true });
+  const nextPassword = parsed.password?.trim() || '';
+  if (nextPassword) {
+    if (nextPassword.length < MIN_PASSWORD_LENGTH) {
+      return NextResponse.json(
+        { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`, password_updated: false },
+        { status: 400 }
+      );
+    }
+    const { error: authError } = await admin.auth.admin.updateUserById(parsed.user_id, {
+      password: nextPassword,
+    });
+    if (authError) {
+      return NextResponse.json(
+        { error: 'Could not update sign-in password', password_updated: false },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ ok: true, password_updated: true });
+  }
+
+  return NextResponse.json({ ok: true, password_updated: false });
 }
