@@ -288,7 +288,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         description: describeInvoiceVehicle(item),
         quantity: Number(item.quantity) || 1,
         unit_price: Number(item.unit_price) || 0,
-        discount: isAuction ? Number(item.discount) || 0 : normalizeDepositRatio(item.discount, item.unit_price),
+        discount: isAuction
+          ? Number(item.discount) || 0
+          : normalizeDepositRatio(Number(item.discount) || 0, Number(item.unit_price) || 0),
         line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0),
         sort_order: idx,
       }));
