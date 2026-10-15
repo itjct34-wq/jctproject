@@ -115,9 +115,24 @@ export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {
 
 export const PAYMENT_STATUS_STYLES: Record<VehiclePaymentStatus, string> = {
   available: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  reserved: 'bg-amber-50 text-amber-800 border-amber-200',
-  partial_paid: 'bg-orange-50 text-orange-800 border-orange-200',
-  paid: 'bg-blue-100 text-blue-900 border-blue-300',
+  reserved: 'bg-sky-50 text-sky-800 border-sky-200',
+  partial_paid: 'bg-amber-50 text-amber-900 border-amber-200',
+  paid: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+};
+
+/** Large right-rail pills on the ERP stock list (screenshot labels). */
+export const PAYMENT_STATUS_PILL_LABELS: Record<VehiclePaymentStatus, string> = {
+  available: 'AVAILABLE',
+  reserved: 'RESERVED',
+  partial_paid: 'PARTIAL PAID',
+  paid: 'PAID',
+};
+
+export const PAYMENT_STATUS_PILL_STYLES: Record<VehiclePaymentStatus, string> = {
+  available: 'bg-emerald-600 text-white',
+  reserved: 'bg-sky-600 text-white',
+  partial_paid: 'bg-amber-500 text-white',
+  paid: 'bg-emerald-600 text-white',
 };
 
 export const SHIPPING_STATUS_STYLES: Record<VehicleShippingStatus, string> = {
@@ -127,17 +142,27 @@ export const SHIPPING_STATUS_STYLES: Record<VehicleShippingStatus, string> = {
   delivered: 'bg-slate-200 text-slate-800 border-slate-300',
 };
 
-/** Full-row ERP list tint. Shipping stage wins over payment once booked. */
+export const SHIPPING_STATUS_SHORT: Record<VehicleShippingStatus, string> = {
+  not_booked: 'NOT BOOKED',
+  booked: 'BOOKED',
+  shipped: 'SHIPPED',
+  delivered: 'DELIVERED',
+};
+
+/** Screenshot freight wording. Empty when freight_mode is unset. */
+export function freightModeListLabel(mode: Vehicle['freight_mode'] | '' | undefined): string {
+  if (mode === 'roro') return 'RORO';
+  if (mode === 'container') return '40 Feet Container';
+  return '';
+}
+
+/** Full-row ERP list tint from payment_status (shipping stays in the right rail). */
 export function vehicleListRowClass(vehicle: Vehicle): string {
-  const ship = effectiveShippingStatus(vehicle);
   const pay = effectivePaymentStatus(vehicle);
-  if (ship === 'delivered') return 'bg-slate-100 text-slate-950 hover:bg-slate-200/80';
-  if (ship === 'shipped') return 'bg-cyan-50 text-cyan-950 hover:bg-cyan-100/80';
-  if (ship === 'booked') return 'bg-sky-50 text-sky-950 hover:bg-sky-100/80';
-  if (pay === 'paid') return 'bg-blue-100 text-blue-950 hover:bg-blue-200/70';
-  if (pay === 'partial_paid') return 'bg-orange-50 text-orange-950 hover:bg-orange-100/80';
-  if (pay === 'reserved') return 'bg-amber-50 text-amber-950 hover:bg-amber-100/70';
-  return 'bg-emerald-50/90 text-emerald-950 hover:bg-emerald-100/80';
+  if (pay === 'paid') return 'border-emerald-300/80 bg-emerald-100/90 text-emerald-950';
+  if (pay === 'partial_paid') return 'border-amber-300/80 bg-amber-100/80 text-amber-950';
+  if (pay === 'reserved') return 'border-sky-300/80 bg-sky-100/90 text-sky-950';
+  return 'border-emerald-200/70 bg-white text-emerald-950';
 }
 
 /** Extra list cue when the vehicle is paid/delivered but commission is still due. */

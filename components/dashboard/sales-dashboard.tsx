@@ -213,7 +213,7 @@ export function SalesDashboard() {
               { label: 'Browse stock', icon: Car, href: '/vehicles' },
               { label: 'Commercial invoices', icon: Receipt, href: '/invoices' },
               { label: 'Auction invoices', icon: Landmark, href: '/auction-invoices' },
-              { label: 'View T/T payments', icon: CreditCard, href: '/payments' },
+              { label: 'View remittances / T/T', icon: CreditCard, href: '/payments' },
             ].map((action) => (
               <Link key={action.label} href={action.href}>
                 <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors">

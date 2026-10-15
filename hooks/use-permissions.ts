@@ -14,7 +14,7 @@ const VIEW_ROLES: Record<PermissionModule, RoleName[]> = {
   sales: ['admin', 'operations', 'manager', 'sales_agent', 'freelancer', 'auditor'],
   invoices: ['admin', 'manager', 'sales_agent', 'freelancer', 'accounts', 'auditor'],
   payments: ['admin', 'manager', 'sales_agent', 'freelancer', 'accounts', 'auditor'],
-  expenses: ['admin', 'accounts', 'auditor'],
+  expenses: ['admin', 'manager', 'accounts', 'operations', 'auditor'],
   shipments: ['admin', 'operations', 'manager', 'auditor'],
   documents: ['admin', 'operations', 'auditor'],
   tasks: ['admin', 'operations', 'manager', 'sales_agent', 'freelancer', 'accounts'],
@@ -33,8 +33,8 @@ const WRITE_ROLES: Record<PermissionModule, RoleName[]> = {
   purchases: ['admin', 'operations', 'manager'],
   sales: ['admin', 'operations', 'manager', 'sales_agent'],
   invoices: ['admin', 'manager', 'sales_agent', 'freelancer', 'accounts'],
-  payments: ['admin', 'manager', 'accounts'],
-  expenses: ['admin', 'accounts'],
+  payments: ['admin', 'manager', 'accounts', 'sales_agent', 'freelancer'],
+  expenses: ['admin', 'manager', 'accounts', 'operations'],
   shipments: ['admin', 'operations', 'manager'],
   documents: ['admin', 'operations'],
   tasks: ['admin', 'operations', 'manager', 'sales_agent'],
@@ -50,8 +50,11 @@ const APPROVE_ROLES: RoleName[] = ['admin', 'manager', 'accounts'];
 const EXPORT_ROLES: RoleName[] = ['admin', 'manager', 'accounts', 'operations', 'auditor'];
 
 export function usePermissions() {
-  const { roles } = useAuth();
+  const { roles, profile } = useAuth();
   const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
+  const sellingWithOffice = Boolean(
+    profile?.office_id && (roleNames.includes('sales_agent') || roleNames.includes('freelancer'))
+  );
 
   const hasRole = (role: RoleName): boolean => roleNames.includes(role);
   const isSuperAdmin = (): boolean => roleNames.includes('super_admin');
@@ -60,6 +63,7 @@ export function usePermissions() {
 
   const canView = (module: PermissionModule): boolean => {
     if (isSuperAdmin()) return true;
+    if (module === 'expenses' && sellingWithOffice) return true;
     return (VIEW_ROLES[module] || []).some((r) => roleNames.includes(r));
   };
 
@@ -71,6 +75,7 @@ export function usePermissions() {
         return canView(module);
       case 'create':
       case 'edit':
+        if (module === 'expenses' && sellingWithOffice) return true;
         return (WRITE_ROLES[module] || []).some((r) => roleNames.includes(r));
       case 'delete':
         return DELETE_ROLES.some((r) => roleNames.includes(r)) && canView(module);

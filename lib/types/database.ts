@@ -590,6 +590,18 @@ export interface Payment {
   sale_id: string | null;
   vehicle_id?: string | null;
   sales_agent_id?: string | null;
+  office_id?: string | null;
+  shift_id?: string | null;
+  remitter_name?: string | null;
+  bank_name?: string | null;
+  bank_address?: string | null;
+  bank_phone?: string | null;
+  instructed_amount?: number | null;
+  remit_amount?: number | null;
+  bank_charges?: number | null;
+  remit_date?: string | null;
+  received_date?: string | null;
+  allocation_status?: 'unallocated' | 'allocated';
   payment_date: string;
   amount: number;
   currency: string;
@@ -604,12 +616,25 @@ export interface Payment {
   updated_at: string;
 }
 
+export interface PaymentAllocation {
+  id: string;
+  payment_id: string;
+  vehicle_id: string;
+  allocate_amount: number;
+  sold_price: number | null;
+  created_by: string;
+  created_at: string;
+}
+
 export interface Expense {
   id: string;
   expense_code: string;
   category: string;
   vehicle_id: string | null;
   sale_id: string | null;
+  office_id?: string | null;
+  payroll_user_id?: string | null;
+  payroll_period?: string | null;
   expense_date: string;
   amount: number;
   currency: string;
