@@ -68,7 +68,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
           <div className="mt-12 rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-10 text-center">
             <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
             <p className="mt-3 font-medium text-[var(--jct-navy)]">Not available</p>
-            <Link href={catalog.path} className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white">
+            <Link href={catalog.path} className="jct-btn-primary mt-5 px-5">
               Browse stock
             </Link>
           </div>
@@ -106,9 +106,9 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-5">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">FOB price</p>
-                <p className="mt-1 font-display text-3xl font-bold text-[var(--jct-navy)]">
+              <div className="jct-stock-panel jct-stock-panel-accent p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB price</p>
+                <p className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--jct-navy)]">
                   {vehicle.listed_price != null
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency)
                     : 'Ask for quote'}
@@ -131,14 +131,11 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link
                   href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
-                  className="inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-6 text-sm font-semibold text-white hover:bg-[#c23024]"
+                  className="jct-btn-primary px-6"
                 >
                   {catalog.inquireLabel}
                 </Link>
-                <Link
-                  href="/verify-agent"
-                  className="inline-flex min-h-11 items-center rounded-lg border border-[var(--jct-navy)] px-6 text-sm font-medium text-[var(--jct-navy)]"
-                >
+                <Link href="/verify-agent" className="jct-btn-secondary px-6">
                   Verify agent
                 </Link>
               </div>
@@ -152,7 +149,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
 
 function spec(label: string, value: string, Icon: typeof Gauge) {
   return (
-    <div key={label} className="rounded-xl border border-[var(--jct-border)] bg-white p-3">
+    <div key={label} className="rounded-xl border border-[var(--jct-navy)]/12 bg-white p-3 shadow-[0_2px_12px_rgba(11,31,51,0.04)]">
       <dt className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">
         <Icon className="h-3 w-3" /> {label}
       </dt>

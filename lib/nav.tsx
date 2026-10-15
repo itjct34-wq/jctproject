@@ -100,6 +100,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Users & Teams', href: '/users', icon: UserCog, module: 'users' },
       { label: 'System Config', href: '/settings', icon: Settings, module: 'settings' },
       { label: 'Global Configuration', href: '/configuration', icon: SlidersHorizontal, module: 'settings', requiredRoles: ['super_admin'] },
+      { label: 'Auction houses', href: '/configuration#auction-houses', icon: Gavel, module: 'auctions' },
       { label: 'Audit Logs', href: '/audit', icon: ScrollText, module: 'audit' },
     ],
   },

@@ -100,7 +100,7 @@ export default function ContactPage() {
             <h2 className="mt-3 text-xl font-semibold">Inquiry received</h2>
             <p className="mt-2 text-sm">Reference: <strong className="font-mono">{code}</strong></p>
             <Button
-              className="mt-4 bg-[var(--jct-vermilion)] hover:bg-[#c23024]"
+              className="jct-btn-primary mt-4 h-auto"
               onClick={() => {
                 setCode('');
                 setForm({
@@ -174,7 +174,7 @@ export default function ContactPage() {
               <Label>Requirements *</Label>
               <Textarea required minLength={5} maxLength={8000} rows={5} value={form.message} onChange={(e) => set('message', e.target.value)} placeholder="Models, specifications, target budget, delivery timing…" />
             </div>
-            <Button type="submit" disabled={busy} className="w-full bg-[var(--jct-vermilion)] hover:bg-[#c23024] sm:w-auto">
+            <Button type="submit" disabled={busy} className="jct-btn-primary h-auto w-full sm:w-auto disabled:opacity-50">
               {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</> : <><Send className="mr-2 h-4 w-4" />Submit inquiry</>}
             </Button>
           </form>

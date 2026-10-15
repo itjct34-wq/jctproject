@@ -117,7 +117,9 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
           </p>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="jct-stock-panel mt-6 p-4 md:p-5">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-muted-2)]">Filter by origin</p>
+          <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setCountry('all')}
@@ -144,9 +146,9 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
               {label}
             </button>
           ))}
-        </div>
+          </div>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-4 flex flex-col gap-3 border-t border-[var(--jct-border)] pt-4 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-[var(--jct-muted-2)]" />
             <input
@@ -166,6 +168,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
             ))}
           </select>
         </div>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-[var(--jct-muted-2)]">
@@ -176,7 +179,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
             <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
             <p className="mt-3 font-medium text-[var(--jct-navy)]">{catalog.emptyTitle}</p>
             <p className="mt-1 text-sm text-[var(--jct-muted)]">Try clearing filters or contact us for sourcing.</p>
-            <Link href="/contact" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white">
+            <Link href="/contact" className="jct-btn-primary mt-5 px-5">
               Request sourcing
             </Link>
           </div>
@@ -184,11 +187,13 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
           <div className="mt-10 space-y-12">
             {groups.map((group) => (
               <section key={group.key}>
-                <div className="mb-4 flex items-center gap-3">
+                <div className="jct-stock-panel-accent mb-4 flex items-center gap-3 rounded-xl border border-[var(--jct-navy)]/10 bg-[var(--jct-panel)]/50 px-4 py-3">
                   <CountryFlag country={group.label} code={group.key} size="md" />
                   <h2 className="font-display text-xl font-semibold text-[var(--jct-navy)]">
                     {group.label}
-                    <span className="ml-2 text-sm font-normal text-[var(--jct-muted-2)]">{group.items.length}</span>
+                    <span className="ml-2 rounded-full bg-[var(--jct-navy)] px-2 py-0.5 text-xs font-semibold text-white">
+                      {group.items.length}
+                    </span>
                   </h2>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
