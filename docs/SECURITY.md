@@ -26,7 +26,7 @@ Do not commit `.env.local` or paste live JWTs into documentation. Build-time pla
 
 | Bucket | Access |
 |--------|--------|
-| `vehicle-images` | Public read for catalog photos; uploads from authenticated ERP flows / photo ZIP API |
+| `vehicle-images` | Public read for catalog photos; uploads from authenticated ERP flows / photo ZIP API; ZIP batch undo removes objects via inventory staff API |
 | `record-attachments` | Private; signed URLs for download (`components/shared/record-attachments.tsx`, 20 MB max per file) |
 
 ## Public surface

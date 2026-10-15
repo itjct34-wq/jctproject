@@ -74,8 +74,9 @@ Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboa
 | Delete reservations (`sales`) | No (UI `can('sales','delete')`; RLS `sales_delete_admin`) | No |
 | Delete quotations | No (UI; RLS `quotations_delete_admin`) | No |
 | Delete invoices (commercial or auction deposit) | No (UI `can('invoices','delete')`; RLS `invoices_delete_admin`) | No |
-| Delete vehicles | No (UI + RLS: admin only) | No |
+| Delete vehicles | No (UI + RLS: admin only; batch undo uses staff API) | No |
 | Add / import vehicles | No (UI + RLS: operations/manager/admin) | No |
+| See / delete bulk upload batches | No (RLS + UI: `vehicles.create` / `auctions.create`) | No |
 | Edit stock specs / pricing | No | No |
 | Edit shipping on vehicles | No | No |
 
@@ -94,6 +95,7 @@ New customers created in CRM set **`customers.assigned_to`** and **`created_by`*
 | Record & edit T/T | Yes | No | Yes | Yes |
 | Allocate payment to reserved vehicle | Yes | No | Yes | Yes |
 | Edit stock | Yes | Yes | Yes | No |
+| Bulk upload history + undo batch | Yes | Yes | Yes | No |
 | Edit vehicle shipping + upload courier docs | Yes | Yes | Yes | No |
 
 ## Enforcement rule

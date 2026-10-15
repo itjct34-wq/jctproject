@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
   const { data: vehicle, error: vErr } = await admin
     .from('vehicles')
-    .select('id, chassis_number, stock_number, part_sku')
+    .select('id, chassis_number, stock_number, part_sku, primary_image_url')
     .eq('id', vehicleId)
     .maybeSingle();
   if (vErr || !vehicle) {
@@ -74,7 +74,10 @@ export async function POST(request: NextRequest) {
   }
 
   await admin.from('vehicle_images').delete().eq('vehicle_id', vehicleId);
-  const { error: insErr } = await admin.from('vehicle_images').insert(rows);
+  const { data: inserted, error: insErr } = await admin
+    .from('vehicle_images')
+    .insert(rows)
+    .select('id, image_url');
   if (insErr) {
     return NextResponse.json({ error: insErr.message, errors }, { status: 400 });
   }
@@ -83,5 +86,21 @@ export async function POST(request: NextRequest) {
     updated_at: new Date().toISOString(),
   }).eq('id', vehicleId);
 
-  return NextResponse.json({ photos: rows.length, errors });
+  const imageIds = (inserted || []).map((row) => row.id as string);
+  const storagePaths = rows
+    .map((row) => {
+      const marker = '/object/public/vehicle-images/';
+      const idx = row.image_url.indexOf(marker);
+      return idx === -1 ? null : decodeURIComponent(row.image_url.slice(idx + marker.length).split('?')[0]);
+    })
+    .filter((p): p is string => Boolean(p));
+
+  return NextResponse.json({
+    photos: rows.length,
+    errors,
+    image_ids: imageIds,
+    vehicle_id: vehicleId,
+    previous_primary_image_url: vehicle.primary_image_url || null,
+    storage_paths: storagePaths,
+  });
 }

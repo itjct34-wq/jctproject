@@ -19,7 +19,7 @@ Snapshot aligned with codebase on branch **`feat/home-page-redesign`**. No fabri
 |------|--------|-------|
 | Auth + RBAC | Done | RLS + UI role map |
 | CRM (customers, inquiries) | Done | Fullscreen forms |
-| Vehicles + bulk sheet/ZIP | Done | ExcelJS/CSV + photo ZIP |
+| Vehicles + bulk sheet/ZIP | Done | ExcelJS/CSV + photo ZIP + batch history undo |
 | Auctions + purchases | Done | Auction house select |
 | Sales + quotations | Done | Print matches invoice layout |
 | Invoices + auction invoices | Done | Shared `InvoicesWorkspace` |
@@ -36,6 +36,7 @@ Snapshot aligned with codebase on branch **`feat/home-page-redesign`**. No fabri
 |------|--------|-------|
 | Migrations 001–018 | Assumed on prod | RBAC through invoice agent name |
 | Migrations 019–023 | Required for latest public features | See [DATABASE.md](DATABASE.md); apply on JCT Supabase if missing |
+| Migration **027** | Applied on JCT project | `bulk_import_batches` sheet/ZIP history |
 
 ## Remaining / follow-up
 

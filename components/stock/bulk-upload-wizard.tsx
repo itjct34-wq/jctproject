@@ -15,7 +15,9 @@ import {
   countryFlagEmoji,
   loadPortsForCountry,
 } from '@/lib/source-countries';
+import { BulkUploadHistory } from '@/components/stock/bulk-upload-history';
 import { importAuctionSpreadsheetRows } from '@/lib/auctions/import-spreadsheet';
+import { recordBulkImportBatch } from '@/lib/stock/bulk-import-batches';
 import { importVehicleSpreadsheetRows } from '@/lib/vehicles/import-spreadsheet';
 import {
   downloadEasyVehicleWorkbook,
@@ -98,6 +100,7 @@ export function BulkUploadWizard() {
   const [skipped, setSkipped] = useState<string[]>([]);
   const [zipError, setZipError] = useState('');
   const [uploadResult, setUploadResult] = useState<{ vehicles: number; photos: number } | null>(null);
+  const [historyKey, setHistoryKey] = useState(0);
 
   const kindMeta = KINDS.find((k) => k.id === kind) || null;
   const ports = useMemo(() => loadPortsForCountry(countryCode), [countryCode]);
@@ -153,6 +156,21 @@ export function BulkUploadWizard() {
         setSheetResult(res);
         if (res.ok > 0) {
           toast.success(`Saved ${res.ok} auction listing(s)`);
+          await recordBulkImportBatch(supabase, {
+            kind: 'auctions',
+            source: 'sheet',
+            filename: sheetName || 'auction-sheet',
+            created_by: profile.id,
+            payload: {
+              listing_ids: res.createdIds,
+              created: res.createdIds.length,
+              failed: res.failed,
+              country: country.name,
+              country_code: country.code,
+              port: resolvedPort,
+            },
+          });
+          setHistoryKey((n) => n + 1);
           setStep(4);
         } else if (res.failed > 0) {
           toast.error('No listings were saved. Check the row errors.');
@@ -167,6 +185,23 @@ export function BulkUploadWizard() {
         setSheetResult(res);
         if (res.ok > 0) {
           toast.success(`Saved ${res.ok} unit(s)${res.updated ? ` (${res.updated} updated)` : ''}`);
+          await recordBulkImportBatch(supabase, {
+            kind,
+            source: 'sheet',
+            filename: sheetName || 'stock-sheet',
+            created_by: profile.id,
+            payload: {
+              created_vehicle_ids: res.createdIds,
+              updated_vehicle_ids: res.updatedIds,
+              created: res.createdIds.length,
+              updated: res.updated,
+              failed: res.failed,
+              country: country.name,
+              country_code: country.code,
+              port: resolvedPort,
+            },
+          });
+          setHistoryKey((n) => n + 1);
           setStep(4);
         } else if (res.failed > 0) {
           toast.error('No stock was saved. Check the row errors.');
@@ -229,6 +264,10 @@ export function BulkUploadWizard() {
     let vehicles = 0;
     let photos = 0;
     const failNotes: string[] = [];
+    const imageIds: string[] = [];
+    const vehicleIds: string[] = [];
+    const storagePaths: string[] = [];
+    const previousCovers: { vehicle_id: string; primary_image_url: string | null }[] = [];
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -261,6 +300,10 @@ export function BulkUploadWizard() {
           photos?: number;
           error?: string;
           errors?: string[];
+          image_ids?: string[];
+          vehicle_id?: string;
+          previous_primary_image_url?: string | null;
+          storage_paths?: string[];
         };
         if (!res.ok) {
           failNotes.push(`${folderKey}: ${payload.error || res.statusText}`);
@@ -271,6 +314,13 @@ export function BulkUploadWizard() {
         if (count > 0) {
           vehicles += 1;
           photos += count;
+          vehicleIds.push(match.vehicleId);
+          (payload.image_ids || []).forEach((id) => imageIds.push(id));
+          (payload.storage_paths || []).forEach((p) => storagePaths.push(p));
+          previousCovers.push({
+            vehicle_id: match.vehicleId,
+            primary_image_url: payload.previous_primary_image_url || null,
+          });
         }
         (payload.errors || []).forEach((e) => failNotes.push(e));
       }
@@ -278,6 +328,26 @@ export function BulkUploadWizard() {
       if (photos > 0) {
         setUploadResult({ vehicles, photos });
         toast.success(`Attached ${photos} photo(s) to ${vehicles} unit(s)`);
+        if (profile?.id) {
+          await recordBulkImportBatch(supabase, {
+            kind: 'photos',
+            source: 'zip',
+            filename: zipName || 'photos.zip',
+            created_by: profile.id,
+            payload: {
+              vehicle_ids: vehicleIds,
+              image_ids: imageIds,
+              storage_paths: storagePaths,
+              previous_covers: previousCovers,
+              photos,
+              created: vehicles,
+              country: country?.name || null,
+              country_code: countryCode,
+              port: resolvedPort || null,
+            },
+          });
+          setHistoryKey((n) => n + 1);
+        }
       } else {
         setZipError(failNotes[0] || 'No photos were uploaded. Folder names must match chassis in the sheet.');
         toast.error('No photos were uploaded');
@@ -641,6 +711,8 @@ export function BulkUploadWizard() {
           </CardContent>
         </Card>
       )}
+
+      <BulkUploadHistory refreshKey={historyKey} />
     </div>
   );
 }
