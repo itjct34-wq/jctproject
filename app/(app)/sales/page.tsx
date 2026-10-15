@@ -50,15 +50,16 @@ const emptyForm = {
   create_invoice: true,
   reservation_days: '7',
   bid_jpy: '',
-  exchange_rate: '150',
+  exchange_rate: '155',
   markup_pct: '10',
   expense_jpy: '45000',
   profit_usd: '0',
+  status: 'reserved' as Sale['status'],
 };
 
 export default function SalesPage() {
   const { profile } = useAuth();
-  const { can } = usePermissions();
+  const { can, isSellingFocused } = usePermissions();
   const canDeleteSale = can('sales', 'delete');
   const [sales, setSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -76,9 +77,9 @@ export default function SalesPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [sRes, cRes, vRes] = await Promise.all([
-      supabase.from('sales').select('*').order('created_at', { ascending: false }),
-      supabase.from('customers').select('id, full_name, customer_code, email, phone, country, city').order('full_name'),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, status, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url').order('created_at', { ascending: false }),
+      supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(250),
+      supabase.from('customers').select('id, full_name, customer_code, email, phone, country, city').order('full_name').limit(250),
+      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, status, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url').order('created_at', { ascending: false }).limit(250),
     ]);
     if (sRes.error) toast.error(`Unable to load sales: ${sRes.error.message}`);
     else setSales((sRes.data || []) as Sale[]);
@@ -119,7 +120,7 @@ export default function SalesPage() {
       bidJpy: Number(form.bid_jpy),
       markupRate: (form.markup_pct === '' ? 10 : Number(form.markup_pct) || 0) / 100,
       fixedExpenseJpy: form.expense_jpy === '' ? 45000 : Number(form.expense_jpy) || 0,
-      exchangeRate: Number(form.exchange_rate) || 150,
+      exchangeRate: Number(form.exchange_rate) || 155,
       profitUsd: Number(form.profit_usd) || 0,
       freightUsd: Number(form.freight_usd) || 0,
       insuranceUsd: Number(form.insurance_usd) || 0,
@@ -197,6 +198,8 @@ export default function SalesPage() {
         customer_id: form.customer_id,
         reserved_by: profile.id,
         reserved_until: reservedUntilStr,
+        sold_price: salePrice || null,
+        incoterm: form.price_term === 'CNF' ? 'C&F' : form.price_term,
         notes: [
           vehicle?.notes || '',
           `Reserved for ${customerName(form.customer_id)} by ${profile.full_name || profile.email} until ${reservedUntilStr}`,
@@ -259,6 +262,7 @@ export default function SalesPage() {
       deposit_date: selected.deposit_date || '',
       delivery_date: selected.delivery_date || '',
       notes: selected.notes || '',
+      status: selected.status,
     });
     setEditOpen(true);
   };
@@ -279,6 +283,7 @@ export default function SalesPage() {
         deposit_date: form.deposit_date || null,
         delivery_date: form.delivery_date || null,
         notes: form.notes.trim() || null,
+        status: form.status,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selected.id);
@@ -297,9 +302,22 @@ export default function SalesPage() {
       deposit_date: form.deposit_date || null,
       delivery_date: form.delivery_date || null,
       notes: form.notes.trim() || null,
+      status: form.status,
     };
     setSelected(updated);
     setSales((items) => items.map((i) => (i.id === updated.id ? updated : i)));
+    if (form.status === 'paid' || form.status === 'confirmed') {
+      await supabase
+        .from('vehicles')
+        .update({ status: form.status === 'paid' ? 'sold' : 'reserved', updated_at: new Date().toISOString() })
+        .eq('id', selected.vehicle_id);
+    }
+    if (form.status === 'cancelled') {
+      await supabase
+        .from('vehicles')
+        .update({ status: 'in_stock', reserved_until: null, updated_at: new Date().toISOString() })
+        .eq('id', selected.vehicle_id);
+    }
     toast.success('Sale updated');
     setEditOpen(false);
   };
@@ -414,7 +432,7 @@ export default function SalesPage() {
           <div className="flex flex-col items-center justify-center p-14 text-center">
             <Tag className="mb-3 h-10 w-10 text-muted-foreground/50" />
             <h3 className="font-semibold">No sales found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Create a reservation for your customer.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{isSellingFocused ? 'You only see reservations you created or that belong to your customers.' : 'Create a reservation for your customer.'}</p>
             <Button size="sm" className="mt-4" onClick={() => setCreateOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" />New reservation
             </Button>
@@ -538,7 +556,17 @@ export default function SalesPage() {
                 <SheetDescription>{customerName(selected.customer_id)} · {vehicleLabel(selected.vehicle_id)}</SheetDescription>
               </SheetHeader>
               <div className="mt-4 space-y-3 text-sm">
-                <p><span className="text-muted-foreground">Status:</span> {selected.status}</p>
+                <div className="space-y-1">
+                  <Label>Status</Label>
+                  <Select value={selected.status} onValueChange={(v: Sale['status']) => void updateStatus(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(['reserved', 'confirmed', 'paid', 'shipped', 'delivered', 'cancelled'] as Sale['status'][]).map((st) => (
+                        <SelectItem key={st} value={st}>{st}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <p><span className="text-muted-foreground">Price:</span> {selected.currency} {selected.sale_price.toLocaleString()}</p>
                 <p><span className="text-muted-foreground">Date:</span> {format(new Date(selected.sale_date), 'MMM d, yyyy')}</p>
                 {selected.notes && <pre className="whitespace-pre-wrap text-xs bg-muted/40 p-2 rounded">{selected.notes}</pre>}
@@ -561,6 +589,17 @@ export default function SalesPage() {
         <DialogContent fullscreen>
           <DialogHeader><DialogTitle>Edit sale</DialogTitle></DialogHeader>
           <form onSubmit={submitEdit} className="space-y-4">
+            <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v: Sale['status']) => setForm({ ...form, status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(['reserved', 'confirmed', 'paid', 'shipped', 'delivered', 'cancelled'] as Sale['status'][]).map((st) => (
+                    <SelectItem key={st} value={st}>{st}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2"><Label>Sale price</Label><Input type="number" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} /></div>
             <div className="space-y-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             <DialogFooter>

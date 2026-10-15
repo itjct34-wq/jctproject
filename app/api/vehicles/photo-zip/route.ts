@@ -45,13 +45,18 @@ export async function POST(request: NextRequest) {
   for (const match of inspected.matches) {
     if (!match.vehicleId) continue;
     const folder = chassisStorageFolder(match.chassis || match.folder);
+    const { data: existing } = await admin
+      .from('vehicle_images')
+      .select('id, sort_order, is_primary')
+      .eq('vehicle_id', match.vehicleId);
+    const existingCount = existing?.length || 0;
     const rows: { vehicle_id: string; image_url: string; sort_order: number; is_primary: boolean }[] = [];
     for (let p = 0; p < match.photos.length; p++) {
       const photo = match.photos[p];
       const blob = await photo.asyncBlob();
       if (blob.size > MAX_PHOTO_BYTES) continue;
       const safe = photo.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80);
-      const path = `${folder}/${String(p + 1).padStart(3, '0')}-${safe}`;
+      const path = `${folder}/${String(existingCount + p + 1).padStart(3, '0')}-${Date.now()}-${safe}`;
       const buffer = Buffer.from(await blob.arrayBuffer());
       const { error: upErr } = await admin.storage.from('vehicle-images').upload(path, buffer, {
         upsert: true,
@@ -62,17 +67,18 @@ export async function POST(request: NextRequest) {
       rows.push({
         vehicle_id: match.vehicleId,
         image_url: pub.publicUrl,
-        sort_order: rows.length,
-        is_primary: rows.length === 0,
+        sort_order: existingCount + rows.length,
+        is_primary: existingCount === 0 && rows.length === 0,
       });
     }
     if (rows.length === 0) continue;
-    await admin.from('vehicle_images').delete().eq('vehicle_id', match.vehicleId);
     await admin.from('vehicle_images').insert(rows);
-    await admin.from('vehicles').update({
-      primary_image_url: rows[0].image_url,
-      updated_at: new Date().toISOString(),
-    }).eq('id', match.vehicleId);
+    if (existingCount === 0) {
+      await admin.from('vehicles').update({
+        primary_image_url: rows[0].image_url,
+        updated_at: new Date().toISOString(),
+      }).eq('id', match.vehicleId);
+    }
     attached.push({ chassis: match.chassis || match.folder, photos: rows.length });
   }
 

@@ -48,24 +48,24 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
           </span>
         ) : null}
       </Link>
-      <div className="flex flex-1 flex-col p-4 pt-3.5">
+      <div className="flex flex-1 flex-col p-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--jct-muted-2)]">{vehicle.stock_number}</p>
-        <h3 className="mt-1 font-display text-base font-semibold leading-snug text-[var(--jct-navy)] transition-colors group-hover:text-[var(--jct-vermilion)]">
+        <h3 className="mt-0.5 font-display text-base font-semibold leading-snug text-[var(--jct-navy)] transition-colors group-hover:text-[var(--jct-vermilion)]">
           {title}
         </h3>
         {vehicle.model_year ? (
-          <p className="mt-0.5 text-sm text-[var(--jct-muted)]">Year {vehicle.model_year}</p>
+          <p className="text-sm text-[var(--jct-muted)]">Year {vehicle.model_year}</p>
         ) : null}
-        {specs ? <p className="mt-1 line-clamp-2 text-sm text-[var(--jct-muted-2)]">{specs}</p> : null}
-        <div className="jct-stock-panel-accent mt-4 rounded-lg border border-[var(--jct-border)] bg-gradient-to-br from-[var(--jct-panel)]/80 to-white px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--jct-vermilion)]">FOB Japan</p>
+        {specs ? <p className="mt-0.5 line-clamp-2 text-sm text-[var(--jct-muted-2)]">{specs}</p> : null}
+        <div className="jct-stock-panel-accent mt-2.5 rounded-lg border border-[var(--jct-navy)]/12 bg-gradient-to-br from-[#0b1f33]/[0.04] to-[#c9a227]/[0.08] px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB USD</p>
           <p className="mt-0.5 font-display text-xl font-bold tracking-tight text-[var(--jct-navy)]">
-            {vehicle.listed_price != null ? formatCurrency(vehicle.listed_price, vehicle.listed_currency) : 'Ask for price'}
+            {vehicle.listed_price != null ? formatCurrency(vehicle.listed_price, vehicle.listed_currency || 'USD') : 'Ask for price'}
           </p>
         </div>
         <Link
           href={href}
-          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border-2 border-[var(--jct-navy)] bg-[var(--jct-navy)] px-5 text-sm font-semibold text-white transition-colors hover:border-[#b83226] hover:bg-[var(--jct-vermilion)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          className="mt-2.5 inline-flex min-h-10 items-center justify-center rounded-full border-2 border-[var(--jct-navy)] bg-[var(--jct-navy)] px-5 text-sm font-semibold text-white transition-colors hover:border-[#b83226] hover:bg-[var(--jct-vermilion)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
         >
           View details
         </Link>

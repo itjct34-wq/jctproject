@@ -7,7 +7,7 @@ Verified checkpoint for developers and operators. Update when infra, branch, or 
 | Item | Value |
 |------|--------|
 | Workspace | `jctproject` (Next.js monolith) |
-| Active branch | **`feat/home-page-redesign`** |
+| Active branch | **`feat/vehicle-commercial-workflow`** |
 | Entry README | [README.md](../README.md) |
 | Docs | `docs/*.md` (this set) |
 
@@ -23,34 +23,42 @@ Verified checkpoint for developers and operators. Update when infra, branch, or 
 
 - Next.js **13.5.1**, React 18, TypeScript 5.2, Tailwind 3.3, Supabase JS 2.58.
 - App Router: public routes at repo `app/` root; ERP under `app/(app)/`.
+- CI: `.github/workflows/ci.yml` (`npm ci`, lint, typecheck, build).
 
 ## Database evidence (expected on production)
 
-For full public catalog + ERP auction directory, production should include:
+For full public catalog + ERP auction directory + commercial workflow, production should include:
 
 - Column **`vehicles.source_country_code`** (019)
 - Table **`vehicle_images`** + bucket **`vehicle-images`** (020–021)
 - Column **`vehicles.stock_category`**, **`part_sku`** (022)
 - View **`auction_houses`** (023)
-- Table **`bulk_import_batches`** (027) for bulk sheet/ZIP undo history
+- Table **`bulk_import_batches`** (027)
+- FOB / payment / shipping workflow columns and triggers (028)
+- Sales own-records RLS (029)
+- Per-agent TOTP secret, reservation expiry RPC, status sync (030)
 
-If machinery/parts pages error or photos never load, run migrations **019–023** in the Supabase SQL editor (files in `supabase/migrations/`).
+See [MIGRATIONS.md](MIGRATIONS.md) for duplicate historical 009/013/014 names — do not rewrite applied files.
+
+If machinery/parts pages error or photos never load, run migrations **019–023** (and **028–030** for FOB/sales) in the Supabase SQL editor.
 
 ## Environment (local)
 
-Create **`.env.local`** with:
+Copy **`.env.example`** to **`.env.local`**. Required names:
 
-- `NEXT_PUBLIC_SUPABASE_URL` → `https://omlejtzwodudghqqgaiz.supabase.co`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → anon JWT from Supabase dashboard (not committed)
-- `SUPABASE_SERVICE_ROLE_KEY` → server-only, for admin APIs
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `AGENT_TOTP_SECRET` (fallback if an agent has no per-row secret yet)
+- `NEXT_PUBLIC_SITE_URL` / `NEXT_PUBLIC_APP_URL` (sitemap, invoice QR)
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) and [SECURITY.md](SECURITY.md).
 
 ## Next phase
 
-1. Finish **home page redesign** on `feat/home-page-redesign` and deploy to Vercel preview/prod.
-2. Confirm production DB migration level (019–023).
-3. Optional: add smoke tests for verify URLs and bulk import.
+1. Keep shipping **`feat/vehicle-commercial-workflow`** to Vercel **jct16**.
+2. Confirm production DB includes **028–030**.
+3. Deferred: Next 14/15 upgrade, Playwright, Sentry (no DSN), WhatsApp alerts, admin SMS MFA.
 
 ## Consistency
 

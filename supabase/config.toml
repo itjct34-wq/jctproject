@@ -1,0 +1,18 @@
+# Minimal Supabase CLI project config for Japan Circular Trading.
+# Hosted project: omlejtzwodudghqqgaiz
+# Apply new SQL with the Supabase CLI or dashboard; do not rewrite already-applied
+# production migrations (see docs/MIGRATIONS.md).
+
+project_id = "omlejtzwodudghqqgaiz"
+
+[api]
+enabled = true
+schemas = ["public"]
+
+[db]
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://japancirculartrading.com"]

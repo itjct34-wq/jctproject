@@ -73,10 +73,10 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
             </Link>
           </div>
         ) : (
-          <div className="mt-8 grid gap-8 lg:grid-cols-2">
+          <div className="mt-5 grid gap-6 lg:grid-cols-2">
             <VehicleGallery images={vehicle.gallery} alt={`${vehicle.make} ${vehicle.model}`} />
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-2 rounded-full border border-[var(--jct-border)] bg-white px-2.5 py-1">
@@ -107,10 +107,10 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
               </div>
 
               <div className="jct-stock-panel jct-stock-panel-accent p-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB price</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB USD</p>
                 <p className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--jct-navy)]">
                   {vehicle.listed_price != null
-                    ? formatCurrency(vehicle.listed_price, vehicle.listed_currency)
+                    ? formatCurrency(vehicle.listed_price, vehicle.listed_currency || 'USD')
                     : 'Ask for quote'}
                 </p>
                 <p className="mt-2 text-xs text-[var(--jct-muted)]">C&amp;F / CIF on request · RORO or container</p>

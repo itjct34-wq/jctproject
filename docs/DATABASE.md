@@ -3,7 +3,7 @@
 ## Platform
 
 - **Engine**: PostgreSQL (Supabase), project ref **`omlejtzwodudghqqgaiz`**.
-- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure at least **019–027** are applied if public gallery, categories, auction houses, freight notes, or bulk-upload history are missing.
+- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure **019–030** are applied. Duplicate historical 009/013/014 names are documented in [MIGRATIONS.md](MIGRATIONS.md) — do not rewrite applied files. `supabase/config.toml` records `project_id = omlejtzwodudghqqgaiz`.
 - **Types**: `lib/types/database.ts` and `lib/types/index.ts` mirror application usage (not auto-generated in repo).
 
 ## Core domains (selected tables)

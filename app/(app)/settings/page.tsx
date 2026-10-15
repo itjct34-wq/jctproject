@@ -319,6 +319,19 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="system" className="space-y-4">
+          <Card className="border-border/60">
+            <CardHeader><CardTitle className="text-base">Admin sign-in MFA</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>
+                Staff login stays email and password (Supabase Auth). SMS or authenticator MFA for the ERP admin
+                console is not enabled — it needs a Twilio (or similar) DSN and Auth MFA settings we do not have.
+              </p>
+              <p>
+                Public <strong className="text-foreground">agent verification</strong> already uses rotating 30-second
+                codes (per-agent secret). That is identity proof for buyers, not a substitute for admin 2FA.
+              </p>
+            </CardContent>
+          </Card>
           {settings && (
             <Card className="border-border/60">
               <CardHeader><CardTitle className="text-base">System Preferences</CardTitle></CardHeader>

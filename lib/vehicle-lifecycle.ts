@@ -1,20 +1,47 @@
 import type { Vehicle } from '@/lib/types';
+import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
 
 export type VehiclePaymentStatus = NonNullable<Vehicle['payment_status']>;
 export type VehicleShippingStatus = NonNullable<Vehicle['shipping_status']>;
+export type VehicleIncoterm = NonNullable<Vehicle['incoterm']>;
+export type VehicleWorkflowStage = 'in_stock' | 'reserved' | 'booked' | 'shipped' | 'delivered';
+export type VehicleDocKind = 'bl' | 'surrender' | 'waybill' | 'other';
 
 export const PAYMENT_STATUS_LABELS: Record<VehiclePaymentStatus, string> = {
   available: 'Available',
-  reserved: 'Reserved',
+  reserved: 'Unpaid (reserved)',
   partial_paid: 'Partial paid',
   paid: 'Paid',
 };
 
+export const PAYMENT_STATUSES: VehiclePaymentStatus[] = ['available', 'reserved', 'partial_paid', 'paid'];
+
 export const SHIPPING_STATUS_LABELS: Record<VehicleShippingStatus, string> = {
-  not_booked: 'Not booked',
+  not_booked: 'Not booked (in stock / reserved)',
   booked: 'Booked',
   shipped: 'Shipped',
   delivered: 'Delivered',
+};
+
+export const SHIPPING_STATUSES: VehicleShippingStatus[] = ['not_booked', 'booked', 'shipped', 'delivered'];
+
+export const WORKFLOW_STAGE_LABELS: Record<VehicleWorkflowStage, string> = {
+  in_stock: 'In stock',
+  reserved: 'Reserved',
+  booked: 'Booked',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+};
+
+export const WORKFLOW_STAGES: VehicleWorkflowStage[] = ['in_stock', 'reserved', 'booked', 'shipped', 'delivered'];
+
+export const INCOTERMS: VehicleIncoterm[] = ['FOB', 'C&F', 'CIF'];
+
+export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {
+  bl: 'Bill of lading',
+  surrender: 'Surrender',
+  waybill: 'Waybill',
+  other: 'Other',
 };
 
 export const PAYMENT_STATUS_STYLES: Record<VehiclePaymentStatus, string> = {
@@ -44,8 +71,31 @@ export function effectiveShippingStatus(vehicle: Vehicle): VehicleShippingStatus
   return vehicle.shipping_status ?? 'not_booked';
 }
 
+export function publicFobUsd(vehicle: Pick<Vehicle, 'fob_usd' | 'listed_price'>): number | null {
+  if (vehicle.fob_usd != null) return Number(vehicle.fob_usd);
+  if (vehicle.listed_price != null) return Number(vehicle.listed_price);
+  return null;
+}
+
+export function workflowStage(vehicle: Vehicle): VehicleWorkflowStage {
+  const ship = effectiveShippingStatus(vehicle);
+  const pay = effectivePaymentStatus(vehicle);
+  if (ship === 'delivered') return 'delivered';
+  if (ship === 'shipped') return 'shipped';
+  if (ship === 'booked') return 'booked';
+  if (pay !== 'available' || vehicle.customer_id) return 'reserved';
+  return 'in_stock';
+}
+
+export function fobPreviewFromForm(bid: string, expense: string, tt: string) {
+  return calcFobFromBid(
+    Number(bid) || 0,
+    expense === '' ? FIXED_EXPENSE_JPY : Number(expense) || 0,
+    tt === '' ? DEFAULT_TT_RATE : Number(tt) || DEFAULT_TT_RATE
+  );
+}
+
 export const emptyShippingForm = {
-  shipping_status: 'not_booked' as VehicleShippingStatus,
   shipping_port_of_loading: '',
   shipping_port_of_discharge: '',
   shipping_vessel_name: '',

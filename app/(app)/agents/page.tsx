@@ -52,7 +52,7 @@ export default function AgentsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const [{data,error},{data:profiles}] = await Promise.all([
-      supabase.from('agent_verifications').select('*').order('created_at', { ascending: false }),
+      supabase.from('agent_verifications').select('id,agent_code,full_name,email,phone,title,is_active,verified_until,user_id,created_at').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id,full_name,email').order('full_name'),
     ]);
     if (error) toast.error(error.message);

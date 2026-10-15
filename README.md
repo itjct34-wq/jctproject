@@ -7,7 +7,7 @@ Monorepo for **Japan Circular Trading Co., Ltd.**: an internal ERP for export op
 | App | Next.js App Router (`app/`), React 18, TypeScript, Tailwind, Radix/shadcn UI |
 | Database & auth | Supabase project `omlejtzwodudghqqgaiz` |
 | Hosting | Vercel project **jct16** (primary); `netlify.toml` exists for alternate builds |
-| Active branch | `feat/home-page-redesign` |
+| Active branch | `feat/vehicle-commercial-workflow` |
 
 ## What each surface does
 
@@ -64,14 +64,7 @@ Source-of-truth docs live under `docs/`:
 ## Run locally
 
 1. **Node.js 18+** and npm.
-2. Copy env template (create `.env.local` in the project root):
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://omlejtzwodudghqqgaiz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-jwt>
-```
-
-Do not commit `.env.local`. Server-only routes (user invite, some public verify endpoints) also need `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` — never expose this in the browser or in docs.
+2. Copy **`.env.example`** to `.env.local` and fill real values (never commit `.env.local`). Server-only routes also need `SUPABASE_SERVICE_ROLE_KEY` and `AGENT_TOTP_SECRET`.
 
 3. Install and start:
 
@@ -84,9 +77,9 @@ Open `http://localhost:3000` (public) or sign in for ERP routes under `/dashboar
 
 4. **Typecheck / lint**: `npm run typecheck`, `npm run lint`.
 
-## Database migrations (019–023)
+## Database migrations
 
-If the hosted Supabase project is behind the repo, run migrations **019 through 023** in order in the **Supabase SQL editor** for project `omlejtzwodudghqqgaiz` (or apply the matching files under `supabase/migrations/` via CLI). See [docs/DATABASE.md](docs/DATABASE.md) for what each migration adds.
+Hosted project `omlejtzwodudghqqgaiz` is expected through **029**, plus **030** (TOTP secret, reservation expiry, status sync). See [docs/DATABASE.md](docs/DATABASE.md) and [docs/MIGRATIONS.md](docs/MIGRATIONS.md). Do not rename historical duplicate 009/013/014 files.
 
 ## Scripts
 

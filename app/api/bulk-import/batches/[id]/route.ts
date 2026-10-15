@@ -91,21 +91,62 @@ export async function DELETE(
   if (row.source === 'sheet') {
     const createdIds = payload.created_vehicle_ids || [];
     if (createdIds.length > 0) {
-      const { data: images } = await admin
-        .from('vehicle_images')
-        .select('image_url')
-        .in('vehicle_id', createdIds);
-      const paths = (images || [])
-        .map((img) => vehicleImageStoragePath(img.image_url))
-        .filter((p): p is string => Boolean(p));
-      await removeStoragePaths(admin, paths);
+      const skip = new Set<string>();
+      const { data: vehicleRows } = await admin
+        .from('vehicles')
+        .select('id, status, payment_status')
+        .in('id', createdIds);
+      for (const v of vehicleRows || []) {
+        if (
+          ['reserved', 'sold', 'in_transit', 'exported'].includes(String(v.status)) ||
+          ['reserved', 'partial_paid', 'paid'].includes(String(v.payment_status))
+        ) {
+          skip.add(v.id as string);
+          notes.push(`Vehicle ${String(v.id).slice(0, 8)}… skipped: reserved or sold`);
+        }
+      }
+      const candidates = createdIds.filter((id) => !skip.has(id));
+      if (candidates.length > 0) {
+        const { data: invoiceHits } = await admin
+          .from('invoice_items')
+          .select('vehicle_id')
+          .in('vehicle_id', candidates);
+        for (const rowHit of invoiceHits || []) {
+          if (rowHit.vehicle_id) {
+            skip.add(rowHit.vehicle_id as string);
+            notes.push(`Vehicle ${String(rowHit.vehicle_id).slice(0, 8)}… skipped: has invoice line`);
+          }
+        }
+        const { data: saleHits } = await admin
+          .from('sales')
+          .select('vehicle_id')
+          .in('vehicle_id', candidates);
+        for (const rowHit of saleHits || []) {
+          if (rowHit.vehicle_id) {
+            skip.add(rowHit.vehicle_id as string);
+            notes.push(`Vehicle ${String(rowHit.vehicle_id).slice(0, 8)}… skipped: has sale`);
+          }
+        }
+      }
 
-      for (const vehicleId of createdIds) {
-        const { error } = await admin.from('vehicles').delete().eq('id', vehicleId);
-        if (error) {
-          notes.push(`Vehicle ${vehicleId.slice(0, 8)}… kept: ${error.message}`);
-        } else {
-          vehiclesRemoved += 1;
+      const toRemove = createdIds.filter((id) => !skip.has(id));
+      if (toRemove.length > 0) {
+        const { data: images } = await admin
+          .from('vehicle_images')
+          .select('image_url')
+          .in('vehicle_id', toRemove);
+        const paths = (images || [])
+          .map((img) => vehicleImageStoragePath(img.image_url))
+          .filter((p): p is string => Boolean(p));
+        await removeStoragePaths(admin, paths);
+
+        for (const vehicleId of toRemove) {
+          const { error } = await admin.from('vehicles').delete().eq('id', vehicleId);
+          if (error) {
+            notes.push(`Vehicle ${vehicleId.slice(0, 8)}… kept: ${error.message}`);
+          } else {
+            vehiclesRemoved += 1;
+          }
         }
       }
     }

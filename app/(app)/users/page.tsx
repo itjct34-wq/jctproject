@@ -616,7 +616,7 @@ export default function UsersPage() {
           ) : teams.length === 0 ? (
             <Card className="border-border/60">
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                No teams created yet. Click "New Team" to create one.
+                No teams created yet. Click &quot;New Team&quot; to create one.
               </CardContent>
             </Card>
           ) : (
