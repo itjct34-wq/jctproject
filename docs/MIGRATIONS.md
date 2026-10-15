@@ -4,7 +4,7 @@ SQL lives in `supabase/migrations/`. Apply **in filename order** on a new databa
 
 ## Production (`omlejtzwodudghqqgaiz`)
 
-Migrations **019 through 029** (and **030** when shipped) are already intended for this project. **Do not rename or rewrite historical files** that production has applied. A rename would look like a new migration locally and a missing one remotely.
+Migrations **019 through 031** are already intended for this project. **Do not rename or rewrite historical files** that production has applied. A rename would look like a new migration locally and a missing one remotely.
 
 ## Duplicate and malformed names (leave as-is)
 
@@ -17,7 +17,7 @@ Several early files were generated twice or with extra `.sql.sql` suffixes. They
 | Duplicate **014** | `014_avatars_and_profile_link.sql`, `014_inquiries_config_agent_totp.sql`, `014_customer_contact_uniqueness.sql` |
 | Malformed timestamps | `20261010_offices_shifts_avatar.sql`; files ending in `.sql.sql` |
 
-If you need a schema change, add a **new** timestamped file after the highest applied number (030+).
+If you need a schema change, add a **new** timestamped file after the highest applied number (031+).
 
 ## CLI
 

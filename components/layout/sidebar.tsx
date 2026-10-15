@@ -44,31 +44,18 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   const searchParams = useSearchParams();
   const { canView, roleNames } = usePermissions();
   const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
-  // Keep group open/closed toggles; only auto-expand the group for the active route.
-  // (Do not replace state when navGroups gets a new reference — roleNames used to be unstable.)
+  // Accordion: only one group open. Auto-expand the group that contains the active route.
   useEffect(() => {
-    setExpandedGroups((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      navGroups.forEach((g) => {
-        if (next[g.label] === undefined) {
-          next[g.label] = true;
-          changed = true;
-        }
-        const onRoute = g.items.some((item) => isNavItemActive(pathname, searchParams, item.href));
-        if (onRoute && !next[g.label]) {
-          next[g.label] = true;
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
+    const active = navGroups.find((g) =>
+      g.items.some((item) => isNavItemActive(pathname, searchParams, item.href))
+    );
+    if (active) setExpandedGroup(active.label);
   }, [pathname, searchParams, navGroups]);
 
   const toggleGroup = (label: string) => {
-    setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+    setExpandedGroup((prev) => (prev === label ? null : label));
   };
 
   return (
@@ -122,7 +109,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
           );
           if (visibleItems.length === 0) return null;
 
-          const isExpanded = expandedGroups[group.label] ?? true;
+          const isExpanded = expandedGroup === group.label;
 
           return (
             <div key={group.label} className="mb-1">

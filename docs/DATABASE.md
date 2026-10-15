@@ -3,7 +3,7 @@
 ## Platform
 
 - **Engine**: PostgreSQL (Supabase), project ref **`omlejtzwodudghqqgaiz`**.
-- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure **019–030** are applied. Duplicate historical 009/013/014 names are documented in [MIGRATIONS.md](MIGRATIONS.md) — do not rewrite applied files. `supabase/config.toml` records `project_id = omlejtzwodudghqqgaiz`.
+- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure **019–031** are applied. Duplicate historical 009/013/014 names are documented in [MIGRATIONS.md](MIGRATIONS.md) — do not rewrite applied files. `supabase/config.toml` records `project_id = omlejtzwodudghqqgaiz`.
 - **Types**: `lib/types/database.ts` and `lib/types/index.ts` mirror application usage (not auto-generated in repo).
 
 ## Core domains (selected tables)
@@ -54,6 +54,8 @@ Apply **in order** (file names under `supabase/migrations/`):
 | **025** | `20261015060000_025_vehicle_payment_shipping_rls.sql` | Payment/shipping tracks and sales-scoped RLS |
 | **026** | `20261016090000_026_document_freight_notes.sql` | Optional `freight_notes` on invoices and quotations |
 | **027** | `20261016100000_027_bulk_import_batches.sql` | `bulk_import_batches` history for sheet/ZIP imports; staff RLS (admin/operations/manager) |
+| **028–030** | `20261016110000`–`20261016140000` | FOB/commercial workflow, sales own-records, TOTP/reservation expiry |
+| **031** | `20261016150000_031_customer_assigned_to_ownership.sql` | Selling visibility keyed to `customers.assigned_to`; hand-off UPDATE; quotes/invoices/sales follow assignee |
 
 Earlier migrations **001–018** establish RBAC, CRM, inventory, sales/invoices, payments, security fixes, inquiries, avatars, invoice agent name, etc. New environments should run the full chain; production catch-up often needs **019–023** when enabling machinery/parts routes and photo ZIP gallery.
 

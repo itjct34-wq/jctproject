@@ -86,7 +86,7 @@ Migration **`025_vehicle_payment_shipping_rls.sql`** adds payment/shipping track
 
 ## Customer ownership
 
-New customers created in CRM set **`customers.assigned_to`** and **`created_by`** to the creating user (`customers` page). Payments inherit **`payments.sales_agent_id`** from `COALESCE(customers.assigned_to, customers.created_by)` when a customer is tagged on the T/T.
+New customers created in CRM set **`customers.assigned_to`** and **`created_by`** to the creating user (`customers` page). Elevated staff (admin/ops/manager) can reassign any customer; a selling role can hand off a customer they currently own. After reassignment, selling-role SELECT on quotes, invoices, sales, and customer-tagged payments follows **`customers.assigned_to`** (migration **`031`**); `created_by` on those rows stays for audit. Payments inherit **`payments.sales_agent_id`** from `COALESCE(customers.assigned_to, customers.created_by)` when a customer is tagged on the T/T.
 
 ## Staff (admin / operations / manager / accounts)
 

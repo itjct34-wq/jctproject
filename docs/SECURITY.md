@@ -9,6 +9,7 @@
 ## Authorization
 
 - **Postgres RLS** is enabled on operational tables (from migration 001 onward).
+- **Sales own-records** (migrations **029**, **031**): selling roles see customers by **`assigned_to`** (legacy: unassigned rows they created). Quotes, invoices, and sales follow that customer owner via `sales_owns_customer` / `selling_owns_deal`, not invoice `created_by`. Elevated staff see all.
 - **`has_role` / `has_permission` / `is_admin_user`** are revoked from `anon` and granted to **`authenticated`** only (migrations 009 hardening).
 - **Super admin** can manage roles and permissions tables; ordinary users cannot self-assign roles.
 
