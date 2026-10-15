@@ -99,6 +99,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [lineItems, setLineItems] = useState<LineDraft[]>([]);
@@ -183,10 +184,23 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   }, 0);
 
   const loadDetails = async (inv: Invoice) => {
-    setSelected(inv); setDetailLoading(true);
+    setSelected(inv);
+    setDetailSheetOpen(true);
+    setDetailLoading(true);
     const { data, error } = await supabase.from('invoice_items').select('*').eq('invoice_id', inv.id).order('sort_order', { ascending: true });
     if (error) toast.error(`Could not load line items: ${error.message}`);
     setItems((data || []) as InvoiceItem[]); setDetailLoading(false);
+  };
+
+  /** Load line items and open the commercial invoice print/PDF preview without opening the edit sheet. */
+  const openPrintPreview = async (inv: Invoice) => {
+    setSelected(inv);
+    setDetailLoading(true);
+    setPrintOpen(true);
+    const { data, error } = await supabase.from('invoice_items').select('*').eq('invoice_id', inv.id).order('sort_order', { ascending: true });
+    if (error) toast.error(`Could not load line items: ${error.message}`);
+    setItems((data || []) as InvoiceItem[]);
+    setDetailLoading(false);
   };
 
   const openCreate = () => {
@@ -396,7 +410,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     const { error } = await supabase.from('invoices').delete().eq('id', selected.id);
     setSubmitting(false);
     if (error) { toast.error(`Could not delete: ${error.message}`); return; }
-    toast.success('Invoice deleted'); setDeleteOpen(false); setSelected(null); loadData();
+    toast.success('Invoice deleted'); setDeleteOpen(false); setDetailSheetOpen(false); setSelected(null); loadData();
   };
 
   const updatePaymentStatus = async (payment_status: Invoice['payment_status']) => {
@@ -420,6 +434,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   };
 
   const printInvoice = () => { setPrintOpen(true); };
+
+  const closePrintPreview = (open: boolean) => {
+    setPrintOpen(open);
+    if (!open && !detailSheetOpen) {
+      setSelected(null);
+      setItems([]);
+    }
+  };
 
   const exportCommercialExcel = async () => {
     if (!selected) return;
@@ -767,12 +789,43 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         { label: 'Total invoices', value: stats.total, tone: 'bg-blue-50 text-blue-600' }, { label: 'Unpaid', value: stats.unpaid, tone: 'bg-red-50 text-red-600' }, { label: 'Paid', value: stats.paid, tone: 'bg-emerald-50 text-emerald-600' }, { label: 'Outstanding', value: stats.outstanding.toLocaleString(), tone: 'bg-amber-50 text-amber-600' },
       ].map((s) => <Card key={s.label} className="border-border/60"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.label}</p><p className="text-xl font-bold">{s.value}</p></CardContent></Card>)}</div>
       <Card className="border-border/60"><CardContent className="p-4"><div className="flex flex-col gap-3 md:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice code..." /></div><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div></CardContent></Card>
-      <Card className="overflow-hidden border-border/60">{loading ? <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading invoices...</div> : filtered.length === 0 ? <div className="flex flex-col items-center justify-center p-14 text-center"><FileText className="mb-3 h-10 w-10 text-muted-foreground/50" /><h3 className="font-semibold">No invoices found</h3><p className="mt-1 text-sm text-muted-foreground">{isSellingFocused ? 'You only see invoices you created or that belong to your customers.' : 'Create an invoice or adjust your filters.'}</p></div> : <div className="divide-y divide-border/70">{filtered.map((inv) => <button key={inv.id} onClick={() => loadDetails(inv)} className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/40"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><FileText className="h-5 w-5" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-medium">{inv.invoice_code}</p><Badge variant="outline" className={statusStyles[inv.payment_status]}>{inv.payment_status}</Badge><Badge variant="secondary">{typeLabels[inv.invoice_type]}</Badge></div><p className="mt-0.5 truncate text-xs text-muted-foreground">{customerName(inv.customer_id)} · {inv.currency} {inv.total.toLocaleString()}</p></div><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></button>)}</div>}</Card>
+      <Card className="overflow-hidden border-border/60">{loading ? <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading invoices...</div> : filtered.length === 0 ? <div className="flex flex-col items-center justify-center p-14 text-center"><FileText className="mb-3 h-10 w-10 text-muted-foreground/50" /><h3 className="font-semibold">No invoices found</h3><p className="mt-1 text-sm text-muted-foreground">{isSellingFocused ? 'You only see invoices you created or that belong to your customers.' : 'Create an invoice or adjust your filters.'}</p></div> : <div className="divide-y divide-border/70">{filtered.map((inv) => (
+        <div
+          key={inv.id}
+          role="button"
+          tabIndex={0}
+          onClick={() => loadDetails(inv)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadDetails(inv); } }}
+          className="flex w-full cursor-pointer items-center gap-4 p-4 text-left transition-colors hover:bg-muted/40"
+        >
+          <button
+            type="button"
+            title="Print / PDF"
+            aria-label={`Print or download PDF for ${inv.invoice_code}`}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors hover:bg-primary/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              void openPrintPreview(inv);
+            }}
+          >
+            <FileText className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-medium">{inv.invoice_code}</p>
+              <Badge variant="outline" className={statusStyles[inv.payment_status]}>{inv.payment_status}</Badge>
+              <Badge variant="secondary">{typeLabels[inv.invoice_type]}</Badge>
+            </div>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{customerName(inv.customer_id)} · {inv.currency} {inv.total.toLocaleString()}</p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </div>
+      ))}</div>}</Card>
       {lineItemForm(createOpen, () => setCreateOpen(false), submitCreate, isAuction ? 'New auction deposit invoice' : 'New invoice')}
       {lineItemForm(editOpen, () => setEditOpen(false), submitEdit, isAuction ? 'Edit auction deposit invoice' : 'Edit invoice')}
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete invoice?" description="This will permanently remove the invoice and its line items." onConfirm={confirmDelete} loading={submitting} />
-      <Sheet open={Boolean(selected)} onOpenChange={(o) => { if (!o) setSelected(null); }}><SheetContent className="w-full overflow-y-auto sm:max-w-lg"><SheetHeader><SheetTitle>{selected?.invoice_code}</SheetTitle><SheetDescription>{selected && typeLabels[selected.invoice_type]}</SheetDescription></SheetHeader>{selected && (<><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={printInvoice}><Printer className="mr-1.5 h-4 w-4" />Print</Button>{canEditInvoice && <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-4 w-4" />Edit</Button>}{canDeleteInvoice && <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" />Delete</Button>}</div><div className="mt-6 space-y-4">{detailLoading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div> : (<><div className="flex flex-wrap gap-2"><Badge variant="outline" className={statusStyles[selected.payment_status]}>{selected.payment_status}</Badge>{['unpaid','partial','paid','cancelled','credited'].map((s) => <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s as Invoice['payment_status'])}>{s}</Button>)}</div><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p><p className="mt-1 font-medium">{customerName(selected.customer_id)}</p></div>{items.length > 0 && <Table><TableHeader><TableRow><TableHead>Description</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader><TableBody>{items.map((item) => <TableRow key={item.id}><TableCell>{item.description}</TableCell><TableCell className="text-right">{item.quantity}</TableCell><TableCell className="text-right">{item.line_total.toLocaleString()}</TableCell></TableRow>)}</TableBody></Table>}<div className="space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{selected.currency} {selected.subtotal.toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{selected.currency} {selected.total.toLocaleString()}</span></div></div></>)}</div></>)}</SheetContent></Sheet>
-      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
+      <Sheet open={detailSheetOpen} onOpenChange={(o) => { setDetailSheetOpen(o); if (!o && !printOpen) setSelected(null); }}><SheetContent className="w-full overflow-y-auto sm:max-w-lg"><SheetHeader><SheetTitle>{selected?.invoice_code}</SheetTitle><SheetDescription>{selected && typeLabels[selected.invoice_type]}</SheetDescription></SheetHeader>{selected && (<><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={printInvoice}><Printer className="mr-1.5 h-4 w-4" />Print</Button>{canEditInvoice && <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-4 w-4" />Edit</Button>}{canDeleteInvoice && <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" />Delete</Button>}</div><div className="mt-6 space-y-4">{detailLoading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div> : (<><div className="flex flex-wrap gap-2"><Badge variant="outline" className={statusStyles[selected.payment_status]}>{selected.payment_status}</Badge>{['unpaid','partial','paid','cancelled','credited'].map((s) => <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s as Invoice['payment_status'])}>{s}</Button>)}</div><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p><p className="mt-1 font-medium">{customerName(selected.customer_id)}</p></div>{items.length > 0 && <Table><TableHeader><TableRow><TableHead>Description</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader><TableBody>{items.map((item) => <TableRow key={item.id}><TableCell>{item.description}</TableCell><TableCell className="text-right">{item.quantity}</TableCell><TableCell className="text-right">{item.line_total.toLocaleString()}</TableCell></TableRow>)}</TableBody></Table>}<div className="space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{selected.currency} {selected.subtotal.toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{selected.currency} {selected.total.toLocaleString()}</span></div></div></>)}</div></>)}</SheetContent></Sheet>
+      <Dialog open={printOpen} onOpenChange={closePrintPreview}>
         <DialogContent fullscreen className="print:max-w-none print:shadow-none print:border-0">
           <DialogHeader className="print:hidden">
             <DialogTitle>{isAuction ? 'Auction deposit invoice preview' : 'Commercial Invoice Preview'}</DialogTitle>
@@ -805,7 +858,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
           )}
           <DialogFooter className="print:hidden flex-wrap gap-2">
-            <Button variant="outline" onClick={() => setPrintOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => closePrintPreview(false)}>Close</Button>
             {selected?.verification_token && (
               <Button variant="outline" onClick={copyVerifyLink}>
                 <QrCode className="h-4 w-4 mr-2" /> Copy Verify Link

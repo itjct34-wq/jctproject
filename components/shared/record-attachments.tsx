@@ -3,9 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-provider';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ExternalLink, Eye, FileText, Loader2, Paperclip, Upload } from 'lucide-react';
+import { ExternalLink, Eye, FileText, Loader2, Paperclip, Trash2, Upload } from 'lucide-react';
 
 export type AttachmentEntity = 'invoices' | 'quotations' | 'payments' | 'expenses' | 'documents' | 'vehicles';
 
@@ -127,6 +137,24 @@ export async function uploadRecordAttachment(
   return true;
 }
 
+/**
+ * Remove attachment from private storage then delete the `record_attachments` row.
+ * Storage delete RLS requires the row to still exist, so storage is removed first.
+ */
+export async function deleteRecordAttachment(id: string, objectPath: string): Promise<boolean> {
+  const { error: storageError } = await supabase.storage.from('record-attachments').remove([objectPath]);
+  if (storageError) {
+    toast.error('Could not delete file: ' + storageError.message);
+    return false;
+  }
+  const { error: rowError } = await supabase.from('record_attachments').delete().eq('id', id);
+  if (rowError) {
+    toast.error('File removed but record could not be deleted: ' + rowError.message);
+    return false;
+  }
+  return true;
+}
+
 export function useAttachmentCounts(entityType: AttachmentEntity, entityIds: string[]) {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const idsKey = entityIds.join(',');
@@ -176,14 +204,20 @@ export function RecordAttachments({
   entityType,
   entityId,
   onCountChange,
+  onChanged,
   allowUpload = true,
+  allowDelete = allowUpload,
   embedded = false,
 }: {
   entityType: AttachmentEntity;
   entityId: string;
   onCountChange?: (count: number) => void;
+  /** Fired after a successful upload or delete (e.g. refresh stock doc chips). */
+  onChanged?: () => void;
   /** When false, users can view/download only (e.g. sales viewing vehicle courier docs). */
   allowUpload?: boolean;
+  /** When false, hide delete controls. Defaults to `allowUpload`. */
+  allowDelete?: boolean;
   embedded?: boolean;
 }) {
   const { profile } = useAuth();
@@ -192,9 +226,13 @@ export function RecordAttachments({
   const [uploading, setUploading] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AttachmentRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const uploadLabel = UPLOAD_LABELS[entityType];
   const onCountChangeRef = useRef(onCountChange);
   onCountChangeRef.current = onCountChange;
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -228,6 +266,20 @@ export function RecordAttachments({
     if (!ok) return;
     toast.success('Attachment uploaded');
     await load();
+    onChangedRef.current?.();
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const ok = await deleteRecordAttachment(pendingDelete.id, pendingDelete.object_path);
+    setDeleting(false);
+    if (!ok) return;
+    if (preview?.fileName === pendingDelete.file_name) setPreview(null);
+    setPendingDelete(null);
+    toast.success('Attachment deleted');
+    await load();
+    onChangedRef.current?.();
   };
 
   const viewFile = async (row: AttachmentRow) => {
@@ -326,12 +378,59 @@ export function RecordAttachments({
                 <Button type="button" size="sm" variant="outline" aria-label={`Open ${row.file_name} in a new tab`} disabled={openingId === row.id} onClick={() => void openInNewTab(row)}>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
+                {allowDelete ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    aria-label={`Delete ${row.file_name}`}
+                    disabled={deleting}
+                    onClick={() => setPendingDelete(row)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                ) : null}
               </div>
             </li>
           ))}
         </ul>
       )}
       <p className="text-[11px] text-muted-foreground">Private files. View uses a short-lived signed link and respects your record permissions. Maximum 20 MB per file.</p>
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this attachment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete ? (
+                <>
+                  <span className="block font-medium text-foreground">{pendingDelete.file_name}</span>
+                  <span className="mt-2 block">This removes the file from storage. This cannot be undone.</span>
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

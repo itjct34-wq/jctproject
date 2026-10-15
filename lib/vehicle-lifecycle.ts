@@ -160,7 +160,7 @@ export const PAYMENT_STATUS_PILL_LABELS: Record<VehiclePaymentStatus, string> = 
 };
 
 export const PAYMENT_STATUS_PILL_STYLES: Record<VehiclePaymentStatus, string> = {
-  available: 'bg-emerald-600 text-white',
+  available: 'bg-white text-slate-950 border border-slate-900',
   reserved: 'bg-sky-600 text-white',
   partial_paid: 'bg-amber-500 text-white',
   paid: 'bg-emerald-600 text-white',
@@ -190,10 +190,10 @@ export function freightModeListLabel(mode: Vehicle['freight_mode'] | '' | undefi
 /** Full-row ERP list tint from payment_status (shipping stays in the right rail). */
 export function vehicleListRowClass(vehicle: Vehicle): string {
   const pay = effectivePaymentStatus(vehicle);
-  if (pay === 'paid') return 'border-emerald-300/80 bg-emerald-100/90 text-emerald-950';
-  if (pay === 'partial_paid') return 'border-amber-300/80 bg-amber-100/80 text-amber-950';
-  if (pay === 'reserved') return 'border-sky-300/80 bg-sky-100/90 text-sky-950';
-  return 'border-emerald-200/70 bg-white text-emerald-950';
+  if (pay === 'paid') return 'border-2 border-emerald-500 bg-emerald-200 text-emerald-950';
+  if (pay === 'partial_paid') return 'border-2 border-amber-500 bg-amber-200 text-amber-950';
+  if (pay === 'reserved') return 'border-2 border-sky-500 bg-sky-200 text-sky-950';
+  return 'border-2 border-emerald-300 bg-white text-emerald-950';
 }
 
 /** Extra list cue when the vehicle is paid/delivered but commission is still due. */

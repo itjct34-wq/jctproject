@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,8 +120,6 @@ function sourcePlace(v: Vehicle) {
 
 export type StockListCardProps = {
   vehicle: Vehicle;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
   customerName: string;
   customerCountry: string;
   agentName: string;
@@ -143,10 +140,103 @@ export type StockListCardProps = {
   onMarkCommissionPaid?: () => void;
 };
 
+type StockListCardActionsMenuProps = Pick<
+  StockListCardProps,
+  | 'invoice'
+  | 'onEdit'
+  | 'onAssign'
+  | 'onViewInfo'
+  | 'onReserve'
+  | 'onMakeAvailable'
+  | 'onShipping'
+  | 'onCourier'
+  | 'onDelete'
+  | 'onMarkCommissionPaid'
+>;
+
+function StockListCardActionsMenu({
+  invoice,
+  onEdit,
+  onAssign,
+  onViewInfo,
+  onReserve,
+  onMakeAvailable,
+  onShipping,
+  onCourier,
+  onDelete,
+  onMarkCommissionPaid,
+}: StockListCardActionsMenuProps) {
+  return (
+    <>
+      {onEdit || onAssign || onViewInfo ? (
+        <>
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Stock
+          </DropdownMenuLabel>
+          {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit Stock Details</DropdownMenuItem> : null}
+          {onAssign ? <DropdownMenuItem onSelect={onAssign}>Assign Stock</DropdownMenuItem> : null}
+          <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
+        </>
+      ) : (
+        <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
+      )}
+      {onReserve ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Sale &amp; Invoice
+          </DropdownMenuLabel>
+          <DropdownMenuItem onSelect={onReserve}>Reserve Vehicle</DropdownMenuItem>
+        </>
+      ) : null}
+      {onShipping || onCourier ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Shipping
+          </DropdownMenuLabel>
+          {onCourier ? <DropdownMenuItem onSelect={onCourier}>Edit Courier Info</DropdownMenuItem> : null}
+          {onShipping ? <DropdownMenuItem onSelect={onShipping}>Edit Shipping Info</DropdownMenuItem> : null}
+        </>
+      ) : null}
+      {onMarkCommissionPaid || invoice ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Money
+          </DropdownMenuLabel>
+          {onMarkCommissionPaid ? (
+            <DropdownMenuItem onSelect={onMarkCommissionPaid}>Mark commission paid</DropdownMenuItem>
+          ) : null}
+          {invoice ? (
+            <DropdownMenuItem asChild>
+              <Link href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}>Open invoice</Link>
+            </DropdownMenuItem>
+          ) : null}
+        </>
+      ) : null}
+      {onMakeAvailable || onDelete ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Danger
+          </DropdownMenuLabel>
+          {onMakeAvailable ? (
+            <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
+          ) : null}
+          {onDelete ? (
+            <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
+              Delete
+            </DropdownMenuItem>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
+}
+
 export function StockListCard({
   vehicle: v,
-  checked,
-  onCheckedChange,
   customerName,
   customerCountry,
   agentName,
@@ -221,7 +311,7 @@ export function StockListCard({
   return (
     <div
       className={cn(
-        'overflow-visible rounded-xl border px-3 py-3 shadow-sm sm:px-4',
+        'overflow-visible rounded-xl border px-4 py-4 shadow-sm sm:px-5 sm:py-5',
         vehicleListRowClass(v),
         vehicleCommissionDueClass(v)
       )}
@@ -232,7 +322,7 @@ export function StockListCard({
       */}
       <div
         className={cn(
-          'grid w-full items-start gap-3 overflow-visible',
+          'grid w-full items-start gap-4 overflow-visible sm:gap-5',
           'grid-cols-1',
           'md:grid-cols-[auto_minmax(12rem,1.2fr)_minmax(7.5rem,0.7fr)_minmax(8rem,0.8fr)]',
           showMoney
@@ -240,15 +330,8 @@ export function StockListCard({
             : 'xl:grid-cols-[auto_minmax(11rem,1.1fr)_minmax(7rem,0.65fr)_minmax(8rem,0.75fr)_minmax(10.5rem,11.5rem)]'
         )}
       >
-        {/* Thumb + checkbox */}
-        <div className="flex shrink-0 items-start gap-2 pt-0.5">
-          <Checkbox
-            checked={checked}
-            onCheckedChange={(value) => onCheckedChange(value === true)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Select ${v.stock_number}`}
-            className="mt-1 border-slate-400 bg-white"
-          />
+        {/* Thumb */}
+        <div className="shrink-0 pt-0.5">
           <div className="h-[88px] w-[120px] overflow-hidden rounded-md bg-white/80 ring-1 ring-black/10 sm:h-[100px] sm:w-[140px]">
             {v.primary_image_url ? (
               <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" />
@@ -479,121 +562,139 @@ export function StockListCard({
           </div>
         ) : null}
 
-        {/* Right rail — status, Edit shipping, Actions, View Info */}
+        {/* Right rail — status, actions, View Info (available layout matches ERP reference) */}
         <div className="flex w-full min-w-0 flex-col items-stretch gap-2 md:col-span-4 xl:col-span-1 xl:w-auto xl:min-w-[10.5rem]">
           <span
             className={cn(
-              'inline-flex w-full items-center justify-center rounded-md px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide',
+              'inline-flex w-full items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide',
+              pay === 'available' ? 'rounded-full' : 'rounded-md',
               PAYMENT_STATUS_PILL_STYLES[pay]
             )}
           >
             {PAYMENT_STATUS_PILL_LABELS[pay]}
           </span>
-          <p className="text-center text-[11px] font-semibold uppercase leading-snug text-slate-600">
+          <p
+            className={cn(
+              'text-center text-[11px] uppercase leading-snug',
+              pay === 'available' ? 'font-normal text-slate-600' : 'font-semibold text-slate-600'
+            )}
+          >
             {SHIPPING_STATUS_SHORT[ship]}
-            {freight ? ` · ${freight}` : ''}
+            {pay !== 'available' && freight ? ` · ${freight}` : ''}
           </p>
-          {onShipping ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
-              onClick={(e) => {
-                e.stopPropagation();
-                onShipping();
-              }}
-            >
-              Edit shipping
-            </Button>
-          ) : null}
-          {hasActions ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          {pay === 'available' ? (
+            <>
+              <div className="flex w-full gap-1.5">
+                {onReserve ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 min-w-0 flex-1 bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReserve();
+                    }}
+                  >
+                    Reserve
+                  </Button>
+                ) : null}
+                {hasActions ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          'h-8 justify-center gap-1 border-slate-300 bg-white text-xs font-semibold text-slate-900',
+                          onReserve ? 'min-w-0 flex-1' : 'w-full'
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Actions <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                      <StockListCardActionsMenu
+                        invoice={invoice}
+                        onEdit={onEdit}
+                        onAssign={onAssign}
+                        onViewInfo={onViewInfo}
+                        onReserve={onReserve}
+                        onMakeAvailable={onMakeAvailable}
+                        onShipping={onShipping}
+                        onCourier={onCourier}
+                        onDelete={onDelete}
+                        onMarkCommissionPaid={onMarkCommissionPaid}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 w-full bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
+                onClick={onViewInfo}
+              >
+                <ChevronRight className="mr-1 h-3.5 w-3.5 shrink-0" />
+                View Info
+              </Button>
+            </>
+          ) : (
+            <>
+              {onShipping ? (
                 <Button
                   type="button"
-                  variant="outline"
                   size="sm"
-                  className="h-8 w-full justify-between bg-white/80 text-xs"
-                  onClick={(e) => e.stopPropagation()}
+                  className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShipping();
+                  }}
                 >
-                  Actions <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0" />
+                  Edit shipping
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
-                {(onEdit || onAssign || onViewInfo) ? (
-                  <>
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Stock
-                    </DropdownMenuLabel>
-                    {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit Stock Details</DropdownMenuItem> : null}
-                    {onAssign ? <DropdownMenuItem onSelect={onAssign}>Assign Stock</DropdownMenuItem> : null}
-                    <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
-                  </>
-                ) : (
-                  <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
-                )}
-                {onReserve ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Sale &amp; Invoice
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onSelect={onReserve}>Reserve Vehicle</DropdownMenuItem>
-                  </>
-                ) : null}
-                {(onShipping || onCourier) ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Shipping
-                    </DropdownMenuLabel>
-                    {onCourier ? <DropdownMenuItem onSelect={onCourier}>Edit Courier Info</DropdownMenuItem> : null}
-                    {onShipping ? <DropdownMenuItem onSelect={onShipping}>Edit Shipping Info</DropdownMenuItem> : null}
-                  </>
-                ) : null}
-                {(onMarkCommissionPaid || invoice) ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Money
-                    </DropdownMenuLabel>
-                    {onMarkCommissionPaid ? (
-                      <DropdownMenuItem onSelect={onMarkCommissionPaid}>Mark commission paid</DropdownMenuItem>
-                    ) : null}
-                    {invoice ? (
-                      <DropdownMenuItem asChild>
-                        <Link href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}>Open invoice</Link>
-                      </DropdownMenuItem>
-                    ) : null}
-                  </>
-                ) : null}
-                {(onMakeAvailable || onDelete) ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Danger
-                    </DropdownMenuLabel>
-                    {onMakeAvailable ? (
-                      <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
-                    ) : null}
-                    {onDelete ? (
-                      <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
-                        Delete
-                      </DropdownMenuItem>
-                    ) : null}
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
-            onClick={onViewInfo}
-          >
-            View Info <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
-          </Button>
+              ) : null}
+              {hasActions ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full justify-between bg-white/80 text-xs"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Actions <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                    <StockListCardActionsMenu
+                      invoice={invoice}
+                      onEdit={onEdit}
+                      onAssign={onAssign}
+                      onViewInfo={onViewInfo}
+                      onReserve={onReserve}
+                      onMakeAvailable={onMakeAvailable}
+                      onShipping={onShipping}
+                      onCourier={onCourier}
+                      onDelete={onDelete}
+                      onMarkCommissionPaid={onMarkCommissionPaid}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
+                onClick={onViewInfo}
+              >
+                View Info <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

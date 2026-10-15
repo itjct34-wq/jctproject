@@ -121,7 +121,7 @@ export function SalesDashboard() {
 
   const kpis = [
     { label: 'My customers', value: String(data.myCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-blue-50 text-blue-600' },
-    { label: 'My reserved stock', value: String(data.myReservedStock), sub: `${data.mySalesOpen} open reservations`, icon: PackageCheck, href: '/sales', tone: 'bg-amber-50 text-amber-700' },
+    { label: 'My reserved stock', value: String(data.myReservedStock), sub: `${data.mySalesOpen} open reservations`, icon: PackageCheck, href: '/vehicles', tone: 'bg-amber-50 text-amber-700' },
     { label: 'Available to reserve', value: String(data.availableToReserve), sub: 'Browse stock inventory', icon: Car, href: '/vehicles', tone: 'bg-emerald-50 text-emerald-600' },
     { label: 'My quotations', value: String(data.myQuotations), sub: 'Quotes you created', icon: FileText, href: '/quotations', tone: 'bg-violet-50 text-violet-600' },
     { label: 'My invoices', value: String(data.myInvoices), sub: moneyLine(data.outstandingByCurrency) !== '—' ? `${moneyLine(data.outstandingByCurrency)} outstanding` : 'Commercial / proforma', icon: Receipt, href: '/invoices', tone: 'bg-cyan-50 text-cyan-600' },
@@ -183,7 +183,7 @@ export function SalesDashboard() {
         <Card className="lg:col-span-2 border-border/60">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base">Recent reservations</CardTitle>
-            <Link href="/sales"><Button variant="ghost" size="sm" className="text-xs">View all</Button></Link>
+            <Link href="/vehicles"><Button variant="ghost" size="sm" className="text-xs">View all</Button></Link>
           </CardHeader>
           <CardContent>
             {data.recentReservations.length === 0 ? (
@@ -208,7 +208,7 @@ export function SalesDashboard() {
           <CardHeader className="pb-3"><CardTitle className="text-base">Quick actions</CardTitle></CardHeader>
           <CardContent className="space-y-1">
             {[
-              { label: 'New reservation', icon: Plus, href: '/sales' },
+              { label: 'Reserve from stock', icon: Plus, href: '/vehicles' },
               { label: 'New quotation', icon: FileText, href: '/quotations' },
               { label: 'Browse stock', icon: Car, href: '/vehicles' },
               { label: 'Commercial invoices', icon: Receipt, href: '/invoices' },

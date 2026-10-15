@@ -4,7 +4,6 @@ import {
   Car,
   Gavel,
   ShoppingCart,
-  PackageCheck,
   FileText,
   Receipt,
   CreditCard,
@@ -85,7 +84,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Customers', href: '/customers', icon: Users, module: 'customers' },
       { label: 'Inquiries', href: '/inquiries', icon: Inbox, module: 'customers' },
-      { label: 'Sales & Reservations', href: '/sales', icon: PackageCheck, module: 'sales' },
       { label: 'Quotations', href: '/quotations', icon: FileText, module: 'sales' },
       { label: 'Agent verification', href: '/agents', icon: BadgeCheck, module: 'users' },
       { label: 'My verification code', href: '/my-verification', icon: BadgeCheck, module: 'dashboard' },
