@@ -135,3 +135,44 @@ export function countryFlagImageUrl(code: string, width = 40): string {
   if (!/^[a-z]{2}$/.test(cc)) return '';
   return `https://flagcdn.com/w${width}/${cc}.png`;
 }
+
+/** Common load ports by source country (ISO-2). Used by bulk stock import. */
+export const SOURCE_LOAD_PORTS: Record<string, string[]> = {
+  JP: ['Nagoya', 'Yokohama', 'Osaka', 'Kobe', 'Tokyo'],
+  AE: ['Jebel Ali', 'Abu Dhabi', 'Sharjah'],
+  GB: ['Southampton', 'Felixstowe', 'London Gateway'],
+  US: ['Los Angeles', 'Houston', 'Savannah', 'New York'],
+  KE: ['Mombasa'],
+  TZ: ['Dar es Salaam'],
+  ZA: ['Durban', 'Cape Town'],
+  NG: ['Lagos', 'Tin Can Island'],
+  GH: ['Tema'],
+  SA: ['Jeddah', 'Dammam'],
+  QA: ['Hamad'],
+  KW: ['Shuwaikh'],
+  OM: ['Sohar'],
+  PK: ['Karachi', 'Port Qasim'],
+  IN: ['Mumbai', 'Chennai', 'Mundra'],
+  BD: ['Chittagong'],
+  LK: ['Colombo'],
+  TH: ['Laem Chabang', 'Bangkok'],
+  VN: ['Hai Phong', 'Ho Chi Minh'],
+  MY: ['Port Klang'],
+  SG: ['Singapore'],
+  ID: ['Tanjung Priok', 'Surabaya'],
+  PH: ['Manila'],
+  CN: ['Shanghai', 'Tianjin', 'Guangzhou'],
+  KR: ['Busan'],
+  AU: ['Sydney', 'Melbourne', 'Brisbane'],
+  NZ: ['Auckland'],
+  DE: ['Hamburg', 'Bremerhaven'],
+  NL: ['Rotterdam'],
+  BE: ['Antwerp'],
+  IT: ['Genoa'],
+  ES: ['Valencia', 'Barcelona'],
+  FR: ['Le Havre'],
+};
+
+export function loadPortsForCountry(code: string): string[] {
+  return SOURCE_LOAD_PORTS[code.trim().toUpperCase()] || [];
+}

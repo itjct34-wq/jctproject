@@ -44,18 +44,20 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-red-50/30 px-4">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-[linear-gradient(160deg,#0F2744_0%,#16375c_42%,#f4f1e8_42%,#eef2f6_100%)] px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex flex-col items-center gap-2 mb-2">
-            <BrandLogo placement="header" className="justify-center" />
-            <p className="text-xs text-muted-foreground">Co., Ltd. — Nagoya, Japan · ERP</p>
+          <div className="flex flex-col items-center gap-3 mb-2">
+            <div className="rounded-2xl bg-white px-5 py-3 shadow-md">
+              <BrandLogo placement="header" className="justify-center" />
+            </div>
+            <p className="text-xs font-medium text-white/85">Co., Ltd. — Nagoya, Japan · ERP</p>
           </div>
         </div>
 
-        <Card className="border-border/60 shadow-lg">
+        <Card className="border-2 border-primary/15 shadow-[0_18px_50px_rgba(15,39,68,0.18)]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-center text-lg">Sign in to ERP</CardTitle>
+            <CardTitle className="text-center text-lg text-primary">Sign in to ERP</CardTitle>
             <p className="text-center text-xs text-muted-foreground mt-1">Vehicle export operations system</p>
           </CardHeader>
           <CardContent>
@@ -120,7 +122,7 @@ function LoginForm() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-primary/80 mt-6">
           Japan Circular Trading Co., Ltd. — Used Vehicle Export
         </p>
         <p className="text-center text-xs text-muted-foreground mt-2">
@@ -135,7 +137,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30">
+        <div className="min-h-[100dvh] flex items-center justify-center bg-background">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       }
