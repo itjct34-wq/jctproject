@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-provider';
+import { usesSalesFocusedNav } from '@/lib/nav';
+import { SalesDashboard } from '@/components/dashboard/sales-dashboard';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
@@ -50,7 +52,7 @@ function moneyLine(buckets: Bucket[]) {
   return buckets.map((b) => formatCurrency(b.total, b.currency)).join(' · ');
 }
 
-export default function DashboardPage() {
+function OperationsDashboardPage() {
   const { profile, roles } = useAuth();
   const { canView } = usePermissions();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -264,4 +266,11 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const { roles } = useAuth();
+  const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
+  if (usesSalesFocusedNav(roleNames)) return <SalesDashboard />;
+  return <OperationsDashboardPage />;
 }

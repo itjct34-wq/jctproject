@@ -33,7 +33,7 @@ export interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   module?: PermissionModule;
   requiredRoles?: RoleName[];
-  /** Hidden when the user is on sales-focused navigation (sales_agent without elevated staff roles). */
+  /** Hidden when the user is on sales-focused navigation (selling roles without elevated staff roles). */
   salesNavHidden?: boolean;
 }
 
@@ -48,7 +48,7 @@ const ELEVATED_NAV_ROLES: RoleName[] = ['super_admin', 'admin', 'operations', 'm
 
 export function usesSalesFocusedNav(roleNames: RoleName[]): boolean {
   return (
-    roleNames.includes('sales_agent') &&
+    (roleNames.includes('sales_agent') || roleNames.includes('freelancer')) &&
     !roleNames.some((r) => ELEVATED_NAV_ROLES.includes(r))
   );
 }
@@ -63,7 +63,7 @@ export function getNavGroupsForRoles(roleNames: RoleName[]): NavGroup[] {
 
 /** First screen after login for role (sales agents land on CRM/finance, not ops dashboard). */
 export function getPostLoginPath(roleNames: RoleName[]): string {
-  if (usesSalesFocusedNav(roleNames)) return '/invoices';
+  if (usesSalesFocusedNav(roleNames)) return '/dashboard';
   return '/dashboard';
 }
 
@@ -98,7 +98,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Finance',
     items: [
       { label: 'Invoices', href: '/invoices', icon: Receipt, module: 'invoices' },
-      { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices', salesNavHidden: true },
+      { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices' },
       { label: 'Payments / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
       { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses' },
     ],
