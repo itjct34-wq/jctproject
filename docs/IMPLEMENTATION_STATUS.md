@@ -27,6 +27,8 @@ Snapshot aligned with codebase on branch **`feat/vehicle-commercial-workflow`**.
 | Expenses + attachments | Done | |
 | Shipments + documents | Done | Fullscreen forms |
 | Users + passwords | Done | Admin invite/update API |
+| Payroll (salaries) | Done | `user_payroll` on Users → Payroll tab; admin/manager edit |
+| Vehicle commission | Done | PKR amount on reserve/edit; due on paid or delivered; paid by admin/manager/accounts |
 | Configuration | Done | Super admin lists + auction houses panel |
 | Reports, tasks, audit, offices | Done | Baseline modules present |
 
@@ -38,6 +40,8 @@ Snapshot aligned with codebase on branch **`feat/vehicle-commercial-workflow`**.
 | Migrations 019–023 | Required for latest public features | See [DATABASE.md](DATABASE.md); apply on JCT Supabase if missing |
 | Migration **027** | Applied on JCT project | `bulk_import_batches` sheet/ZIP history |
 | Migrations **028–031** | Required | FOB workflow, sales own-records, TOTP/expiry, customer assignment RLS |
+| Migration **032** | Required | `vehicles.freight_mode` roro/container |
+| Migration **033** | Applied on JCT project | `user_payroll` + vehicle commission columns/triggers |
 
 ## Remaining / follow-up
 

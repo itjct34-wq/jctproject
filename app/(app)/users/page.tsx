@@ -16,12 +16,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Search, Users, UserCog, Shield, Loader2, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Users, UserCog, Shield, Loader2, MoreHorizontal, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import type { Office, Profile, Role, Shift, Team, TeamMember, RoleName } from '@/lib/types';
+import type { Office, Profile, Role, Shift, Team, TeamMember, RoleName, UserPayroll } from '@/lib/types';
 import { ROLE_COLORS } from '@/lib/types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { formatMoney } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { AssignOfficeShiftDialog } from '@/components/users/assign-office-shift';
@@ -34,7 +35,7 @@ interface UserWithRoles extends Profile {
 
 export default function UsersPage() {
   const { profile: currentUser, session } = useAuth();
-  const { isAdmin, isSuperAdmin } = usePermissions();
+  const { isAdmin, isSuperAdmin, hasRole } = usePermissions();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -50,13 +51,16 @@ export default function UsersPage() {
   const [roleDialogUser, setRoleDialogUser] = useState<UserWithRoles | null>(null);
   const [offices, setOffices] = useState<Office[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [payroll, setPayroll] = useState<Record<string, UserPayroll>>({});
+  const [payrollDrafts, setPayrollDrafts] = useState<Record<string, string>>({});
+  const [savingPayroll, setSavingPayroll] = useState<string | null>(null);
 
   const [teamForm, setTeamForm] = useState({ name: '', description: '', department: '', manager_id: '' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
 
-    const [profilesRes, rolesRes, userRolesRes, teamsRes, teamMembersRes, officesRes, shiftsRes] = await Promise.all([
+    const [profilesRes, rolesRes, userRolesRes, teamsRes, teamMembersRes, officesRes, shiftsRes, payrollRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('roles').select('*').order('sort_order', { ascending: true }),
       supabase.from('user_roles').select('user_id, role_id, is_active, roles(id, name, display_name, description, sort_order, is_system_role, created_at, updated_at)'),
@@ -64,6 +68,7 @@ export default function UsersPage() {
       supabase.from('team_members').select('*, profiles!inner(full_name, email)'),
       supabase.from('offices').select('*').order('name', { ascending: true }),
       supabase.from('shifts').select('*').order('name', { ascending: true }),
+      supabase.from('user_payroll').select('*'),
     ]);
 
     const roleMap: Record<string, Role[]> = {};
@@ -84,6 +89,15 @@ export default function UsersPage() {
     setTeams(teamsRes.data as Team[] || []);
     setOffices((officesRes.data || []) as Office[]);
     setShifts((shiftsRes.data || []) as Shift[]);
+
+    const payrollMap: Record<string, UserPayroll> = {};
+    const drafts: Record<string, string> = {};
+    for (const row of (payrollRes.data || []) as UserPayroll[]) {
+      payrollMap[row.user_id] = row;
+      drafts[row.user_id] = String(row.salary_amount ?? 0);
+    }
+    setPayroll(payrollMap);
+    setPayrollDrafts(drafts);
 
     const tmEnriched = (teamMembersRes.data || []).map((tm: Record<string, unknown>) => ({
       ...tm,
@@ -283,6 +297,32 @@ export default function UsersPage() {
     loadData();
   };
 
+  const canEditPayroll = isAdmin() || hasRole('manager');
+
+  const saveSalary = async (userId: string) => {
+    if (!canEditPayroll || !currentUser) return;
+    const amount = Number(payrollDrafts[userId] ?? payroll[userId]?.salary_amount ?? 0);
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error('Enter a valid salary amount');
+      return;
+    }
+    setSavingPayroll(userId);
+    const { error } = await supabase.from('user_payroll').upsert({
+      user_id: userId,
+      salary_amount: amount,
+      salary_currency: payroll[userId]?.salary_currency || 'PKR',
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser.id,
+    });
+    setSavingPayroll(null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Salary saved');
+    loadData();
+  };
+
   const filtered = users.filter((u) => {
     const matchesSearch =
       !search ||
@@ -397,6 +437,10 @@ export default function UsersPage() {
           <TabsTrigger value="teams">
             <UserCog className="w-4 h-4 mr-1.5" />
             Teams ({teams.length})
+          </TabsTrigger>
+          <TabsTrigger value="payroll">
+            <Wallet className="w-4 h-4 mr-1.5" />
+            Payroll
           </TabsTrigger>
         </TabsList>
 
@@ -599,6 +643,81 @@ export default function UsersPage() {
                         )}
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payroll" className="space-y-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Monthly salaries</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Name, role, and salary (default PKR). Admin and manager can edit. Sales and freelancer cannot.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-4 space-y-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Salary PKR</TableHead>
+                      {canEditPayroll ? <TableHead className="w-28"></TableHead> : null}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((u) => {
+                      const roleLabel = u.roles.map((r) => r.display_name).join(', ') || '—';
+                      const row = payroll[u.id];
+                      const currency = row?.salary_currency || 'PKR';
+                      return (
+                        <TableRow key={u.id}>
+                          <TableCell>
+                            <p className="text-sm font-medium">{u.full_name || 'Unnamed'}</p>
+                            <p className="text-xs text-muted-foreground">{u.email}</p>
+                          </TableCell>
+                          <TableCell className="text-sm">{roleLabel}</TableCell>
+                          <TableCell>
+                            {canEditPayroll ? (
+                              <Input
+                                type="number"
+                                min={0}
+                                className="h-8 w-36"
+                                value={payrollDrafts[u.id] ?? (row ? String(row.salary_amount) : '')}
+                                onChange={(e) => setPayrollDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                                placeholder="0"
+                              />
+                            ) : (
+                              <span className="text-sm">
+                                {row ? formatMoney(Number(row.salary_amount), currency) : '—'}
+                              </span>
+                            )}
+                          </TableCell>
+                          {canEditPayroll ? (
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={savingPayroll === u.id}
+                                onClick={() => void saveSalary(u.id)}
+                              >
+                                {savingPayroll === u.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                              </Button>
+                            </TableCell>
+                          ) : null}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

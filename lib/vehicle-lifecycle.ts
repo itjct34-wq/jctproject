@@ -4,6 +4,8 @@ import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/
 export type VehiclePaymentStatus = NonNullable<Vehicle['payment_status']>;
 export type VehicleShippingStatus = NonNullable<Vehicle['shipping_status']>;
 export type VehicleIncoterm = NonNullable<Vehicle['incoterm']>;
+export type VehicleFreightMode = NonNullable<Vehicle['freight_mode']>;
+export type VehicleCommissionStatus = NonNullable<Vehicle['commission_status']>;
 export type VehicleWorkflowStage = 'in_stock' | 'reserved' | 'booked' | 'shipped' | 'delivered';
 export type VehicleDocKind = 'bl' | 'surrender' | 'waybill' | 'other';
 
@@ -37,6 +39,73 @@ export const WORKFLOW_STAGES: VehicleWorkflowStage[] = ['in_stock', 'reserved', 
 
 export const INCOTERMS: VehicleIncoterm[] = ['FOB', 'C&F', 'CIF'];
 
+export const FREIGHT_MODES: VehicleFreightMode[] = ['roro', 'container'];
+
+export const FREIGHT_MODE_LABELS: Record<VehicleFreightMode, string> = {
+  roro: 'RORO',
+  container: 'Container',
+};
+
+export const COMMISSION_STATUSES: VehicleCommissionStatus[] = ['none', 'due', 'paid'];
+
+export const COMMISSION_STATUS_LABELS: Record<VehicleCommissionStatus, string> = {
+  none: 'None',
+  due: 'Due',
+  paid: 'Paid',
+};
+
+export function effectiveCommissionStatus(vehicle: Pick<Vehicle, 'commission_status'>): VehicleCommissionStatus {
+  return vehicle.commission_status === 'due' || vehicle.commission_status === 'paid' ? vehicle.commission_status : 'none';
+}
+
+export function commissionAmountPkr(vehicle: Pick<Vehicle, 'commission_pkr'>): number | null {
+  if (vehicle.commission_pkr == null) return null;
+  const n = Number(vehicle.commission_pkr);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Optional config helper. Returns null unless a positive PKR-per-USD rate is stored. Never invents a rate. */
+export function parsePkrPerUsd(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === 'string') {
+    const n = Number(value.trim());
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  if (value && typeof value === 'object') {
+    const rec = value as Record<string, unknown>;
+    const inner = rec.pkr_per_usd ?? rec.value ?? rec.rate ?? rec.amount;
+    return parsePkrPerUsd(inner);
+  }
+  return null;
+}
+
+export function suggestCommissionPkr(profitUsd: number | null | undefined, pkrPerUsd: number | null, percent: number): number | null {
+  if (profitUsd == null || pkrPerUsd == null || pkrPerUsd <= 0) return null;
+  const pct = Number(percent);
+  if (!Number.isFinite(pct) || pct <= 0) return null;
+  return Math.round(Number(profitUsd) * pkrPerUsd * (pct / 100));
+}
+
+export function parseFreightMode(value: string | null | undefined): VehicleFreightMode | null {
+  if (value === 'roro' || value === 'container') return value;
+  if (!value) return null;
+  const n = value.trim().toLowerCase();
+  if (n === 'roro') return 'roro';
+  if (n.includes('container') || n.includes('20ft') || n.includes('40ft') || n === '20ft' || n === '40ft') return 'container';
+  return null;
+}
+
+export function freightModeFromShipmentType(shipmentType: string | null | undefined): VehicleFreightMode | null {
+  return parseFreightMode(shipmentType);
+}
+
+export function soldProfitUsd(vehicle: Pick<Vehicle, 'sold_price' | 'fob_usd' | 'listed_price'>): number | null {
+  if (vehicle.sold_price == null) return null;
+  const fob = publicFobUsd(vehicle);
+  if (fob == null) return null;
+  return Number(vehicle.sold_price) - Number(fob);
+}
+
 export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {
   bl: 'Bill of lading',
   surrender: 'Surrender',
@@ -45,18 +114,36 @@ export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {
 };
 
 export const PAYMENT_STATUS_STYLES: Record<VehiclePaymentStatus, string> = {
-  available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  reserved: 'bg-amber-50 text-amber-700 border-amber-200',
-  partial_paid: 'bg-blue-50 text-blue-700 border-blue-200',
-  paid: 'bg-slate-100 text-slate-700 border-slate-200',
+  available: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  reserved: 'bg-amber-50 text-amber-800 border-amber-200',
+  partial_paid: 'bg-orange-50 text-orange-800 border-orange-200',
+  paid: 'bg-blue-100 text-blue-900 border-blue-300',
 };
 
 export const SHIPPING_STATUS_STYLES: Record<VehicleShippingStatus, string> = {
-  not_booked: 'bg-slate-50 text-slate-600 border-slate-200',
-  booked: 'bg-violet-50 text-violet-700 border-violet-200',
-  shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  not_booked: 'bg-slate-50 text-slate-700 border-slate-200',
+  booked: 'bg-sky-50 text-sky-800 border-sky-200',
+  shipped: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+  delivered: 'bg-slate-200 text-slate-800 border-slate-300',
 };
+
+/** Full-row ERP list tint. Shipping stage wins over payment once booked. */
+export function vehicleListRowClass(vehicle: Vehicle): string {
+  const ship = effectiveShippingStatus(vehicle);
+  const pay = effectivePaymentStatus(vehicle);
+  if (ship === 'delivered') return 'bg-slate-100 text-slate-950 hover:bg-slate-200/80';
+  if (ship === 'shipped') return 'bg-cyan-50 text-cyan-950 hover:bg-cyan-100/80';
+  if (ship === 'booked') return 'bg-sky-50 text-sky-950 hover:bg-sky-100/80';
+  if (pay === 'paid') return 'bg-blue-100 text-blue-950 hover:bg-blue-200/70';
+  if (pay === 'partial_paid') return 'bg-orange-50 text-orange-950 hover:bg-orange-100/80';
+  if (pay === 'reserved') return 'bg-amber-50 text-amber-950 hover:bg-amber-100/70';
+  return 'bg-emerald-50/90 text-emerald-950 hover:bg-emerald-100/80';
+}
+
+/** Extra list cue when the vehicle is paid/delivered but commission is still due. */
+export function vehicleCommissionDueClass(vehicle: Pick<Vehicle, 'commission_status'>): string {
+  return effectiveCommissionStatus(vehicle) === 'due' ? 'ring-1 ring-inset ring-fuchsia-400' : '';
+}
 
 /** Legacy public listing uses vehicles.status in_stock | reserved */
 export function isPubliclyListed(vehicle: Pick<Vehicle, 'status' | 'payment_status'>) {

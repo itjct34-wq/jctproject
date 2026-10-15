@@ -24,6 +24,16 @@ ERP uses **orthogonal** payment and shipping tracks on `vehicles` (migration **`
 
 Shipping detail fields on the vehicle row: `shipping_port_of_loading`, `shipping_port_of_discharge`, `shipping_vessel_name`, `shipping_bl_number`, `shipping_line`, `shipping_etd`, `shipping_eta`, `shipping_notes`.
 
+`freight_mode` (`roro` \| `container`, nullable) is the RORO vs container flag on stock (migration **032**). It is independent of booking ports/vessel. Sales may set it on reserve.
+
+### Commission — `commission_pkr` / `commission_status`
+
+Recorded on reserve or stock edit as a **PKR amount** for the selling agent (`reserved_by`). Status is `none` \| `due` \| `paid` (migration **033**).
+
+- **Due** when `payment_status = paid` **or** `shipping_status = delivered` (either), and `commission_pkr` &gt; 0. Trigger `vehicles_apply_commission_status`.
+- **Paid** only when **admin, manager, or accounts** mark it (`Mark commission paid` on the vehicle row/detail or Status section). Selling roles cannot mark others’ (or their own) commission paid.
+- List row: second meta line shows commission PKR plus Due / **Commission paid** (green). A fuchsia corner marks commission still due.
+
 ## Legacy status enum — `vehicles.status`
 
 Still required for public filters and existing reports:
@@ -47,7 +57,7 @@ Defined originally in migration `003_vehicle_inventory.sql`; sync trigger in **`
 
 ## Reservation
 
-- **Sales agent / freelancer**: may update a vehicle from **`available` → `reserved`**, set `customer_id`, `reserved_by`, `reserved_until` (vehicles UI **Reserve** or sales reservation flow). RLS + trigger block edits to specs, pricing, or shipping.
+- **Sales agent / freelancer**: may update a vehicle from **`available` → `reserved`**, set `customer_id`, `reserved_by`, `reserved_until`, `sold_price`, `incoterm`, `freight_mode` (vehicles UI **Reserve** or sales reservation flow). RLS + trigger block edits to specs, bid/FOB, or shipping booking fields.
 - **Operations / manager / admin**: full stock edit; shipping dialog and courier uploads.
 
 ## Courier documents
@@ -76,7 +86,8 @@ Defined originally in migration `003_vehicle_inventory.sql`; sync trigger in **`
 
 ## UI helpers
 
-- Labels and badges: `lib/vehicle-lifecycle.ts`
+- Labels, badges, and list-row tints: `lib/vehicle-lifecycle.ts` (`vehicleListRowClass`, `soldProfitUsd`)
+- Stock list rows (Cars/Machinery/Parts): full-row color by payment then shipping; FOB kept; second line shows agent, customer, invoice code, sold, term, RORO/Container, profit, commission PKR + Due/Paid.
 - Stock page: payment/shipping badges, **Edit stock**, **Shipping**, **Reserve**, courier attachments.
 
 ## Recovery

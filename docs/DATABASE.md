@@ -3,7 +3,7 @@
 ## Platform
 
 - **Engine**: PostgreSQL (Supabase), project ref **`omlejtzwodudghqqgaiz`**.
-- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure **019–031** are applied. Duplicate historical 009/013/014 names are documented in [MIGRATIONS.md](MIGRATIONS.md) — do not rewrite applied files. `supabase/config.toml` records `project_id = omlejtzwodudghqqgaiz`.
+- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure **019–033** are applied. Duplicate historical 009/013/014 names are documented in [MIGRATIONS.md](MIGRATIONS.md) — do not rewrite applied files. `supabase/config.toml` records `project_id = omlejtzwodudghqqgaiz`.
 - **Types**: `lib/types/database.ts` and `lib/types/index.ts` mirror application usage (not auto-generated in repo).
 
 ## Core domains (selected tables)
@@ -11,6 +11,7 @@
 | Domain | Tables / views |
 |--------|----------------|
 | RBAC | `profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`, `teams`, `team_members` |
+| Payroll | `user_payroll` (salary amount + currency, default PKR) — migration **033** |
 | CRM | `customers`, contacts, communications, requirements, `inquiries` |
 | Inventory | `vehicles`, `vehicle_status_history`, `vehicle_images`, `bulk_import_batches` |
 | Auctions | `auction_listings`, `auction_bids`, `suppliers` (incl. auction houses), view **`auction_houses`** |
@@ -30,6 +31,9 @@
 | `source_country` | Display name for grouping |
 | `source_country_code` | ISO 3166-1 alpha-2 — migration **019**; `GRANT SELECT` to `anon` in **021** |
 | `status` | Lifecycle; public read limited to `in_stock`, `reserved` |
+| `freight_mode` | `roro` \| `container` \| null — migration **032** |
+| `commission_pkr` | Selling-agent commission in PKR — **033** |
+| `commission_status` | `none` \| `due` \| `paid` — **033**; due when `payment_status = paid` **or** `shipping_status = delivered` and amount &gt; 0 |
 
 ## RLS posture (summary)
 
@@ -56,6 +60,8 @@ Apply **in order** (file names under `supabase/migrations/`):
 | **027** | `20261016100000_027_bulk_import_batches.sql` | `bulk_import_batches` history for sheet/ZIP imports; staff RLS (admin/operations/manager) |
 | **028–030** | `20261016110000`–`20261016140000` | FOB/commercial workflow, sales own-records, TOTP/reservation expiry |
 | **031** | `20261016150000_031_customer_assigned_to_ownership.sql` | Selling visibility keyed to `customers.assigned_to`; hand-off UPDATE; quotes/invoices/sales follow assignee |
+| **032** | `20261016160000_032_vehicle_freight_mode.sql` | `vehicles.freight_mode` (`roro` \| `container`, nullable) |
+| **033** | `20261016170000_033_payroll_commission.sql` | `user_payroll`; vehicle `commission_pkr` / `commission_status`; due trigger; paid restricted to admin/manager/accounts |
 
 Earlier migrations **001–018** establish RBAC, CRM, inventory, sales/invoices, payments, security fixes, inquiries, avatars, invoice agent name, etc. New environments should run the full chain; production catch-up often needs **019–023** when enabling machinery/parts routes and photo ZIP gallery.
 

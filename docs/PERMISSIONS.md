@@ -79,6 +79,8 @@ Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboa
 | See / delete bulk upload batches | No (RLS + UI: `vehicles.create` / `auctions.create`) | No |
 | Edit stock specs / pricing | No | No |
 | Edit shipping on vehicles | No | No |
+| Enter commission PKR on own reserved vehicles | Yes | Yes |
+| Mark commission paid | No | No |
 
 Migration **`024_sales_freelancer_stock_invoice_guard.sql`** reaffirms vehicle insert/delete and invoice delete policies and extends invoice read/create for selling roles.
 
@@ -97,6 +99,8 @@ New customers created in CRM set **`customers.assigned_to`** and **`created_by`*
 | Edit stock | Yes | Yes | Yes | No |
 | Bulk upload history + undo batch | Yes | Yes | Yes | No |
 | Edit vehicle shipping + upload courier docs | Yes | Yes | Yes | No |
+| Edit user salaries (`user_payroll`) | Yes | No | Yes | No |
+| Mark vehicle commission paid | Yes | No | Yes | Yes |
 
 ## Enforcement rule
 

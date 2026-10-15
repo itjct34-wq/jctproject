@@ -24,6 +24,7 @@
 - Master-detail pattern: list in **Card** + **Sheet** or side panel for selected row (invoices, payments, documents).
 - Search and filter bars at top of module pages.
 - Badge styling for status enums (consistent pastel border/text classes per module).
+- Vehicle stock list tints the **entire row** (not only badges): available emerald, unpaid reserved amber, partial paid orange, paid blue, booked sky, shipped cyan, delivered slate (`vehicleListRowClass`). Text stays dark on those tints. Commission **due** adds a fuchsia corner and Due badge; **Commission paid** is a green label.
 
 ## Print
 
