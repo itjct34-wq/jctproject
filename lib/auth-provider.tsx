@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
-import type { Profile, Role } from '@/lib/types';
+import type { Profile, Role, RoleName } from '@/lib/types';
 
 interface AuthContextValue {
   user: User | null;
@@ -11,7 +11,10 @@ interface AuthContextValue {
   profile: Profile | null;
   roles: Role[];
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null; roleNames?: RoleName[] }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -22,7 +25,7 @@ const AuthContext = createContext<AuthContextValue>({
   profile: null,
   roles: [],
   loading: true,
-  signIn: async () => ({ error: 'Not initialized' }),
+  signIn: async () => ({ error: 'Not initialized', roleNames: [] }),
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -108,9 +111,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfileAndRoles]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
-    return { error: null };
+    if (data.user) {
+      const [profileRes, rolesRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle(),
+        supabase
+          .from('user_roles')
+          .select(`
+          is_active,
+          roles (
+            id,
+            name,
+            display_name,
+            description,
+            sort_order,
+            is_system_role,
+            created_at,
+            updated_at
+          )
+        `)
+          .eq('user_id', data.user.id)
+          .eq('is_active', true),
+      ]);
+      if (profileRes.data) setProfile(profileRes.data as Profile);
+      const userRoles =
+        rolesRes.data
+          ?.map((item) => item.roles as unknown as Role)
+          .filter(Boolean) ?? [];
+      setRoles(userRoles);
+      const roleNames = userRoles.map((r) => r.name);
+      return { error: null, roleNames };
+    }
+    return { error: null, roleNames: [] };
   }, []);
 
   const signOut = useCallback(async () => {

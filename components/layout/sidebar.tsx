@@ -24,12 +24,27 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
+  // Keep group open/closed toggles; only auto-expand the group for the active route.
+  // (Do not replace state when navGroups gets a new reference — roleNames used to be unstable.)
   useEffect(() => {
-    const initial: Record<string, boolean> = {};
-    navGroups.forEach((g) => {
-      initial[g.label] = g.items.some((item) => pathname.startsWith(item.href));
+    setExpandedGroups((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      navGroups.forEach((g) => {
+        if (next[g.label] === undefined) {
+          next[g.label] = true;
+          changed = true;
+        }
+        const onRoute = g.items.some(
+          (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+        );
+        if (onRoute && !next[g.label]) {
+          next[g.label] = true;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
     });
-    setExpandedGroups(initial);
   }, [pathname, navGroups]);
 
   const toggleGroup = (label: string) => {

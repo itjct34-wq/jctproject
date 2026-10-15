@@ -61,6 +61,12 @@ export function getNavGroupsForRoles(roleNames: RoleName[]): NavGroup[] {
   })).filter((group) => !group.salesNavHidden && group.items.length > 0);
 }
 
+/** First screen after login for role (sales agents land on CRM/finance, not ops dashboard). */
+export function getPostLoginPath(roleNames: RoleName[]): string {
+  if (usesSalesFocusedNav(roleNames)) return '/invoices';
+  return '/dashboard';
+}
+
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
@@ -92,7 +98,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Finance',
     items: [
       { label: 'Invoices', href: '/invoices', icon: Receipt, module: 'invoices' },
-      { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices' },
+      { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices', salesNavHidden: true },
       { label: 'Payments / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
       { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses' },
     ],
