@@ -8,9 +8,6 @@ import {
   Receipt,
   CreditCard,
   Wallet,
-  Ship,
-  FolderOpen,
-  Building2,
   CheckSquare,
   BarChart3,
   Bell,
@@ -112,20 +109,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Export & Shipping',
-    salesNavHidden: true,
-    items: [
-      { label: 'Shipping', href: '/shipments', icon: Ship, module: 'shipments' },
-      { label: 'Export Documents', href: '/documents', icon: FolderOpen, module: 'documents' },
-    ],
-  },
-  {
     label: 'Operations',
     salesNavHidden: true,
     items: [
       { label: 'Offices & shifts', href: '/offices', icon: MapPin, module: 'users', salesNavHidden: true },
       { label: 'Tasks & Approvals', href: '/tasks', icon: CheckSquare, module: 'tasks' },
-      { label: 'Suppliers', href: '/suppliers', icon: Building2 },
       { label: 'Notifications', href: '/notifications', icon: Bell, module: 'notifications' },
     ],
   },

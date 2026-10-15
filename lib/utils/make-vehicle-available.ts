@@ -131,6 +131,7 @@ export async function makeVehicleAvailable(opts: {
       status: 'in_stock',
       customer_id: null,
       reserved_by: null,
+      assigned_agent_id: null,
       reserved_until: null,
       sold_price: null,
       incoterm: null,

@@ -123,6 +123,8 @@ export type StockListCardProps = {
   customerName: string;
   customerCountry: string;
   agentName: string;
+  /** Display name for vehicles.bid_requester_id (BID pill). */
+  bidRequesterName?: string;
   invoice: { id: string; invoice_code: string } | null;
   paymentCount: number;
   allocatedUsd: number;
@@ -132,6 +134,7 @@ export type StockListCardProps = {
   onViewInfo: () => void;
   onEdit?: () => void;
   onAssign?: () => void;
+  onSetBidRequester?: () => void;
   onReserve?: () => void;
   onMakeAvailable?: () => void;
   onShipping?: () => void;
@@ -145,6 +148,7 @@ type StockListCardActionsMenuProps = Pick<
   | 'invoice'
   | 'onEdit'
   | 'onAssign'
+  | 'onSetBidRequester'
   | 'onViewInfo'
   | 'onReserve'
   | 'onMakeAvailable'
@@ -158,6 +162,7 @@ function StockListCardActionsMenu({
   invoice,
   onEdit,
   onAssign,
+  onSetBidRequester,
   onViewInfo,
   onReserve,
   onMakeAvailable,
@@ -168,13 +173,16 @@ function StockListCardActionsMenu({
 }: StockListCardActionsMenuProps) {
   return (
     <>
-      {onEdit || onAssign || onViewInfo ? (
+      {onEdit || onAssign || onSetBidRequester || onViewInfo ? (
         <>
           <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
             Stock
           </DropdownMenuLabel>
           {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit Stock Details</DropdownMenuItem> : null}
           {onAssign ? <DropdownMenuItem onSelect={onAssign}>Assign Stock</DropdownMenuItem> : null}
+          {onSetBidRequester ? (
+            <DropdownMenuItem onSelect={onSetBidRequester}>Set Bid Requester</DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
         </>
       ) : (
@@ -240,6 +248,7 @@ export function StockListCard({
   customerName,
   customerCountry,
   agentName,
+  bidRequesterName = '',
   invoice,
   paymentCount,
   allocatedUsd,
@@ -248,6 +257,7 @@ export function StockListCard({
   onViewInfo,
   onEdit,
   onAssign,
+  onSetBidRequester,
   onReserve,
   onMakeAvailable,
   onShipping,
@@ -287,6 +297,7 @@ export function StockListCard({
   const hasActions = Boolean(
     onEdit ||
       onAssign ||
+      onSetBidRequester ||
       onReserve ||
       onMakeAvailable ||
       onShipping ||
@@ -433,6 +444,13 @@ export function StockListCard({
             <p className="flex items-center gap-1.5 text-slate-700">
               <span className={cn('h-2 w-2 shrink-0 rounded-full', agentDotClass(agentName))} />
               {agentName}
+            </p>
+          ) : null}
+          {bidRequesterName ? (
+            <p className="mt-1">
+              <span className="inline-flex max-w-full items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-900">
+                <span className="truncate">BID {bidRequesterName}</span>
+              </span>
             </p>
           ) : null}
           {v.source_supplier ? <p className="uppercase text-slate-500">{v.source_supplier}</p> : null}
@@ -614,11 +632,19 @@ export function StockListCard({
                         Actions <ChevronDown className="h-3.5 w-3.5 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuContent
+                      side="bottom"
+                      align="end"
+                      sideOffset={4}
+                      collisionPadding={12}
+                      className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <StockListCardActionsMenu
                         invoice={invoice}
                         onEdit={onEdit}
                         onAssign={onAssign}
+                        onSetBidRequester={onSetBidRequester}
                         onViewInfo={onViewInfo}
                         onReserve={onReserve}
                         onMakeAvailable={onMakeAvailable}
@@ -669,11 +695,19 @@ export function StockListCard({
                       Actions <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuContent
+                    side="bottom"
+                    align="end"
+                    sideOffset={4}
+                    collisionPadding={12}
+                    className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <StockListCardActionsMenu
                       invoice={invoice}
                       onEdit={onEdit}
                       onAssign={onAssign}
+                      onSetBidRequester={onSetBidRequester}
                       onViewInfo={onViewInfo}
                       onReserve={onReserve}
                       onMakeAvailable={onMakeAvailable}

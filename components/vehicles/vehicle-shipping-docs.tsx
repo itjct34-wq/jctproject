@@ -6,11 +6,14 @@ import { RecordAttachments } from '@/components/shared/record-attachments';
 export function VehicleShippingDocs({
   vehicleId,
   allowDelete,
+  emptyLabel,
   onChanged,
 }: {
   vehicleId: string;
   /** Who can edit shipping / vehicle — gates delete. */
   allowDelete: boolean;
+  /** Compact empty copy (e.g. Documents tab: "No documents."). */
+  emptyLabel?: string;
   onChanged?: () => void;
 }) {
   return (
@@ -20,6 +23,7 @@ export function VehicleShippingDocs({
       allowUpload={false}
       allowDelete={allowDelete}
       embedded
+      emptyLabel={emptyLabel}
       onChanged={onChanged}
     />
   );

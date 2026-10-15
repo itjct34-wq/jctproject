@@ -320,6 +320,12 @@ export interface Vehicle {
   shipping_status?: 'not_booked' | 'booked' | 'shipped' | 'delivered';
   customer_id?: string | null;
   reserved_by?: string | null;
+  /** Soft pre-reserve assignment to a sales agent (distinct from reserved_by). */
+  assigned_agent_id?: string | null;
+  /** User/agent who wanted to bid on this unit. */
+  bid_requester_id?: string | null;
+  /** Optional requested bid amount (JPY); not required when setting bid_requester_id. */
+  bid_request_price?: number | null;
   shipping_port_of_loading?: string | null;
   shipping_port_of_discharge?: string | null;
   shipping_vessel_name?: string | null;

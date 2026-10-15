@@ -15,6 +15,12 @@ import { supabase } from '@/lib/supabase/client';
 import type { Customer, Office, Vehicle } from '@/lib/types';
 import { createReservationInvoice } from '@/lib/utils/create-reservation-invoice';
 import { isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
+import {
+  BID_MARKUP_RATE,
+  calcFobFromBid,
+  DEFAULT_TT_RATE,
+  FIXED_EXPENSE_JPY,
+} from '@/lib/utils/vehicle-pricing';
 import { publicFobUsd, reservationExclusivityMessage, type VehicleFreightMode, type VehicleIncoterm } from '@/lib/vehicle-lifecycle';
 import { SOURCE_COUNTRIES, loadPortsForCountry } from '@/lib/source-countries';
 
@@ -105,6 +111,23 @@ function emptyCharges(): Record<ChargeKey, string> {
   };
 }
 
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+function money(n: number, ccy = 'USD') {
+  return `${ccy} ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function agentLabel(
+  id: string | null | undefined,
+  agentNames: Record<string, string> | undefined,
+  fallback: string
+) {
+  if (!id) return fallback;
+  return agentNames?.[id]?.trim() || fallback;
+}
+
 export function ReserveVehicleDialog({
   open,
   onOpenChange,
@@ -129,8 +152,9 @@ export function ReserveVehicleDialog({
   const [paymentTermPct, setPaymentTermPct] = useState('100');
   const [freightMode, setFreightMode] = useState<'' | VehicleFreightMode>('');
   const [officeId, setOfficeId] = useState('');
+  const [requesterName, setRequesterName] = useState('');
+  const [requesterAgentId, setRequesterAgentId] = useState<string | null>(null);
   const [charges, setCharges] = useState(emptyCharges);
-  const [sellingPrice, setSellingPrice] = useState('');
 
   const [consigneeName, setConsigneeName] = useState('');
   const [consigneeCountry, setConsigneeCountry] = useState('');
@@ -159,11 +183,28 @@ export function ReserveVehicleDialog({
     [customers, customerId]
   );
 
-  const chargeSum = useMemo(() => {
-    const fob = vehicle ? Number(publicFobUsd(vehicle)) || 0 : 0;
-    const extras = CHARGE_FIELDS.reduce((sum, { key }) => sum + (Number(charges[key]) || 0), 0);
-    return fob + extras;
-  }, [charges, vehicle]);
+  const fobBreakdown = useMemo(() => {
+    if (!vehicle) return null;
+    const bid = vehicle.purchase_price != null ? Number(vehicle.purchase_price) : null;
+    const expense = vehicle.expense_jpy == null ? FIXED_EXPENSE_JPY : Number(vehicle.expense_jpy) || 0;
+    const tt = vehicle.tt_rate == null ? DEFAULT_TT_RATE : Number(vehicle.tt_rate) || DEFAULT_TT_RATE;
+    const calc = bid != null ? calcFobFromBid(bid, expense, tt) : null;
+    const stored = publicFobUsd(vehicle);
+    const fobUsd = stored != null ? Number(stored) : calc ? round2(calc.fobUsd) : null;
+    return { bid, expense, tt, calc, fobUsd };
+  }, [vehicle]);
+
+  const fobUsd = fobBreakdown?.fobUsd ?? null;
+
+  const chargeExtras = useMemo(
+    () => CHARGE_FIELDS.reduce((sum, { key }) => sum + (Number(charges[key]) || 0), 0),
+    [charges]
+  );
+
+  const quotedUsd = Number(quotedPrice) || 0;
+  const discountUsd = Number(discount) || 0;
+  const profitUsd = fobUsd != null && quotedPrice !== '' ? round2(quotedUsd - fobUsd) : null;
+  const invoiceTotal = round2(Math.max(0, quotedUsd + chargeExtras - discountUsd));
 
   useEffect(() => {
     if (!open || !vehicle || !profile) return;
@@ -172,11 +213,17 @@ export function ReserveVehicleDialog({
     due.setDate(due.getDate() + 7);
     const todayStr = today.toISOString().slice(0, 10);
     const dueStr = due.toISOString().slice(0, 10);
-    const fob = publicFobUsd(vehicle);
+    const bid = vehicle.purchase_price != null ? Number(vehicle.purchase_price) : null;
+    const expense = vehicle.expense_jpy == null ? FIXED_EXPENSE_JPY : Number(vehicle.expense_jpy) || 0;
+    const tt = vehicle.tt_rate == null ? DEFAULT_TT_RATE : Number(vehicle.tt_rate) || DEFAULT_TT_RATE;
+    const calc = bid != null ? calcFobFromBid(bid, expense, tt) : null;
+    const stored = publicFobUsd(vehicle);
+    const fob = stored != null ? Number(stored) : calc ? round2(calc.fobUsd) : null;
+
     setCustomerId('');
     setQuotedCurrency('USD');
     setQuotedTerm((vehicle.incoterm as VehicleIncoterm) || 'FOB');
-    setQuotedPrice(fob != null ? String(fob) : '');
+    setQuotedPrice(fob != null ? String(round2(fob)) : '');
     setInvoiceCurrency('USD');
     setShipmentTerm((vehicle.incoterm as VehicleIncoterm) || 'FOB');
     setDestinationCountry('');
@@ -185,12 +232,13 @@ export function ReserveVehicleDialog({
     setPaymentTermPct('100');
     setFreightMode(vehicle.freight_mode === 'roro' || vehicle.freight_mode === 'container' ? vehicle.freight_mode : '');
     setOfficeId(profile.office_id || offices[0]?.id || '');
+    setRequesterName(profile.full_name || profile.email || '');
+    setRequesterAgentId(profile.id);
     setCharges({
       ...emptyCharges(),
       freight: vehicle.shipping_freight_charges != null ? String(vehicle.shipping_freight_charges) : '',
       vanning: vehicle.shipping_vanning_charges != null ? String(vehicle.shipping_vanning_charges) : '',
     });
-    setSellingPrice(fob != null ? String(fob) : '');
     setConsigneeName('');
     setConsigneeCountry('');
     setConsigneeCity('');
@@ -214,19 +262,49 @@ export function ReserveVehicleDialog({
   }, [open, vehicle, profile, offices]);
 
   useEffect(() => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer || !profile) return;
+
     setConsigneeName(selectedCustomer.company_name || selectedCustomer.full_name || '');
     setConsigneeCountry(selectedCustomer.country || '');
     setConsigneeCity(selectedCustomer.city || '');
     setConsigneeAddress(selectedCustomer.address_line1 || '');
     setConsigneePhone(selectedCustomer.phone || '');
     setConsigneeEmail(selectedCustomer.email || '');
-    setDestinationCountry((prev) => prev || selectedCustomer.country || '');
-    if (selectedCustomer.default_currency) {
-      setQuotedCurrency(selectedCustomer.default_currency);
-      setInvoiceCurrency(selectedCustomer.default_currency);
-    }
-  }, [selectedCustomer]);
+    setDestinationCountry(selectedCustomer.country || '');
+
+    // Keep reservation quote/invoice in USD (FOB workflow). Do not flip to customer JPY.
+    setQuotedCurrency('USD');
+    setInvoiceCurrency('USD');
+
+    const agentId = selectedCustomer.assigned_to || profile.id;
+    setRequesterAgentId(agentId);
+    setRequesterName(agentLabel(agentId, agentNames, profile.full_name || profile.email || ''));
+
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, display_name, email, office_id')
+        .eq('id', agentId)
+        .maybeSingle();
+      if (cancelled || !data) {
+        if (!cancelled && agentId === profile.id) {
+          setOfficeId(profile.office_id || offices[0]?.id || '');
+        }
+        return;
+      }
+      const name =
+        (data.display_name || data.full_name || data.email || '').trim() ||
+        agentLabel(agentId, agentNames, profile.full_name || profile.email || '');
+      setRequesterName(name);
+      if (data.office_id) setOfficeId(data.office_id);
+      else if (agentId === profile.id) setOfficeId(profile.office_id || offices[0]?.id || '');
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCustomer, profile, agentNames, offices]);
 
   useEffect(() => {
     if (!notifySame) return;
@@ -237,14 +315,6 @@ export function ReserveVehicleDialog({
     setNotifyPhone(consigneePhone);
     setNotifyEmail(consigneeEmail);
   }, [notifySame, consigneeName, consigneeCountry, consigneeCity, consigneeAddress, consigneePhone, consigneeEmail]);
-
-  useEffect(() => {
-    if (sellingPrice === '' || Number(sellingPrice) === chargeSum || chargeSum > 0) {
-      setSellingPrice(String(Math.round(chargeSum * 100) / 100));
-    }
-    // Only sync when charges/fob change — not when user types selling price
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chargeSum]);
 
   const destPorts = useMemo(() => {
     const match = SOURCE_COUNTRIES.find(
@@ -279,9 +349,14 @@ export function ReserveVehicleDialog({
       return;
     }
 
-    const salePrice = Number(sellingPrice) || chargeSum || 0;
-    if (salePrice <= 0) {
-      toast.error('Selling price must be greater than zero');
+    const vehicleLineUsd = quotedUsd > 0 ? quotedUsd : fobUsd || 0;
+    if (vehicleLineUsd <= 0) {
+      toast.error('Quoted price (USD) must be greater than zero');
+      return;
+    }
+    const totalUsd = round2(Math.max(0, vehicleLineUsd + chargeExtras - discountUsd));
+    if (totalUsd <= 0) {
+      toast.error('Invoice total must be greater than zero');
       return;
     }
 
@@ -310,15 +385,17 @@ export function ReserveVehicleDialog({
     const reservedUntilStr = reservedUntil.toISOString().slice(0, 10);
     const mode: VehicleFreightMode | null =
       freightMode === 'roro' || freightMode === 'container' ? freightMode : null;
+    const reserveAgentId = requesterAgentId || selectedCustomer?.assigned_to || profile.id;
 
     const { data: claimed, error: claimErr } = await supabase
       .from('vehicles')
       .update({
         payment_status: 'reserved',
+        status: 'reserved',
         customer_id: customerId,
-        reserved_by: profile.id,
+        reserved_by: reserveAgentId,
         reserved_until: reservedUntilStr,
-        sold_price: salePrice,
+        sold_price: totalUsd,
         incoterm: shipmentTerm,
         freight_mode: mode,
         shipping_port_of_discharge: destinationPort.trim(),
@@ -351,16 +428,20 @@ export function ReserveVehicleDialog({
         customer_id: customerId,
         vehicle_id: vehicle.id,
         sale_date: invoiceDate,
-        sale_price: salePrice,
+        sale_price: totalUsd,
         currency: invoiceCurrency || 'USD',
         deposit_amount: 0,
         status: 'reserved',
         notes: [
           remarks.trim(),
-          `Quoted ${quotedTerm} ${quotedCurrency} ${quotedPrice || salePrice}`,
+          `Quoted ${quotedTerm} USD ${vehicleLineUsd}`,
+          fobUsd != null ? `FOB USD ${fobUsd}` : '',
+          profitUsd != null ? `Profit USD ${profitUsd}` : '',
+          `Invoice total USD ${totalUsd} (quoted + freight/charges)`,
           `Destination: ${destinationCountry} / ${destinationPort}`,
           auctionHouse ? `Auction / yard: ${auctionHouse}` : '',
           `Payment term: ${paymentTermPct}%`,
+          requesterName ? `Requester: ${requesterName}` : '',
           officeId ? `Office: ${offices.find((o) => o.id === officeId)?.name || officeId}` : '',
         ]
           .filter(Boolean)
@@ -392,8 +473,8 @@ export function ReserveVehicleDialog({
       saleId: saleData.id,
       vehicleId: vehicle.id,
       vehicle: live,
-      salePrice,
-      currency: invoiceCurrency || 'USD',
+      salePrice: vehicleLineUsd,
+      currency: 'USD',
       priceTerm: shipmentTerm,
       shipmentType,
       containerMode,
@@ -402,7 +483,7 @@ export function ReserveVehicleDialog({
       destinationCountry: destinationCountry.trim(),
       freightUsd: Number(charges.freight) || 0,
       insuranceUsd: Number(charges.insurance) || 0,
-      discountUsd: Number(discount) || 0,
+      discountUsd,
       charges: Object.fromEntries(
         CHARGE_FIELDS.map(({ key }) => [key, Number(charges[key]) || 0])
       ) as Record<ChargeKey, number>,
@@ -428,7 +509,7 @@ export function ReserveVehicleDialog({
       paymentTerms: `${paymentTermPct}% T/T in advance`,
       remarks: remarks.trim() || null,
       emailInvoice,
-      salesAgentName: profile.full_name || profile.email || null,
+      salesAgentName: requesterName || profile.full_name || profile.email || null,
       createdBy: profile.id,
       invoiceType: 'commercial',
     });
@@ -444,6 +525,8 @@ export function ReserveVehicleDialog({
   };
 
   if (!vehicle) return null;
+
+  const markupPct = Math.round(BID_MARKUP_RATE * 100);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -483,11 +566,16 @@ export function ReserveVehicleDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Quoted Price">
-                <Input type="number" value={quotedPrice} onChange={(e) => setQuotedPrice(e.target.value)} />
+              <Field label="Quoted Price (USD)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={quotedPrice}
+                  onChange={(e) => setQuotedPrice(e.target.value)}
+                />
               </Field>
               <Field label="Requester Person" required>
-                <Input value={profile?.full_name || profile?.email || ''} readOnly />
+                <Input value={requesterName} readOnly />
               </Field>
               <Field label="Person Office" required>
                 <Select value={officeId || 'none'} onValueChange={(v) => setOfficeId(v === 'none' ? '' : v)}>
@@ -552,21 +640,85 @@ export function ReserveVehicleDialog({
                 <Input type="number" min={1} value={reserveDays} onChange={(e) => setReserveDays(e.target.value)} />
               </Field>
             </div>
+
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Reservation pricing (USD FOB)
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Bid (purchase)</p>
+                  <p className="font-medium">
+                    {fobBreakdown?.bid != null
+                      ? `¥${Math.round(fobBreakdown.bid).toLocaleString()}`
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">+{markupPct}% markup</p>
+                  <p className="font-medium">
+                    {fobBreakdown?.calc
+                      ? `¥${Math.round(fobBreakdown.calc.markupJpy).toLocaleString()}`
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">+ Expense JPY</p>
+                  <p className="font-medium">
+                    {fobBreakdown
+                      ? `¥${Math.round(fobBreakdown.expense).toLocaleString()}`
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">÷ TT rate</p>
+                  <p className="font-medium">{fobBreakdown ? fobBreakdown.tt : DEFAULT_TT_RATE}</p>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 border-t border-border/50 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">FOB USD</p>
+                  <p className="font-semibold text-primary">
+                    {fobUsd != null ? money(fobUsd) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Profit (quoted − FOB)</p>
+                  <p className={`font-semibold ${profitUsd != null && profitUsd < 0 ? 'text-destructive' : ''}`}>
+                    {profitUsd != null ? money(profitUsd) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Freight + charges</p>
+                  <p className="font-medium">{money(chargeExtras)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Invoice total</p>
+                  <p className="font-semibold">{money(invoiceTotal)}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                (Bid + {markupPct}% + expense) ÷ TT → FOB USD · quoted − FOB = profit · quoted + freight/charges − discount = invoice
+              </p>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {CHARGE_FIELDS.map(({ key, label }) => (
-                <Field key={key} label={label}>
+                <Field key={key} label={`${label} (USD)`}>
                   <Input
                     type="number"
+                    step="0.01"
                     value={charges[key]}
                     onChange={(e) => setCharges((prev) => ({ ...prev, [key]: e.target.value }))}
                   />
                 </Field>
               ))}
             </div>
-            <Field label="Selling Price (FOB + charges)" required className="max-w-xs space-y-1">
-              <Input type="number" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} />
+            <Field label="Selling / invoice amount (USD)" required className="max-w-xs space-y-1">
+              <Input type="number" readOnly value={String(invoiceTotal)} />
               <p className="text-[11px] text-muted-foreground">
-                Prefill FOB {vehicle ? publicFobUsd(vehicle) ?? '—' : '—'} · charge sum {chargeSum.toLocaleString()}
+                Quoted {quotedPrice !== '' ? money(quotedUsd) : '—'} + charges {money(chargeExtras)}
+                {discountUsd > 0 ? ` − discount ${money(discountUsd)}` : ''}
               </p>
             </Field>
           </section>
@@ -613,17 +765,14 @@ export function ReserveVehicleDialog({
               <Field label="Payment due" required>
                 <Input type="date" value={paymentDue} onChange={(e) => setPaymentDue(e.target.value)} />
               </Field>
-              <Field label="Discount">
-                <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+              <Field label="Discount (USD)">
+                <Input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
               </Field>
-              <Field label="Invoice amount">
-                <Input readOnly value={sellingPrice} />
+              <Field label="Invoice amount (USD)">
+                <Input readOnly value={String(invoiceTotal)} />
               </Field>
-              <Field label="Total">
-                <Input
-                  readOnly
-                  value={String(Math.max(0, (Number(sellingPrice) || 0) - (Number(discount) || 0)))}
-                />
+              <Field label="Total (USD)">
+                <Input readOnly value={String(invoiceTotal)} />
               </Field>
             </div>
             <label className="flex items-center gap-2 text-sm font-medium">
