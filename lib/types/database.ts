@@ -306,6 +306,18 @@ export interface Vehicle {
   listed_price: number | null;
   listed_currency: string;
   status: 'in_stock' | 'reserved' | 'sold' | 'in_transit' | 'exported' | 'on_hold' | 'archived';
+  payment_status?: 'available' | 'reserved' | 'partial_paid' | 'paid';
+  shipping_status?: 'not_booked' | 'booked' | 'shipped' | 'delivered';
+  customer_id?: string | null;
+  reserved_by?: string | null;
+  shipping_port_of_loading?: string | null;
+  shipping_port_of_discharge?: string | null;
+  shipping_vessel_name?: string | null;
+  shipping_bl_number?: string | null;
+  shipping_line?: string | null;
+  shipping_etd?: string | null;
+  shipping_eta?: string | null;
+  shipping_notes?: string | null;
   location: string | null;
   arrival_date: string | null;
   reserved_until: string | null;
@@ -533,6 +545,8 @@ export interface Payment {
   customer_id: string | null;
   invoice_id: string | null;
   sale_id: string | null;
+  vehicle_id?: string | null;
+  sales_agent_id?: string | null;
   payment_date: string;
   amount: number;
   currency: string;

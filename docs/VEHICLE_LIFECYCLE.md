@@ -1,29 +1,64 @@
 # Vehicle Lifecycle
 
-## Status enum
+## Two tracks (do not mix)
 
-`vehicles.status` must be one of:
+ERP uses **orthogonal** payment and shipping tracks on `vehicles` (migration **`025_vehicle_payment_shipping_rls.sql`**). Legacy **`vehicles.status`** remains for public listing and history; it is **synced** from the two tracks when `payment_status` or `shipping_status` changes (except `on_hold` / `archived` overrides).
 
-| Status | Meaning |
+### Payment track — `payment_status`
+
+| Value | Meaning |
 |--------|---------|
-| `in_stock` | Available in yard/stock |
-| `reserved` | Committed to buyer; still shown on public site |
-| `sold` | Sold; hidden from public |
-| `in_transit` | Shipping; hidden from public |
-| `exported` | Completed export; hidden from public |
-| `on_hold` | Blocked from sale; hidden from public |
-| `archived` | Retired record; hidden from public |
+| `available` | Open for reservation / sale |
+| `reserved` | Committed to a customer (`customer_id`, `reserved_by`) |
+| `partial_paid` | T/T allocated; total received &lt; listed price |
+| `paid` | T/T allocated; received total ≥ listed price (when listed price set) |
 
-Defined in migration `003_vehicle_inventory.sql` and `lib/types/database.ts`.
+### Shipping track — `shipping_status`
+
+| Value | Meaning |
+|--------|---------|
+| `not_booked` | No export booking yet |
+| `booked` | Booking / documentation in progress |
+| `shipped` | On vessel / in transit |
+| `delivered` | Delivered to buyer destination |
+
+Shipping detail fields on the vehicle row: `shipping_port_of_loading`, `shipping_port_of_discharge`, `shipping_vessel_name`, `shipping_bl_number`, `shipping_line`, `shipping_etd`, `shipping_eta`, `shipping_notes`.
+
+## Legacy status enum — `vehicles.status`
+
+Still required for public filters and existing reports:
+
+| Status | Typical source |
+|--------|----------------|
+| `in_stock` | `payment_status = available` |
+| `reserved` | `payment_status` in (`reserved`, `partial_paid`) |
+| `sold` | `payment_status = paid`, shipping not yet in transit |
+| `in_transit` | `paid` + `shipping_status = shipped` |
+| `exported` | `paid` + `shipping_status = delivered` |
+| `on_hold` | Manual ops block (not auto-overwritten by sync trigger) |
+| `archived` | Retired record |
+
+Defined originally in migration `003_vehicle_inventory.sql`; sync trigger in **`025`**.
 
 ## Public visibility
 
 - Anon and public queries filter **`in_stock`** and **`reserved`** only (`lib/public/vehicles.ts`, RLS on `vehicle_images`).
 - Home page “arrivals” slice uses **`in_stock`** subset (`lib/public/home-data.ts`).
 
+## Reservation
+
+- **Sales agent / freelancer**: may update a vehicle from **`available` → `reserved`**, set `customer_id`, `reserved_by`, `reserved_until` (vehicles UI **Reserve** or sales reservation flow). RLS + trigger block edits to specs, pricing, or shipping.
+- **Operations / manager / admin**: full stock edit; shipping dialog and courier uploads.
+
+## Courier documents
+
+- Stored as **`record_attachments`** with `entity_type = 'vehicles'` (private **`record-attachments`** bucket).
+- **Upload**: admin, operations, manager.
+- **View / download**: anyone who can view the vehicle (including sales on their customer’s units).
+
 ## History
 
-- **`vehicle_status_history`** stores operational history rows; insert policies limited to operations roles; select for inventory-access roles.
+- **`vehicle_status_history`** stores operational history rows; insert for staff and selling roles on reserve (`025`); select for inventory-access roles.
 
 ## Stock identity
 
@@ -39,11 +74,12 @@ Defined in migration `003_vehicle_inventory.sql` and `lib/types/database.ts`.
 - **`vehicle_images.sort_order`** and **`is_primary`** control gallery order.
 - Upload path: manual ERP or bulk ZIP import → **`vehicle-images`** storage.
 
-## Transitions
+## UI helpers
 
-- Status changes are performed in ERP vehicles UI; no centralized state machine service — validators enforce allowed enum strings on import.
+- Labels and badges: `lib/vehicle-lifecycle.ts`
+- Stock page: payment/shipping badges, **Edit stock**, **Shipping**, **Reserve**, courier attachments.
 
 ## Recovery
 
-- Incorrect status: operations users with edit rights update row and optionally log history note.
-- Wrong public exposure: set status outside `in_stock`/`reserved` or archive.
+- Incorrect payment/shipping track: staff with edit rights update columns; legacy `status` follows on next track change.
+- Wrong public exposure: set payment track to non-public combination or `on_hold` / `archived`.

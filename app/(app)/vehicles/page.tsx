@@ -27,8 +27,19 @@ import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
 import { parseStockCategory, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
 import { nextVehicleStockNumber } from '@/lib/utils/stock-number';
 import { mergeEngineIntoNotes, publicEngineFromNotes, stripEngineFromNotes } from '@/lib/public/vehicles';
-import type { Vehicle } from '@/lib/types';
-import { CarFront, ChevronRight, DollarSign, Download, Loader2, MapPin, Pencil, Plus, Search, Trash2, Warehouse } from 'lucide-react';
+import type { Customer, Vehicle } from '@/lib/types';
+import {
+  effectivePaymentStatus,
+  effectiveShippingStatus,
+  emptyShippingForm,
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUS_STYLES,
+  SHIPPING_STATUS_LABELS,
+  SHIPPING_STATUS_STYLES,
+  type VehicleShippingStatus,
+} from '@/lib/vehicle-lifecycle';
+import { AttachmentCountBadge, RecordAttachments, useAttachmentCounts } from '@/components/shared/record-attachments';
+import { CarFront, ChevronRight, Loader2, MapPin, Pencil, Plus, Search, Ship, Tag, Trash2 } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 
@@ -54,11 +65,15 @@ const emptyForm = {
 
 export default function VehiclesPage() {
   const { profile } = useAuth();
-  const { can } = usePermissions();
+  const { can, hasRole } = usePermissions();
   const canCreateVehicle = can('vehicles', 'create');
   const canEditVehicle = can('vehicles', 'edit');
   const canDeleteVehicle = can('vehicles', 'delete');
+  const canReserveStock =
+    (hasRole('sales_agent') || hasRole('freelancer')) && !canEditVehicle;
+  const canEditShipping = canEditVehicle;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [customers, setCustomers] = useState<Pick<Customer, 'id' | 'full_name' | 'customer_code'>[]>([]);
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -73,12 +88,23 @@ export default function VehiclesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<Vehicle['status']>('in_stock');
+  const [reserveOpen, setReserveOpen] = useState(false);
+  const [reserveCustomerId, setReserveCustomerId] = useState('');
+  const [reserveDays, setReserveDays] = useState('7');
+  const [shippingOpen, setShippingOpen] = useState(false);
+  const [shippingForm, setShippingForm] = useState(emptyShippingForm);
+  const vehicleIds = useMemo(() => vehicles.map((v) => v.id), [vehicles]);
+  const { counts: courierDocCounts } = useAttachmentCounts('vehicles', vehicleIds);
 
   const loadVehicles = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('vehicles').select('*').order('updated_at', { ascending: false });
-    if (error) toast.error(`Unable to load inventory: ${error.message}`);
-    else setVehicles((data || []) as Vehicle[]);
+    const [vRes, cRes] = await Promise.all([
+      supabase.from('vehicles').select('*').order('updated_at', { ascending: false }),
+      supabase.from('customers').select('id, full_name, customer_code').order('full_name'),
+    ]);
+    if (vRes.error) toast.error(`Unable to load inventory: ${vRes.error.message}`);
+    else setVehicles((vRes.data || []) as Vehicle[]);
+    if (cRes.data) setCustomers(cRes.data);
     setLoading(false);
   }, []);
 
@@ -261,10 +287,101 @@ export default function VehiclesPage() {
     else { toast.success('Bulk status updated'); setBulkStatusOpen(false); setSelectedIds(new Set()); await loadVehicles(); }
   };
 
+  const customerLabel = (id: string | null) =>
+    id ? customers.find((c) => c.id === id)?.full_name || 'Customer' : '';
+
+  const openReserve = () => {
+    if (!selected) return;
+    setReserveCustomerId('');
+    setReserveDays('7');
+    setReserveOpen(true);
+  };
+
+  const submitReserve = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !selected || !reserveCustomerId) return;
+    const days = Math.max(1, Number(reserveDays) || 7);
+    const reservedUntil = new Date();
+    reservedUntil.setDate(reservedUntil.getDate() + days);
+    const reservedUntilStr = reservedUntil.toISOString().slice(0, 10);
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('vehicles')
+      .update({
+        payment_status: 'reserved',
+        customer_id: reserveCustomerId,
+        reserved_by: profile.id,
+        reserved_until: reservedUntilStr,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selected.id);
+    if (error) {
+      setSubmitting(false);
+      toast.error(error.message);
+      return;
+    }
+    await supabase.from('vehicle_status_history').insert({
+      vehicle_id: selected.id,
+      from_status: selected.status,
+      to_status: 'reserved',
+      note: `Reserved for ${customerLabel(reserveCustomerId)} until ${reservedUntilStr}`,
+      changed_by: profile.id,
+    });
+    setSubmitting(false);
+    toast.success(`Reserved for ${customerLabel(reserveCustomerId)}`);
+    setReserveOpen(false);
+    await loadVehicles();
+  };
+
+  const openShippingEdit = () => {
+    if (!selected) return;
+    setShippingForm({
+      shipping_status: effectiveShippingStatus(selected),
+      shipping_port_of_loading: selected.shipping_port_of_loading || '',
+      shipping_port_of_discharge: selected.shipping_port_of_discharge || '',
+      shipping_vessel_name: selected.shipping_vessel_name || '',
+      shipping_bl_number: selected.shipping_bl_number || '',
+      shipping_line: selected.shipping_line || '',
+      shipping_etd: selected.shipping_etd || '',
+      shipping_eta: selected.shipping_eta || '',
+      shipping_notes: selected.shipping_notes || '',
+    });
+    setShippingOpen(true);
+  };
+
+  const submitShipping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected || !canEditShipping) return;
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('vehicles')
+      .update({
+        shipping_status: shippingForm.shipping_status,
+        shipping_port_of_loading: shippingForm.shipping_port_of_loading.trim() || null,
+        shipping_port_of_discharge: shippingForm.shipping_port_of_discharge.trim() || null,
+        shipping_vessel_name: shippingForm.shipping_vessel_name.trim() || null,
+        shipping_bl_number: shippingForm.shipping_bl_number.trim() || null,
+        shipping_line: shippingForm.shipping_line.trim() || null,
+        shipping_etd: shippingForm.shipping_etd || null,
+        shipping_eta: shippingForm.shipping_eta || null,
+        shipping_notes: shippingForm.shipping_notes.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selected.id);
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Shipping updated');
+    setShippingOpen(false);
+    await loadVehicles();
+  };
+
   const stats = {
     total: vehicles.length,
-    available: vehicles.filter((v) => v.status === 'in_stock').length,
-    reserved: vehicles.filter((v) => v.status === 'reserved').length,
+    available: vehicles.filter((v) => effectivePaymentStatus(v) === 'available').length,
+    reserved: vehicles.filter((v) => effectivePaymentStatus(v) === 'reserved').length,
   };
 
   return (
@@ -309,7 +426,15 @@ export default function VehiclesPage() {
                   {v.primary_image_url ? <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" /> : <CarFront className="h-5 w-5 text-primary" />}
                 </div>
                 <div className="min-w-0 flex-1"><p className="font-medium">{v.make} {v.model}</p><p className="text-xs text-muted-foreground">{stockCategoryLabel(parseStockCategory(v.stock_category))} · {v.stock_number} · {v.chassis_number}{v.part_sku ? ` · ${v.part_sku}` : ''}{v.source_country ? ` · ${v.source_country}` : ''}{v.source_country_code ? ` (${v.source_country_code})` : ''}</p></div>
-                <Badge variant="outline" className={statusStyles[v.status]}>{statusLabels[v.status]}</Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="outline" className={PAYMENT_STATUS_STYLES[effectivePaymentStatus(v)]}>
+                    {PAYMENT_STATUS_LABELS[effectivePaymentStatus(v)]}
+                  </Badge>
+                  <Badge variant="outline" className={SHIPPING_STATUS_STYLES[effectiveShippingStatus(v)]}>
+                    {SHIPPING_STATUS_LABELS[effectiveShippingStatus(v)]}
+                  </Badge>
+                  <AttachmentCountBadge count={courierDocCounts[v.id] || 0} />
+                </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
@@ -358,22 +483,84 @@ export default function VehiclesPage() {
         </form>
       </DialogContent></Dialog>
 
-      <Sheet open={!!selected && !editOpen && !deleteOpen} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">{selected && (<>
-          <SheetHeader><SheetTitle>{selected.make} {selected.model}</SheetTitle><SheetDescription>{selected.stock_number}</SheetDescription></SheetHeader>
+          <SheetHeader><SheetTitle>{selected.make} {selected.model}</SheetTitle><SheetDescription>{selected.stock_number} · {statusLabels[selected.status]}</SheetDescription></SheetHeader>
           {selected.primary_image_url && <img src={selected.primary_image_url} alt="" className="mt-4 rounded-lg w-full max-h-48 object-cover" />}
-          {(canEditVehicle || canDeleteVehicle) && (
-            <div className="mt-4 flex gap-2">
-              {canEditVehicle && (
-                <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit + photos</Button>
-              )}
-              {canDeleteVehicle && (
-                <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
-              )}
-            </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Badge variant="outline" className={PAYMENT_STATUS_STYLES[effectivePaymentStatus(selected)]}>{PAYMENT_STATUS_LABELS[effectivePaymentStatus(selected)]}</Badge>
+            <Badge variant="outline" className={SHIPPING_STATUS_STYLES[effectiveShippingStatus(selected)]}>{SHIPPING_STATUS_LABELS[effectiveShippingStatus(selected)]}</Badge>
+          </div>
+          {selected.customer_id && (
+            <p className="mt-2 text-sm text-muted-foreground">Buyer: {customerLabel(selected.customer_id)}</p>
           )}
+          {selected.reserved_until && (
+            <p className="text-xs text-muted-foreground">Reserved until {selected.reserved_until}</p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {canReserveStock && effectivePaymentStatus(selected) === 'available' && (
+              <Button size="sm" onClick={openReserve}><Tag className="h-3.5 w-3.5 mr-1" />Reserve</Button>
+            )}
+            {canEditVehicle && (
+              <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit stock</Button>
+            )}
+            {canEditShipping && (
+              <Button size="sm" variant="outline" onClick={openShippingEdit}><Ship className="h-3.5 w-3.5 mr-1" />Shipping</Button>
+            )}
+            {canDeleteVehicle && (
+              <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+            )}
+          </div>
+          <RecordAttachments
+            entityType="vehicles"
+            entityId={selected.id}
+            allowUpload={canEditShipping}
+          />
         </>)}</SheetContent>
       </Sheet>
+
+      <Dialog open={reserveOpen} onOpenChange={setReserveOpen}><DialogContent>
+        <DialogHeader><DialogTitle>Reserve vehicle</DialogTitle></DialogHeader>
+        <form onSubmit={submitReserve} className="space-y-3">
+          <div className="space-y-1"><Label>Customer *</Label>
+            <Select value={reserveCustomerId} onValueChange={setReserveCustomerId}>
+              <SelectTrigger><SelectValue placeholder="Select your customer" /></SelectTrigger>
+              <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name} ({c.customer_code})</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1"><Label>Hold (days)</Label><Input type="number" min={1} value={reserveDays} onChange={(e) => setReserveDays(e.target.value)} /></div>
+          <DialogFooter><Button type="submit" disabled={submitting || !reserveCustomerId}>Confirm reserve</Button></DialogFooter>
+        </form>
+      </DialogContent></Dialog>
+
+      <Dialog open={shippingOpen} onOpenChange={setShippingOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>Shipping &amp; export</DialogTitle></DialogHeader>
+        <form onSubmit={submitShipping} className="space-y-3">
+          <div className="space-y-1"><Label>Shipping status</Label>
+            <Select value={shippingForm.shipping_status} onValueChange={(v: VehicleShippingStatus) => setShippingForm({ ...shippingForm, shipping_status: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(SHIPPING_STATUS_LABELS).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>POL</Label><Input value={shippingForm.shipping_port_of_loading} onChange={(e) => setShippingForm({ ...shippingForm, shipping_port_of_loading: e.target.value })} /></div>
+            <div className="space-y-1"><Label>POD</Label><Input value={shippingForm.shipping_port_of_discharge} onChange={(e) => setShippingForm({ ...shippingForm, shipping_port_of_discharge: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Vessel</Label><Input value={shippingForm.shipping_vessel_name} onChange={(e) => setShippingForm({ ...shippingForm, shipping_vessel_name: e.target.value })} /></div>
+            <div className="space-y-1"><Label>B/L number</Label><Input value={shippingForm.shipping_bl_number} onChange={(e) => setShippingForm({ ...shippingForm, shipping_bl_number: e.target.value })} /></div>
+          </div>
+          <div className="space-y-1"><Label>Shipping line</Label><Input value={shippingForm.shipping_line} onChange={(e) => setShippingForm({ ...shippingForm, shipping_line: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>ETD</Label><Input type="date" value={shippingForm.shipping_etd} onChange={(e) => setShippingForm({ ...shippingForm, shipping_etd: e.target.value })} /></div>
+            <div className="space-y-1"><Label>ETA</Label><Input type="date" value={shippingForm.shipping_eta} onChange={(e) => setShippingForm({ ...shippingForm, shipping_eta: e.target.value })} /></div>
+          </div>
+          <div className="space-y-1"><Label>Notes</Label><Textarea rows={2} value={shippingForm.shipping_notes} onChange={(e) => setShippingForm({ ...shippingForm, shipping_notes: e.target.value })} /></div>
+          <DialogFooter><Button type="submit" disabled={submitting}>Save shipping</Button></DialogFooter>
+        </form>
+      </DialogContent></Dialog>
 
       <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}><DialogContent>
         <DialogHeader><DialogTitle>Bulk status</DialogTitle></DialogHeader>
