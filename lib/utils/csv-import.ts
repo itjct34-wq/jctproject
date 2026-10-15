@@ -30,6 +30,13 @@ const HEADER_ALIASES: Record<string, string> = {
   photos: 'image_urls',
   images: 'image_urls',
   image_url_list: 'image_urls',
+  category: 'stock_category',
+  listing_type: 'stock_category',
+  stock_cat: 'stock_category',
+  part_number: 'part_sku',
+  part_no: 'part_sku',
+  sku: 'part_sku',
+  part: 'part_sku',
 };
 
 function applyHeaderAlias(header: string): string {
@@ -172,7 +179,10 @@ export function splitImageUrls(row: Record<string, string>): string[] {
 export const VEHICLE_CSV_HEADERS = [
   'source_country',
   'source_country_code',
+  'stock_category',
   'chassis_number',
+  'part_sku',
+  'stock_number',
   'make',
   'model',
   'model_grade',
@@ -197,19 +207,19 @@ export const VEHICLE_CSV_HEADERS = [
 
 export const VEHICLE_CSV_SAMPLES: string[][] = [
   [
-    'Japan', 'JP', 'ABC123456789', 'Toyota', 'Prius', 'S', '2019', '2019', 'White', '45000',
+    'Japan', 'JP', 'car', 'ABC123456789', '', '', 'Toyota', 'Prius', 'S', '2019', '2019', 'White', '45000',
     'automatic', 'hybrid', 'USS Tokyo', '800000', 'JPY', '6500', 'USD',
     'Nagoya Yard', '2026-01-15', 'in_stock', 'Clean title',
     'https://example.com/prius.jpg', 'https://example.com/prius-2.jpg',
   ],
   [
-    'United Arab Emirates', 'AE', 'NZE141000001', 'Toyota', 'Axio', 'X', '2018', '2018', 'Silver', '62000',
+    'United Arab Emirates', 'AE', 'machinery', 'NZE141000001', '', '', 'Toyota', 'Axio', 'X', '2018', '2018', 'Silver', '62000',
     'cvt', 'petrol', 'Dubai yard', '9000', 'AED', '7200', 'USD',
     'Dubai', '2026-02-01', 'in_stock', '',
     'https://example.com/axio.jpg', '',
   ],
   [
-    'United Kingdom', 'GB', 'NCP81Z000002', 'Honda', 'Fit', 'RS', '2017', '2017', 'Blue', '51000',
+    'United Kingdom', 'GB', 'parts', 'NCP81Z000002', 'NCP81-FILTER', 'JCT-P-2001', 'Honda', 'Fit', 'RS', '2017', '2017', 'Blue', '51000',
     'automatic', 'petrol', 'UK stock', '4500', 'GBP', '5800', 'USD',
     'Felixstowe', '2026-03-01', 'in_stock', '',
     '', '',

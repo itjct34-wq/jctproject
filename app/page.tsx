@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CountryList } from '@/components/public/home/country-list';
 import { CtaBand } from '@/components/public/home/cta-band';
+import { HeroGallery } from '@/components/public/home/hero-gallery';
 import { HeroSearch } from '@/components/public/home/hero-search';
+import { SourceMarketsSection } from '@/components/public/home/source-markets-section';
 import { HomeShell } from '@/components/public/home/home-shell';
 import { MakeList } from '@/components/public/home/make-list';
 import { StepsSection } from '@/components/public/home/steps-section';
@@ -66,18 +68,7 @@ export default async function HomePage() {
             <HeroSearch makes={makeNames} modelsByMake={modelsByMake} />
           </div>
         </div>
-        <div className="relative">
-          <div
-            className="aspect-[4/3] overflow-hidden rounded-[20px] bg-gradient-to-br from-[#0B1F33] via-[#16324d] to-[#0B1F33]"
-            role="img"
-            aria-label="Japanese export yard — photo coming soon"
-          />
-          <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-white p-4 shadow-[0_12px_40px_rgba(11,31,51,0.18)] sm:left-auto sm:right-6 sm:w-64">
-            <p className="text-[11px] uppercase tracking-wider text-[var(--jct-muted-2)]">RORO and container</p>
-            <p className="mt-1 font-display text-sm font-semibold text-[var(--jct-navy)]">Price terms you can choose</p>
-            <p className="mt-2 text-sm text-[var(--jct-muted)]">FOB / C&amp;F / CIF</p>
-          </div>
-        </div>
+        <HeroGallery />
       </section>
 
       <TrustStrip />
@@ -103,6 +94,7 @@ export default async function HomePage() {
       )}
 
       <StepsSection />
+      <SourceMarketsSection />
       <CountryList />
       <CtaBand />
     </HomeShell>

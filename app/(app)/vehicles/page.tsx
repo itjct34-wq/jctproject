@@ -23,6 +23,8 @@ import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images
 import { VehiclesBulkImportButton } from '@/components/vehicles/vehicles-bulk-import-button';
 import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
 import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
+import { parseStockCategory, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
+import { nextVehicleStockNumber } from '@/lib/utils/stock-number';
 import { mergeEngineIntoNotes, publicEngineFromNotes, stripEngineFromNotes } from '@/lib/public/vehicles';
 import type { Vehicle } from '@/lib/types';
 import { CarFront, ChevronRight, DollarSign, Download, Loader2, MapPin, Pencil, Plus, Search, Trash2, Warehouse } from 'lucide-react';
@@ -43,7 +45,8 @@ const statusLabels: Record<Vehicle['status'], string> = {
   exported: 'Exported', on_hold: 'On hold', archived: 'Archived',
 };
 const emptyForm = {
-  chassis_number: '', stock_number: '', make: '', model: '', colour: '', model_year: '',
+  stock_category: 'car' as StockCategory,
+  chassis_number: '', stock_number: '', part_sku: '', make: '', model: '', colour: '', model_year: '',
   engine: '', transmission: '', listed_price: '', listed_currency: 'USD',
   notes: '', primary_image_url: '', source_country_code: 'JP',
 };
@@ -56,6 +59,7 @@ export default function VehiclesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -79,20 +83,33 @@ export default function VehiclesPage() {
     const q = search.trim().toLowerCase();
     return vehicles.filter((v) => {
       const matchesStatus = statusFilter === 'all' || v.status === statusFilter;
-      const matchesSearch = !q || [v.stock_number, v.chassis_number, v.make, v.model].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
-      return matchesStatus && matchesSearch;
+      const matchesCategory = categoryFilter === 'all' || parseStockCategory(v.stock_category) === categoryFilter;
+      const matchesSearch = !q || [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
+      return matchesStatus && matchesCategory && matchesSearch;
     });
-  }, [vehicles, search, statusFilter]);
+  }, [vehicles, search, statusFilter, categoryFilter]);
 
-  const openCreate = () => { setForm(emptyForm); setGallery([]); setCreateOpen(true); };
+  const openCreate = () => {
+    const defaultCategory: StockCategory =
+      categoryFilter === 'machinery' || categoryFilter === 'parts' ? categoryFilter : 'car';
+    setForm({
+      ...emptyForm,
+      stock_category: defaultCategory,
+      stock_number: nextVehicleStockNumber(vehicles.map((v) => v.stock_number)),
+    });
+    setGallery([]);
+    setCreateOpen(true);
+  };
 
   const openEdit = async () => {
     if (!selected) return;
     const imgs = await loadVehicleImages(selected.id);
     setGallery(imgs.length ? imgs : (selected.primary_image_url ? [{ image_url: selected.primary_image_url, sort_order: 0, is_primary: true }] : []));
     setForm({
+      stock_category: parseStockCategory(selected.stock_category),
       chassis_number: selected.chassis_number,
       stock_number: selected.stock_number || '',
+      part_sku: selected.part_sku || '',
       make: selected.make,
       model: selected.model,
       colour: selected.color || '',
@@ -110,12 +127,19 @@ export default function VehiclesPage() {
 
   const submitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !form.chassis_number.trim() || !form.make.trim() || !form.model.trim()) return;
+    const category = parseStockCategory(form.stock_category);
+    const chassis = form.chassis_number.trim() || (category === 'parts' ? (form.part_sku.trim() || form.stock_number.trim()) : '');
+    if (!profile || !chassis || !form.make.trim() || !form.model.trim()) {
+      toast.error(category === 'parts' ? 'Part number, stock no., or chassis is required' : 'Chassis, make, and model are required');
+      return;
+    }
     setSubmitting(true);
     const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
     const origin = resolveSourceCountry(form.source_country_code);
     const insertPayload: Record<string, unknown> = {
-      chassis_number: form.chassis_number.trim(),
+      chassis_number: chassis,
+      stock_category: category,
+      part_sku: form.part_sku.trim() || (category === 'parts' ? chassis : null),
       make: form.make.trim(),
       model: form.model.trim(),
       color: form.colour.trim() || null,
@@ -128,12 +152,12 @@ export default function VehiclesPage() {
       source_country: origin?.name || 'Japan',
       source_country_code: origin?.code || 'JP',
       created_by: profile.id,
+      stock_number: form.stock_number.trim() || nextVehicleStockNumber(vehicles.map((v) => v.stock_number)),
     };
-    if (form.stock_number.trim()) insertPayload.stock_number = form.stock_number.trim();
     let { data, error } = await supabase.from('vehicles').insert(insertPayload).select().maybeSingle();
-    if (error && /source_country_code/i.test(error.message)) {
-      const { source_country_code: _c, ...rest } = insertPayload;
-      void _c;
+    if (error && /source_country_code|stock_category|part_sku/i.test(error.message)) {
+      const { source_country_code: _c, stock_category: _sc, part_sku: _sku, ...rest } = insertPayload;
+      void _c; void _sc; void _sku;
       ({ data, error } = await supabase.from('vehicles').insert(rest).select().maybeSingle());
     }
     if (error) { setSubmitting(false); toast.error(error.message); return; }
@@ -143,7 +167,7 @@ export default function VehiclesPage() {
       }
     }
     setSubmitting(false);
-    toast.success('Vehicle added');
+    toast.success('Stock added');
     setCreateOpen(false);
     setGallery([]);
     await loadVehicles();
@@ -159,9 +183,18 @@ export default function VehiclesPage() {
       toast.error(err instanceof Error ? err.message : 'Photos save failed');
     }
     const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
+    const category = parseStockCategory(form.stock_category);
+    const chassis = form.chassis_number.trim() || (category === 'parts' ? (form.part_sku.trim() || form.stock_number.trim()) : '');
+    if (!chassis || !form.make.trim() || !form.model.trim()) {
+      setSubmitting(false);
+      toast.error(category === 'parts' ? 'Part number, stock no., or chassis is required' : 'Chassis, make, and model are required');
+      return;
+    }
     const origin = resolveSourceCountry(form.source_country_code);
     const updatePayload: Record<string, unknown> = {
-      chassis_number: form.chassis_number.trim(),
+      chassis_number: chassis,
+      stock_category: category,
+      part_sku: form.part_sku.trim() || (category === 'parts' ? chassis : null),
       make: form.make.trim(),
       model: form.model.trim(),
       color: form.colour.trim() || null,
@@ -176,15 +209,16 @@ export default function VehiclesPage() {
       updated_at: new Date().toISOString(),
     };
     if (form.stock_number.trim()) updatePayload.stock_number = form.stock_number.trim();
+    else updatePayload.stock_number = selected.stock_number;
     let { error } = await supabase.from('vehicles').update(updatePayload).eq('id', selected.id);
-    if (error && /source_country_code/i.test(error.message)) {
-      const { source_country_code: _c, ...rest } = updatePayload;
-      void _c;
+    if (error && /source_country_code|stock_category|part_sku/i.test(error.message)) {
+      const { source_country_code: _c, stock_category: _sc, part_sku: _sku, ...rest } = updatePayload;
+      void _c; void _sc; void _sku;
       ({ error } = await supabase.from('vehicles').update(rest).eq('id', selected.id));
     }
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
-    toast.success('Vehicle updated');
+    toast.success('Stock updated');
     setEditOpen(false);
     await loadVehicles();
   };
@@ -218,11 +252,11 @@ export default function VehiclesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Vehicle Inventory" description="Multi-photo stock · chassis · pricing"
+      <PageHeader title="Stock inventory" description="Cars, machinery, and parts · photos · pricing"
         actions={<div className="flex flex-wrap gap-2">
           {selectedIds.size > 0 && <Button size="sm" variant="outline" onClick={() => setBulkStatusOpen(true)}>Bulk status ({selectedIds.size})</Button>}
           <VehiclesBulkImportButton onDone={loadVehicles} />
-          <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add vehicle</Button>
+          <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
         </div>} />
 
       <div className="grid grid-cols-3 gap-3">
@@ -233,8 +267,10 @@ export default function VehiclesPage() {
 
       <Card className="border-border/60"><CardContent className="p-4 flex flex-col md:flex-row gap-3">
         <div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." /></div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className="md:w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent><SelectItem value="all">All categories</SelectItem><SelectItem value="car">Cars</SelectItem><SelectItem value="machinery">Machinery</SelectItem><SelectItem value="parts">Parts</SelectItem></SelectContent></Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">All</SelectItem>{Object.entries(statusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>
+          <SelectContent><SelectItem value="all">All statuses</SelectItem>{Object.entries(statusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>
       </CardContent></Card>
 
       <Card className="overflow-hidden border-border/60">
@@ -247,7 +283,7 @@ export default function VehiclesPage() {
                 <div className="h-10 w-10 rounded-lg overflow-hidden bg-primary/10 flex items-center justify-center">
                   {v.primary_image_url ? <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" /> : <CarFront className="h-5 w-5 text-primary" />}
                 </div>
-                <div className="min-w-0 flex-1"><p className="font-medium">{v.make} {v.model}</p><p className="text-xs text-muted-foreground">{v.stock_number} · {v.chassis_number}{v.source_country ? ` · ${v.source_country}` : ''}{v.source_country_code ? ` (${v.source_country_code})` : ''}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-medium">{v.make} {v.model}</p><p className="text-xs text-muted-foreground">{stockCategoryLabel(parseStockCategory(v.stock_category))} · {v.stock_number} · {v.chassis_number}{v.part_sku ? ` · ${v.part_sku}` : ''}{v.source_country ? ` · ${v.source_country}` : ''}{v.source_country_code ? ` (${v.source_country_code})` : ''}</p></div>
                 <Badge variant="outline" className={statusStyles[v.status]}>{statusLabels[v.status]}</Badge>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
@@ -255,7 +291,7 @@ export default function VehiclesPage() {
           ))}</div>}
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen>
         <DialogHeader><DialogTitle>Add vehicle</DialogTitle></DialogHeader>
         <form onSubmit={submitCreate} className="space-y-3">
           <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} gallery={gallery} onGalleryChange={setGallery} />
@@ -276,8 +312,8 @@ export default function VehiclesPage() {
         </form>
       </DialogContent></Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader><DialogTitle>Edit vehicle</DialogTitle></DialogHeader>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen>
+        <DialogHeader><DialogTitle>Edit stock</DialogTitle></DialogHeader>
         <form onSubmit={submitEdit} className="space-y-3">
           <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} gallery={gallery} onGalleryChange={setGallery} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Listed price</Label><Input type="number" value={form.listed_price} onChange={(e) => setForm({ ...form, listed_price: e.target.value })} /></div>
@@ -306,7 +342,7 @@ export default function VehiclesPage() {
         </>)}</SheetContent>
       </Sheet>
 
-      <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}><DialogContent fullscreen>
+      <Dialog open={bulkStatusOpen} onOpenChange={setBulkStatusOpen}><DialogContent>
         <DialogHeader><DialogTitle>Bulk status</DialogTitle></DialogHeader>
         <Select value={bulkStatus} onValueChange={(v: Vehicle['status']) => setBulkStatus(v)}><SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{Object.entries(statusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>

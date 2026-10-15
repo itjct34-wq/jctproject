@@ -287,6 +287,8 @@ export interface Vehicle {
   id: string;
   stock_number: string;
   chassis_number: string;
+  stock_category: 'car' | 'machinery' | 'parts';
+  part_sku: string | null;
   make: string;
   model: string;
   model_grade: string | null;

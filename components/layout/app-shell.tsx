@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { useAuth } from '@/lib/auth-provider';
 import { Loader2 } from 'lucide-react';
+import { JCT_OFFICIAL } from '@/lib/jct-official';
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -59,9 +60,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3">
           <img
-            src="/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png"
+            src={JCT_OFFICIAL.logo}
             alt="Japan Circular Trading"
-            className="w-14 h-14 rounded-xl object-contain bg-white border border-border shadow-sm p-1"
+            className="h-20 w-auto max-w-[280px] object-contain bg-white"
           />
           <div className="flex items-center gap-2 text-muted-foreground" role="status" aria-live="polite">
             <Loader2 className="w-4 h-4 animate-spin" />

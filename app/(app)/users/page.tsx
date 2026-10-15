@@ -317,7 +317,7 @@ export default function UsersPage() {
                     New Team
                   </Button>
                 </DialogTrigger>
-                <DialogContent fullscreen className="sm:max-w-md">
+                <DialogContent fullscreen>
                   <DialogHeader>
                     <DialogTitle>Create New Team</DialogTitle>
                   </DialogHeader>
@@ -542,7 +542,7 @@ export default function UsersPage() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                              <DialogContent fullscreen className="sm:max-w-md">
+                              <DialogContent fullscreen>
                                 <DialogHeader>
                                   <DialogTitle>Manage Roles — {u.full_name || u.email}</DialogTitle>
                                 </DialogHeader>

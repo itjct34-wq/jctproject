@@ -442,7 +442,7 @@ export default function SalesPage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>Reserve vehicle for customer</DialogTitle>
           </DialogHeader>

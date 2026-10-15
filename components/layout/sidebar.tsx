@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_GROUPS } from '@/lib/nav';
+import { JCT_OFFICIAL } from '@/lib/jct-official';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -38,19 +39,27 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
     <aside
       className={cn(
         'flex flex-col bg-card border-r border-border h-[100dvh] sticky top-0 transition-all duration-200',
-        mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-60'
+        mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-64'
       )}
     >
-      <div className="flex items-center gap-2.5 h-14 px-3 border-b border-border shrink-0">
+      <div
+        className={cn(
+          'flex items-center gap-2 border-b border-border shrink-0 bg-white',
+          collapsed && !mobile ? 'h-[4.5rem] justify-center px-1.5' : 'min-h-[4.5rem] px-2.5 py-2'
+        )}
+      >
         <img
-          src="/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png"
+          src={JCT_OFFICIAL.logo}
           alt="Japan Circular Trading"
-          className="w-9 h-9 rounded-lg object-contain bg-white border border-border shrink-0 p-0.5"
+          className={cn(
+            'shrink-0 bg-white object-contain object-left',
+            collapsed && !mobile ? 'h-12 w-12' : 'h-14 w-auto max-h-16 max-w-[210px]'
+          )}
         />
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground truncate">JCT ERP</p>
-            <p className="text-[11px] text-muted-foreground truncate">Circular Trading</p>
+            <p className="text-sm font-semibold text-foreground truncate">ERP</p>
+            <p className="text-[11px] text-muted-foreground truncate">Operations</p>
           </div>
         )}
         {mobile && (

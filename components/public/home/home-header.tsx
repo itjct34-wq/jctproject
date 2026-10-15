@@ -5,15 +5,22 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { BrandLogo } from '@/components/public/brand-logo';
+import { PUBLIC_STOCK_NAV } from '@/lib/stock-category';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { href: '/inventory', label: 'Cars' },
+  ...PUBLIC_STOCK_NAV,
+  { href: '/#source-markets', label: 'Source markets' },
   { href: '/blog', label: 'Import guides' },
   { href: '/verify-agent', label: 'Verify agent' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
+
+function navLinkActive(pathname: string, href: string): boolean {
+  if (href.includes('#')) return false;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function HomeHeader() {
   const pathname = usePathname();
@@ -36,7 +43,7 @@ export function HomeHeader() {
               href={item.href}
               className={cn(
                 'inline-flex min-h-11 items-center rounded-lg px-3 text-sm text-[var(--jct-muted)] transition-colors hover:bg-[var(--jct-panel)] hover:text-[var(--jct-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]',
-                pathname === item.href || pathname.startsWith(item.href)
+                navLinkActive(pathname, item.href)
                   ? 'bg-[var(--jct-panel)] font-medium text-[var(--jct-navy)]'
                   : ''
               )}

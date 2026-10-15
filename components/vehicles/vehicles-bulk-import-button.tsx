@@ -135,14 +135,20 @@ export function VehiclesBulkImportButton({ onDone }: Props) {
     setZipLoading(true);
     setZipProgress('Reading ZIP and matching chassis folders…');
     try {
-      const { data, error } = await supabase.from('vehicles').select('id, chassis_number');
+      let { data, error } = await supabase.from('vehicles').select('id, chassis_number, stock_number, part_sku');
+      if (error) {
+        ({ data, error } = await supabase.from('vehicles').select('id, chassis_number, stock_number'));
+      }
       if (error) throw error;
-      const inspected = await inspectVehiclePhotoZip(file, (data || []) as { id: string; chassis_number: string }[]);
+      const inspected = await inspectVehiclePhotoZip(
+        file,
+        (data || []) as { id: string; chassis_number: string; stock_number?: string | null; part_sku?: string | null }[]
+      );
       setMatches(inspected.matches);
       setUnmatchedFolders(inspected.unmatchedFolders);
       setSkipped(inspected.skipped);
       if (inspected.matches.length === 0 && inspected.unmatchedFolders.length === 0) {
-        setZipError('No chassis folders with jpg/png/webp photos were found. Folder names must match vehicle chassis numbers.');
+        setZipError('No folders with jpg/png/webp photos were found. Folder names must match chassis, stock number, or part SKU.');
       }
     } catch (err) {
       setZipError(err instanceof Error ? err.message : 'Could not read ZIP');
@@ -160,10 +166,11 @@ export function VehiclesBulkImportButton({ onDone }: Props) {
     try {
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
-        if (!match.vehicleId || !match.chassis) continue;
-        setZipProgress(`Uploading photos ${i + 1}/${matches.length}: ${match.chassis}`);
+        const folderKey = match.chassis || match.folder;
+        if (!match.vehicleId || !folderKey) continue;
+        setZipProgress(`Uploading photos ${i + 1}/${matches.length}: ${folderKey}`);
         const gallery: { image_url: string; sort_order: number; is_primary: boolean }[] = [];
-        const folder = chassisStorageFolder(match.chassis);
+        const folder = chassisStorageFolder(folderKey);
         for (let p = 0; p < match.photos.length; p++) {
           const photo = match.photos[p];
           const blob = await photo.asyncBlob();
@@ -216,7 +223,7 @@ export function VehiclesBulkImportButton({ onDone }: Props) {
           setOpen(o);
         }}
       >
-        <DialogContent fullscreen className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>Bulk import stock</DialogTitle>
           </DialogHeader>
@@ -248,7 +255,7 @@ export function VehiclesBulkImportButton({ onDone }: Props) {
             <div className="space-y-4">
               <div className="rounded-lg border border-dashed border-border p-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Upload a CSV or Excel sheet first. Mix any source countries in one file. Photos are not required in the sheet — attach them in step 2 as a ZIP of chassis folders.
+                  Upload a CSV or Excel sheet first. Use column stock_category or category: car, machinery, or parts (default car). Mix any source countries in one file. Photos are not required in the sheet — attach them in step 2 as a ZIP of chassis or SKU folders.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -334,7 +341,7 @@ export function VehiclesBulkImportButton({ onDone }: Props) {
             <div className="space-y-4">
               <div className="rounded-lg border border-dashed border-border p-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  One ZIP. Inside: a folder per chassis (e.g. <code>RU3-1231232/</code> or <code>KDH2015012847/</code>), each holding that vehicle&apos;s jpg/png/webp files. Folder names are matched to chassis (hyphens and case ignored). Max {Math.round(MAX_PHOTO_ZIP_BYTES / 1024 / 1024)}MB. <code>__MACOSX</code> and junk files are skipped.
+                  One ZIP. Inside: a folder per unit (e.g. <code>RU3-1231232/</code>, stock number, or part SKU), each holding jpg/png/webp files. Folder names match chassis, stock_number, or part_sku (hyphens and case ignored). Max {Math.round(MAX_PHOTO_ZIP_BYTES / 1024 / 1024)}MB. <code>__MACOSX</code> and junk files are skipped.
                 </p>
                 <Button type="button" size="sm" onClick={() => zipRef.current?.click()} disabled={zipLoading}>
                   <FolderArchive className="mr-1.5 h-4 w-4" />
@@ -371,7 +378,7 @@ export function VehiclesBulkImportButton({ onDone }: Props) {
 
               {matches.length > 0 && (
                 <div className="rounded-lg border p-3 text-sm space-y-1 max-h-40 overflow-auto">
-                  <p className="font-medium">Matched chassis</p>
+                  <p className="font-medium">Matched folders</p>
                   {matches.map((m) => (
                     <p key={m.vehicleId} className="text-xs text-muted-foreground">
                       {m.folder} → {m.chassis} · {m.photos.length} photo(s)

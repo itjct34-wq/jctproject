@@ -62,7 +62,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Inventory & Auctions',
     items: [
-      { label: 'Vehicle Inventory', href: '/vehicles', icon: Car, module: 'vehicles' },
+      { label: 'Stock inventory', href: '/vehicles', icon: Car, module: 'vehicles' },
       { label: 'Auction Stock', href: '/auctions', icon: Gavel, module: 'auctions' },
       { label: 'Auction Purchases', href: '/purchases', icon: ShoppingCart, module: 'purchases' },
     ],

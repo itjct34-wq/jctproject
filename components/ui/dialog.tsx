@@ -33,10 +33,13 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
   fullscreen?: boolean;
 };
 
+const FULLSCREEN_CLASS =
+  'inset-0 left-0 right-0 top-0 bottom-0 flex h-[100dvh] w-screen max-h-[100dvh] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:max-w-none md:max-w-none lg:max-w-none xl:max-w-none 2xl:max-w-none !inset-0 !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-none sm:!max-w-none md:!max-w-none lg:!max-w-none !translate-x-0 !translate-y-0 !rounded-none data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100';
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, fullscreen, ...props }, ref) => (
+>(({ className, children, fullscreen, style, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -47,15 +50,32 @@ const DialogContent = React.forwardRef<
         !fullscreen &&
           'left-[50%] top-[50%] max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-lg p-4 sm:p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
         className,
-        fullscreen &&
-          'left-0 top-0 flex h-[100dvh] w-screen max-h-[100dvh] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100'
+        fullscreen && FULLSCREEN_CLASS
       )}
+      style={
+        fullscreen
+          ? {
+              inset: 0,
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              maxWidth: 'none',
+              height: '100dvh',
+              maxHeight: '100dvh',
+              transform: 'none',
+              borderRadius: 0,
+              ...style,
+            }
+          : style
+      }
       {...props}
     >
       {children}
       <DialogPrimitive.Close className={cn(
         'absolute rounded-sm p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground',
-        fullscreen ? 'right-4 top-3.5' : 'right-3 top-3 sm:right-4 sm:top-4'
+        fullscreen ? 'right-4 top-3.5 z-10' : 'right-3 top-3 sm:right-4 sm:top-4'
       )}>
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>

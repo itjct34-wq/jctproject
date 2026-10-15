@@ -174,7 +174,7 @@ export default function BlogAdminPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent fullscreen className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit post' : 'New post'}</DialogTitle>
           </DialogHeader>

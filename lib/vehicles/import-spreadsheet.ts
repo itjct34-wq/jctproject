@@ -1,4 +1,5 @@
 import { resolveSourceCountryFromRow } from '@/lib/source-countries';
+import { parseStockCategory } from '@/lib/stock-category';
 import { normalizeChassis } from '@/lib/utils/chassis';
 import { parseOptionalNumber, splitImageUrls } from '@/lib/utils/csv-import';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -56,14 +57,21 @@ export async function importVehicleSpreadsheetRows(
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const line = i + 2;
-    const chassis = (r.chassis_number || '').trim();
+    const category = parseStockCategory(r.stock_category || r.category || r.listing_type);
+    const partSku = (r.part_sku || '').trim() || null;
+    const stockNumber = (r.stock_number || '').trim() || null;
+    const chassis = (r.chassis_number || '').trim() || (category === 'parts' ? (partSku || stockNumber || '') : '');
     const make = (r.make || '').trim();
     const model = (r.model || '').trim();
     const country = resolveSourceCountryFromRow(r);
 
     if (!chassis || !make || !model) {
       failed++;
-      errors.push(`Row ${line}: chassis_number, make, and model are required`);
+      errors.push(
+        category === 'parts'
+          ? `Row ${line}: chassis_number, part_sku, or stock_number plus make and model are required`
+          : `Row ${line}: chassis_number, make, and model are required`
+      );
       continue;
     }
     if (!country) {
@@ -112,6 +120,8 @@ export async function importVehicleSpreadsheetRows(
     const images = splitImageUrls(r);
     const payload: Record<string, unknown> = {
       chassis_number: chassis,
+      stock_category: category,
+      part_sku: partSku || (category === 'parts' ? chassis : null),
       make,
       model,
       model_grade: r.model_grade?.trim() || null,
@@ -134,6 +144,7 @@ export async function importVehicleSpreadsheetRows(
       notes: r.notes?.trim() || null,
     };
     if (images[0]) payload.primary_image_url = images[0];
+    if (stockNumber) payload.stock_number = stockNumber;
 
     const existingId = existingByNorm.get(chassisKey);
     let vehicleId = existingId || null;
@@ -143,23 +154,21 @@ export async function importVehicleSpreadsheetRows(
       payload.updated_at = new Date().toISOString();
       const upd = await supabase.from('vehicles').update(payload).eq('id', existingId);
       error = upd.error;
-      if (error && /source_country_code/i.test(error.message)) {
-        const { source_country_code: _code, ...withoutCode } = payload;
-        void _code;
-        const retry = await supabase.from('vehicles').update(withoutCode).eq('id', existingId);
-        error = retry.error;
+      if (error && /source_country_code|stock_category|part_sku/i.test(error.message)) {
+        error = (await retryVehicleWrite(supabase, 'update', payload, existingId)).error;
       }
       if (!error) updated++;
     } else {
       payload.created_by = profileId;
       let ins = await supabase.from('vehicles').insert(payload).select('id').maybeSingle();
-      if (ins.error && /source_country_code/i.test(ins.error.message)) {
-        const { source_country_code: _code, ...withoutCode } = payload;
-        void _code;
-        ins = await supabase.from('vehicles').insert(withoutCode).select('id').maybeSingle();
+      if (ins.error && /source_country_code|stock_category|part_sku/i.test(ins.error.message)) {
+        const retry = await retryVehicleWrite(supabase, 'insert', payload);
+        error = retry.error;
+        vehicleId = retry.id;
+      } else {
+        error = ins.error;
+        vehicleId = (ins.data as { id: string } | null)?.id || null;
       }
-      error = ins.error;
-      vehicleId = (ins.data as { id: string } | null)?.id || null;
       if (vehicleId) existingByNorm.set(chassisKey, vehicleId);
     }
 
@@ -184,4 +193,35 @@ export async function importVehicleSpreadsheetRows(
   }
 
   return { ok, failed, updated, errors };
+}
+
+async function retryVehicleWrite(
+  supabase: SupabaseClient,
+  mode: 'insert' | 'update',
+  payload: Record<string, unknown>,
+  existingId?: string
+): Promise<{ error: { message: string } | null; id: string | null }> {
+  const strip = (keys: string[]) => {
+    const next = { ...payload };
+    for (const key of keys) delete next[key];
+    return next;
+  };
+  const attempts = [
+    strip(['source_country_code']),
+    strip(['stock_category', 'part_sku']),
+    strip(['source_country_code', 'stock_category', 'part_sku']),
+  ];
+  let lastError: { message: string } | null = { message: 'retry failed' };
+  for (const next of attempts) {
+    if (mode === 'insert') {
+      const ins = await supabase.from('vehicles').insert(next).select('id').maybeSingle();
+      lastError = ins.error;
+      if (!ins.error) return { error: null, id: (ins.data as { id: string } | null)?.id || null };
+    } else {
+      const upd = await supabase.from('vehicles').update(next).eq('id', existingId);
+      lastError = upd.error;
+      if (!upd.error) return { error: null, id: existingId || null };
+    }
+  }
+  return { error: lastError, id: null };
 }

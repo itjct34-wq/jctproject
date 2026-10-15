@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { CountryFlag } from '@/components/public/country-flag';
 import { formatCurrency } from '@/lib/utils/currencies';
-import { coverPhoto, sourceCountryCode, sourceCountryLabel, type PublicVehicle } from '@/lib/public/vehicles';
+import { coverPhoto, listedVehicleCategory, sourceCountryCode, sourceCountryLabel, type PublicVehicle } from '@/lib/public/vehicles';
+import { STOCK_CATALOGS } from '@/lib/stock-category';
 
 function specLine(vehicle: PublicVehicle): string {
   return [
@@ -14,15 +15,16 @@ function specLine(vehicle: PublicVehicle): string {
     .join(' · ');
 }
 
-export function VehicleCard({ vehicle }: { vehicle: PublicVehicle }) {
+export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hrefBase?: string }) {
   const title = [vehicle.model_year, vehicle.make, vehicle.model].filter(Boolean).join(' ');
   const specs = specLine(vehicle);
   const source = sourceCountryLabel(vehicle);
   const photo = coverPhoto(vehicle);
+  const href = `${hrefBase || STOCK_CATALOGS[listedVehicleCategory(vehicle)].path}/${vehicle.id}`;
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--jct-border)] bg-white">
-      <Link href={`/inventory/${vehicle.id}`} className="relative block aspect-[3/2] bg-[var(--jct-panel)]">
+      <Link href={href} className="relative block aspect-[3/2] bg-[var(--jct-panel)]">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -58,7 +60,7 @@ export function VehicleCard({ vehicle }: { vehicle: PublicVehicle }) {
           {vehicle.listed_price != null ? formatCurrency(vehicle.listed_price, vehicle.listed_currency) : 'Ask for price'}
         </p>
         <Link
-          href={`/inventory/${vehicle.id}`}
+          href={href}
           className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--jct-navy)] px-4 text-sm font-semibold text-[var(--jct-navy)] hover:bg-[var(--jct-panel)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
         >
           View details
