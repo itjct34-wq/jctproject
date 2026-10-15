@@ -32,9 +32,9 @@ Users hold roles via **`user_roles`** (active flag). Self-assignment of roles is
 |--------|-----------------|-----------------|
 | `dashboard` | Most roles | — |
 | `customers` | Sales, ops, accounts, auditor | admin, operations, manager, sales_agent |
-| `vehicles` | Inventory readers | admin, operations, manager |
+| `vehicles` | Inventory readers (incl. sales_agent, freelancer read-only) | admin, operations, manager |
 | `auctions` | ops, manager, auditor | admin, operations, manager |
-| `invoices` | sales, accounts, auditor | admin, manager, sales_agent, accounts |
+| `invoices` | sales, accounts, auditor | admin, manager, sales_agent, freelancer, accounts |
 | `payments` | finance, auditor | admin, manager, accounts |
 | `settings` | admin, auditor | admin only (UI); super_admin for global config page |
 
@@ -48,6 +48,22 @@ Users hold roles via **`user_roles`** (active flag). Self-assignment of roles is
 | `POST /api/admin/update-user` | Admin auth; optional password update |
 
 These are not gated by RLS alone; they use **`requireAdmin`** (`lib/admin-auth.ts`).
+
+## Sales agent navigation
+
+Users with **`sales_agent`** and no elevated staff role (`admin`, `operations`, `manager`, `accounts`, `super_admin`) get a **sales-focused sidebar** via `getNavGroupsForRoles()` in `lib/nav.tsx`. Administration, Operations, Export & Shipping, and auction purchase links are hidden. Direct URLs to admin pages may still exist; RLS remains the data gate.
+
+## Sales agent & freelancer data rules
+
+| Action | sales_agent | freelancer |
+|--------|-------------|------------|
+| View stock / invoices | Yes | Yes (invoices after migration `024`) |
+| Create invoices / quotations | Yes | Yes (quotations already; invoices via RLS `024`) |
+| Edit invoices (UI + RLS) | Yes (UI); RLS update still manager/accounts/admin | Create only; no invoice update in RLS |
+| Delete invoices or vehicles | No (UI + RLS: admin only) | No |
+| Add / import vehicles | No (UI + RLS: operations/manager/admin) | No |
+
+Migration **`024_sales_freelancer_stock_invoice_guard.sql`** reaffirms vehicle insert/delete and invoice delete policies and extends invoice read/create for selling roles.
 
 ## Enforcement rule
 

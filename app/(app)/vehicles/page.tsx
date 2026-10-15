@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { differenceInCalendarDays } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,10 @@ const emptyForm = {
 
 export default function VehiclesPage() {
   const { profile } = useAuth();
+  const { can } = usePermissions();
+  const canCreateVehicle = can('vehicles', 'create');
+  const canEditVehicle = can('vehicles', 'edit');
+  const canDeleteVehicle = can('vehicles', 'delete');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,6 +132,10 @@ export default function VehiclesPage() {
 
   const submitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canCreateVehicle) {
+      toast.error('You do not have permission to add stock');
+      return;
+    }
     const category = parseStockCategory(form.stock_category);
     const chassis = form.chassis_number.trim() || (category === 'parts' ? (form.part_sku.trim() || form.stock_number.trim()) : '');
     if (!profile || !chassis || !form.make.trim() || !form.model.trim()) {
@@ -176,6 +185,10 @@ export default function VehiclesPage() {
   const submitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
+    if (!canEditVehicle) {
+      toast.error('You do not have permission to edit stock');
+      return;
+    }
     setSubmitting(true);
     try {
       await saveVehicleImages(selected.id, gallery);
@@ -225,6 +238,10 @@ export default function VehiclesPage() {
 
   const confirmDelete = async () => {
     if (!selected) return;
+    if (!canDeleteVehicle) {
+      toast.error('You do not have permission to delete stock');
+      return;
+    }
     setSubmitting(true);
     const { error } = await supabase.from('vehicles').delete().eq('id', selected.id);
     setSubmitting(false);
@@ -253,11 +270,17 @@ export default function VehiclesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Stock inventory" description="Cars, machinery, and parts · photos · pricing"
-        actions={<div className="flex flex-wrap gap-2">
-          {selectedIds.size > 0 && <Button size="sm" variant="outline" onClick={() => setBulkStatusOpen(true)}>Bulk status ({selectedIds.size})</Button>}
-          <VehiclesBulkImportButton onDone={loadVehicles} />
-          <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
-        </div>} />
+        actions={canCreateVehicle || canEditVehicle ? (
+          <div className="flex flex-wrap gap-2">
+            {canEditVehicle && selectedIds.size > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setBulkStatusOpen(true)}>Bulk status ({selectedIds.size})</Button>
+            )}
+            {canCreateVehicle && <VehiclesBulkImportButton onDone={loadVehicles} />}
+            {canCreateVehicle && (
+              <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
+            )}
+          </div>
+        ) : undefined} />
 
       <div className="grid grid-cols-3 gap-3">
         {[{ l: 'Total', v: stats.total }, { l: 'Available', v: stats.available }, { l: 'Reserved', v: stats.reserved }].map((s) => (
@@ -278,7 +301,9 @@ export default function VehiclesPage() {
           : filtered.length === 0 ? <div className="p-14 text-center text-muted-foreground">No vehicles</div>
           : <div className="divide-y">{filtered.map((v) => (
             <div key={v.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
-              <Checkbox checked={selectedIds.has(v.id)} onCheckedChange={() => setSelectedIds((prev) => { const n = new Set(prev); n.has(v.id) ? n.delete(v.id) : n.add(v.id); return n; })} />
+              {canEditVehicle && (
+                <Checkbox checked={selectedIds.has(v.id)} onCheckedChange={() => setSelectedIds((prev) => { const n = new Set(prev); n.has(v.id) ? n.delete(v.id) : n.add(v.id); return n; })} />
+              )}
               <button type="button" className="flex flex-1 items-center gap-3 text-left" onClick={() => setSelected(v)}>
                 <div className="h-10 w-10 rounded-lg overflow-hidden bg-primary/10 flex items-center justify-center">
                   {v.primary_image_url ? <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" /> : <CarFront className="h-5 w-5 text-primary" />}
@@ -337,8 +362,16 @@ export default function VehiclesPage() {
         <SheetContent className="overflow-y-auto sm:max-w-md">{selected && (<>
           <SheetHeader><SheetTitle>{selected.make} {selected.model}</SheetTitle><SheetDescription>{selected.stock_number}</SheetDescription></SheetHeader>
           {selected.primary_image_url && <img src={selected.primary_image_url} alt="" className="mt-4 rounded-lg w-full max-h-48 object-cover" />}
-          <div className="mt-4 flex gap-2"><Button size="sm" variant="outline" onClick={openEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit + photos</Button>
-            <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button></div>
+          {(canEditVehicle || canDeleteVehicle) && (
+            <div className="mt-4 flex gap-2">
+              {canEditVehicle && (
+                <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit + photos</Button>
+              )}
+              {canDeleteVehicle && (
+                <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+              )}
+            </div>
+          )}
         </>)}</SheetContent>
       </Sheet>
 

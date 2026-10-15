@@ -33,11 +33,32 @@ export interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   module?: PermissionModule;
   requiredRoles?: RoleName[];
+  /** Hidden when the user is on sales-focused navigation (sales_agent without elevated staff roles). */
+  salesNavHidden?: boolean;
 }
 
 export interface NavGroup {
   label: string;
   items: NavItem[];
+  salesNavHidden?: boolean;
+}
+
+/** Roles that keep the full ERP sidebar (not sales-only). */
+const ELEVATED_NAV_ROLES: RoleName[] = ['super_admin', 'admin', 'operations', 'manager', 'accounts'];
+
+export function usesSalesFocusedNav(roleNames: RoleName[]): boolean {
+  return (
+    roleNames.includes('sales_agent') &&
+    !roleNames.some((r) => ELEVATED_NAV_ROLES.includes(r))
+  );
+}
+
+export function getNavGroupsForRoles(roleNames: RoleName[]): NavGroup[] {
+  if (!usesSalesFocusedNav(roleNames)) return NAV_GROUPS;
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.salesNavHidden),
+  })).filter((group) => !group.salesNavHidden && group.items.length > 0);
 }
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -63,8 +84,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Inventory & Auctions',
     items: [
       { label: 'Stock inventory', href: '/vehicles', icon: Car, module: 'vehicles' },
-      { label: 'Auction Stock', href: '/auctions', icon: Gavel, module: 'auctions' },
-      { label: 'Auction Purchases', href: '/purchases', icon: ShoppingCart, module: 'purchases' },
+      { label: 'Auction Stock', href: '/auctions', icon: Gavel, module: 'auctions', salesNavHidden: true },
+      { label: 'Auction Purchases', href: '/purchases', icon: ShoppingCart, module: 'purchases', salesNavHidden: true },
     ],
   },
   {
@@ -78,6 +99,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Export & Shipping',
+    salesNavHidden: true,
     items: [
       { label: 'Shipping', href: '/shipments', icon: Ship, module: 'shipments' },
       { label: 'Export Documents', href: '/documents', icon: FolderOpen, module: 'documents' },
@@ -85,8 +107,9 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Operations',
+    salesNavHidden: true,
     items: [
-      { label: 'Offices & shifts', href: '/offices', icon: MapPin, module: 'users' },
+      { label: 'Offices & shifts', href: '/offices', icon: MapPin, module: 'users', salesNavHidden: true },
       { label: 'Tasks & Approvals', href: '/tasks', icon: CheckSquare, module: 'tasks' },
       { label: 'Suppliers', href: '/suppliers', icon: Building2 },
       { label: 'Notifications', href: '/notifications', icon: Bell, module: 'notifications' },
@@ -94,6 +117,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Administration',
+    salesNavHidden: true,
     items: [
       { label: 'Reports', href: '/reports', icon: BarChart3, module: 'reports' },
       { label: 'Blog posts', href: '/blog-admin', icon: Newspaper, module: 'settings' },

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_GROUPS } from '@/lib/nav';
+import { getNavGroupsForRoles } from '@/lib/nav';
 import { JCT_OFFICIAL } from '@/lib/jct-official';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
@@ -21,15 +21,16 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { canView, roleNames } = usePermissions();
+  const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const initial: Record<string, boolean> = {};
-    NAV_GROUPS.forEach((g) => {
+    navGroups.forEach((g) => {
       initial[g.label] = g.items.some((item) => pathname.startsWith(item.href));
     });
     setExpandedGroups(initial);
-  }, [pathname]);
+  }, [pathname, navGroups]);
 
   const toggleGroup = (label: string) => {
     setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -78,7 +79,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
         aria-label="Main navigation"
         className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       >
-        {NAV_GROUPS.map((group) => {
+        {navGroups.map((group) => {
           const visibleItems = group.items.filter(
             (item) =>
               (!item.requiredRoles || item.requiredRoles.some((role) => roleNames.includes(role))) &&
