@@ -21,7 +21,6 @@ import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { exportQuotationExcel } from '@/lib/utils/commercial-invoice-excel';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
@@ -96,7 +95,6 @@ export default function QuotationsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
-  const [printBreakdown, setPrintBreakdown] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [lineItems, setLineItems] = useState<LineDraft[]>([emptyQuoteLine()]);
   const [printItems, setPrintItems] = useState<
@@ -779,12 +777,6 @@ export default function QuotationsPage() {
           <DialogHeader className="print:hidden">
             <DialogTitle>Print quotation</DialogTitle>
           </DialogHeader>
-          <div className="print:hidden flex flex-wrap items-center gap-4 rounded-md border border-border/60 p-3 text-sm">
-            <label className="flex items-center gap-2">
-              <Switch checked={printBreakdown} onCheckedChange={setPrintBreakdown} />
-              Breakdown quotation {printBreakdown ? 'on' : 'off'}
-            </label>
-          </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">
               <div className="min-w-[720px] print:min-w-0">
@@ -795,7 +787,6 @@ export default function QuotationsPage() {
                   vehicles={vehicles}
                   salesAgent={profile?.full_name || profile?.email}
                   verificationUrl={selected.verification_token ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/') : undefined}
-                  layoutVariant={printBreakdown ? 'breakdown' : 'standard'}
                 />
               </div>
             </div>

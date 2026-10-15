@@ -16,7 +16,6 @@ type Props = {
   showQr?: boolean;
   includeBankNotice?: boolean;
   variant?: 'commercial' | 'auction_deposit';
-  layoutVariant?: 'standard' | 'breakdown';
 };
 
 export function CommercialInvoiceTemplate({
@@ -28,7 +27,6 @@ export function CommercialInvoiceTemplate({
   showQr = true,
   includeBankNotice = false,
   variant = 'commercial',
-  layoutVariant = 'standard',
 }: Props) {
   const vehiclesTotal = Number(invoice.subtotal || 0);
   const freight = Number(invoice.freight_total || 0);
@@ -86,7 +84,6 @@ export function CommercialInvoiceTemplate({
       showQr={showQr}
       includeBankNotice={includeBankNotice}
       depositMode={variant === 'auction_deposit' ? 'amount' : 'ratio'}
-      layoutVariant={layoutVariant}
     />
   );
 }

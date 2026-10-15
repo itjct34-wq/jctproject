@@ -22,7 +22,6 @@ import { formatMoney } from '@/lib/utils/format';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { type GalleryImage } from '@/components/shared/multi-image-upload';
 import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images';
-import { VehiclesBulkImportButton } from '@/components/vehicles/vehicles-bulk-import-button';
 import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
 import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
 import { parseStockCategory, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
@@ -407,7 +406,6 @@ function VehiclesPage() {
             {canEditVehicle && selectedIds.size > 0 && (
               <Button size="sm" variant="outline" onClick={() => setBulkStatusOpen(true)}>Bulk status ({selectedIds.size})</Button>
             )}
-            {canCreateVehicle && <VehiclesBulkImportButton kind={listCategory} />}
             {canCreateVehicle && (
               <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
             )}
@@ -428,7 +426,7 @@ function VehiclesPage() {
 
       <Card className="overflow-hidden border-border/60">
         {loading ? <div className="p-14 flex justify-center"><Loader2 className="animate-spin h-4 w-4" /></div>
-          : filtered.length === 0 ? <div className="p-14 text-center text-muted-foreground">No {listCopy.title.toLowerCase()} in this list yet. Use Bulk upload to import a sheet.</div>
+          : filtered.length === 0 ? <div className="p-14 text-center text-muted-foreground">No {listCopy.title.toLowerCase()} in this list yet.</div>
           : <div className="divide-y">{filtered.map((v) => (
             <div key={v.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
               {canEditVehicle && (
