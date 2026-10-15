@@ -308,6 +308,11 @@ export interface Vehicle {
   fob_usd?: number | null;
   sold_price?: number | null;
   incoterm?: 'FOB' | 'C&F' | 'CIF' | null;
+  freight_mode?: 'roro' | 'container' | null;
+  commission_pkr?: number | null;
+  commission_status?: 'none' | 'due' | 'paid';
+  commission_paid_at?: string | null;
+  commission_paid_by?: string | null;
   listed_price: number | null;
   listed_currency: string;
   status: 'in_stock' | 'reserved' | 'sold' | 'in_transit' | 'exported' | 'on_hold' | 'archived';
@@ -675,6 +680,14 @@ export interface InvoiceItem {
   line_total: number;
   sort_order: number;
   created_at: string;
+}
+
+export interface UserPayroll {
+  user_id: string;
+  salary_amount: number;
+  salary_currency: string;
+  updated_at: string;
+  updated_by: string | null;
 }
 
 export interface UserWithRoles extends Profile {

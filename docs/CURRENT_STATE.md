@@ -38,10 +38,12 @@ For full public catalog + ERP auction directory + commercial workflow, productio
 - Sales own-records RLS (029)
 - Per-agent TOTP secret, reservation expiry RPC, status sync (030)
 - Customer `assigned_to` ownership + commercial follow (031)
+- Vehicle `freight_mode` (032)
+- `user_payroll` + vehicle commission PKR/status (033)
 
 See [MIGRATIONS.md](MIGRATIONS.md) for duplicate historical 009/013/014 names — do not rewrite applied files.
 
-If machinery/parts pages error or photos never load, run migrations **019–023** (and **028–031** for FOB/sales assignment) in the Supabase SQL editor.
+If machinery/parts pages error or photos never load, run migrations **019–023** (and **028–033** for FOB/sales assignment, freight mode, payroll, and commission) in the Supabase SQL editor.
 
 ## Environment (local)
 
@@ -58,7 +60,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) and [SECURITY.md](SECURITY.md).
 ## Next phase
 
 1. Keep shipping **`feat/vehicle-commercial-workflow`** to Vercel **jct16**.
-2. Confirm production DB includes **028–031**.
+2. Confirm production DB includes **028–033**.
 3. Deferred: Next 14/15 upgrade, Playwright, Sentry (no DSN), WhatsApp alerts, admin SMS MFA.
 
 ## Consistency

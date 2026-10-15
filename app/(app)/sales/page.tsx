@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase/client';
 import type { Sale, Customer, Vehicle } from '@/lib/types';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { calcVehicleCost, formatPricingSummary, type PriceTerm } from '@/lib/utils/vehicle-pricing';
+import { freightModeFromShipmentType } from '@/lib/vehicle-lifecycle';
 import { createReservationInvoice } from '@/lib/utils/create-reservation-invoice';
 import { CarFront, ChevronRight, Loader2, Pencil, Plus, Search, Tag, Trash2, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
@@ -48,6 +49,7 @@ const emptyForm = {
   freight_usd: '0',
   insurance_usd: '0',
   create_invoice: true,
+  commission_pkr: '',
   reservation_days: '7',
   bid_jpy: '',
   exchange_rate: '155',
@@ -200,6 +202,8 @@ export default function SalesPage() {
         reserved_until: reservedUntilStr,
         sold_price: salePrice || null,
         incoterm: form.price_term === 'CNF' ? 'C&F' : form.price_term,
+        freight_mode: freightModeFromShipmentType(form.shipment_type),
+        commission_pkr: form.commission_pkr === '' ? null : Number(form.commission_pkr) || 0,
         notes: [
           vehicle?.notes || '',
           `Reserved for ${customerName(form.customer_id)} by ${profile.full_name || profile.email} until ${reservedUntilStr}`,
@@ -532,6 +536,11 @@ export default function SalesPage() {
               <div className="space-y-2"><Label>Reserve days</Label><Input type="number" value={form.reservation_days} onChange={(e) => setForm({ ...form, reservation_days: e.target.value })} /></div>
             </div>
             <div className="space-y-2"><Label>POD (port of discharge)</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} placeholder="e.g. Mombasa, Karachi" /></div>
+            <div className="space-y-2">
+              <Label>Commission (PKR)</Label>
+              <Input type="number" min={0} value={form.commission_pkr} onChange={(e) => setForm({ ...form, commission_pkr: e.target.value })} placeholder="Selling agent commission in PKR" />
+              <p className="text-xs text-muted-foreground">Enter PKR. Due after the vehicle is paid or delivered; finance marks it paid separately.</p>
+            </div>
             <div className="space-y-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
             {pricingPreview && (
               <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">

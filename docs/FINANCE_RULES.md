@@ -41,9 +41,18 @@
 
 - Invoice list export and single-document **Excel/DOCX** from invoices workspace; PDF via browser print helper.
 
+## Payroll
+
+- Table **`user_payroll`**: one row per user (`salary_amount`, `salary_currency` default **PKR**). Edited on Users → Payroll by **admin** or **manager**. Sales/freelancer cannot write salaries (RLS). Not a full HR product (no tax slips).
+
+## Vehicle commission
+
+- **`vehicles.commission_pkr`**: staff-entered PKR for the selling agent. Optional 10% of USD profit helper only if `system_config.pkr_per_usd` exists; the app does not invent an FX rate.
+- **`commission_status`**: `none` until the vehicle is **paid** or **delivered**; then **due** if amount &gt; 0; **paid** when admin/manager/accounts mark it. Paid status is sticky.
+
 ## FX
 
-- No automatic FX ledger in app; amounts are stored in document currency. Multi-currency reporting is not derived in code beyond stored values.
+- No automatic FX ledger in app; amounts are stored in document currency. Multi-currency reporting is not derived in code beyond stored values. Commission stays in PKR unless a configured `pkr_per_usd` helper is used to suggest an amount.
 
 ## Allocations
 
