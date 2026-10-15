@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ChevronDown, Loader2, Plus, Search } from 'lucide-react';
+import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ import { SearchableSelect } from '@/components/payments/searchable-select';
 import { TtDocumentChip } from '@/components/payments/tt-document-chip';
 import { RemittanceCurrencyDashboard } from '@/components/payments/remittance-currency-dashboard';
 import { supabase } from '@/lib/supabase/client';
-import type { Customer, Payment, PaymentAllocation, Profile } from '@/lib/types';
+import type { Customer, Payment, PaymentAllocation } from '@/lib/types';
 import {
   aggregateRemittanceByCurrency,
   isUnknownRemittance,
@@ -46,6 +47,20 @@ type PaymentRow = Payment & {
 
 type StaffOpt = { id: string; full_name: string | null; display_name: string | null };
 
+/** Show Deallocate when fully allocated or any stock lines exist; otherwise Allocate. */
+function remittanceHasAllocations(p: PaymentRow): boolean {
+  const allocs = p.payment_allocations || [];
+  if (allocs.length > 0) return true;
+  return (p.allocation_status || 'unallocated') === 'allocated';
+}
+
+function ownsRemittanceForSales(p: PaymentRow, profileId: string): boolean {
+  if (p.sales_agent_id === profileId) return true;
+  if (p.created_by === profileId) return true;
+  if (p.customers?.assigned_to === profileId) return true;
+  return false;
+}
+
 function isoDay(value: string | null | undefined) {
   if (!value) return '—';
   const day = value.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -58,9 +73,12 @@ function isoDay(value: string | null | undefined) {
 function RemittancesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { can, hasRole, isSellingFocused, isElevatedStaff } = usePermissions();
+  const { profile } = useAuth();
+  const { can, hasRole, isAdmin, isSellingFocused, isElevatedStaff } = usePermissions();
   const canCreate = can('payments', 'create');
   const canEdit = can('payments', 'edit');
+  const canAllocateAction = canCreate || canEdit;
+  const canDeallocateElevated = isAdmin() || hasRole('manager') || hasRole('accounts');
   const canDelete = can('payments', 'delete') || hasRole('accounts');
   const canManageUnknown = isElevatedStaff;
   const tab = searchParams.get('tab') === 'unknown' ? 'unknown' : 'all';
@@ -72,6 +90,7 @@ function RemittancesPageInner() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deallocateTarget, setDeallocateTarget] = useState<PaymentRow | null>(null);
   const [tagTarget, setTagTarget] = useState<PaymentRow | null>(null);
   const [tagCustomerId, setTagCustomerId] = useState('');
   const [tagAgentId, setTagAgentId] = useState('');
@@ -248,6 +267,33 @@ function RemittancesPageInner() {
     router.push(`/payments/${p.id}/allocate`);
   };
 
+  const canDeallocateRemittance = (p: PaymentRow) => {
+    if (!canAllocateAction || !profile?.id) return false;
+    if (canDeallocateElevated) return true;
+    return ownsRemittanceForSales(p, profile.id);
+  };
+
+  const confirmDeallocate = async () => {
+    if (!deallocateTarget) return;
+    if (!canDeallocateRemittance(deallocateTarget)) {
+      toast.error('You do not have permission to deallocate this remittance');
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('payment_allocations')
+      .delete()
+      .eq('payment_id', deallocateTarget.id);
+    setSubmitting(false);
+    if (error) {
+      toast.error(`Could not deallocate: ${error.message}`);
+      return;
+    }
+    toast.success('Remittance deallocated — stock payment status updated');
+    setDeallocateTarget(null);
+    void loadData();
+  };
+
   const currencyTotals = useMemo(() => aggregateRemittanceByCurrency(rows), [rows]);
 
   const customerOptions = customers.map((c) => ({
@@ -398,6 +444,9 @@ function RemittancesPageInner() {
                     .map((a) => a.vehicles?.stock_number)
                     .filter(Boolean)
                     .join(', ');
+                  const hasAllocations = remittanceHasAllocations(p);
+                  const showDeallocate = hasAllocations && canDeallocateRemittance(p);
+                  const showAllocate = canAllocateAction && !hasAllocations;
                   return (
                     <tr key={p.id} className="align-top hover:bg-muted/40">
                       <td className="px-3 py-3 text-xs leading-5">
@@ -447,7 +496,7 @@ function RemittancesPageInner() {
                       <td className="px-3 py-3">
                         <TtDocumentChip paymentId={p.id} canEdit={canEdit || canManageUnknown} />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="relative overflow-visible px-3 py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="outline">
@@ -455,7 +504,7 @@ function RemittancesPageInner() {
                               <ChevronDown className="ml-1 h-3.5 w-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="z-[100]">
                             {unknown && canManageUnknown ? (
                               <DropdownMenuItem onSelect={() => openTag(p)}>Tag customer / agent</DropdownMenuItem>
                             ) : null}
@@ -464,12 +513,17 @@ function RemittancesPageInner() {
                                 <Link href={`/payments/${p.id}/edit`}>Edit</Link>
                               </DropdownMenuItem>
                             ) : null}
-                            {canCreate || canEdit ? (
+                            {showAllocate ? (
                               <DropdownMenuItem
                                 onSelect={() => tryAllocate(p)}
                                 disabled={unknown}
                               >
                                 Allocate
+                              </DropdownMenuItem>
+                            ) : null}
+                            {showDeallocate ? (
+                              <DropdownMenuItem onSelect={() => setDeallocateTarget(p)}>
+                                Deallocate
                               </DropdownMenuItem>
                             ) : null}
                             {canDelete ? (
@@ -497,6 +551,16 @@ function RemittancesPageInner() {
         destructive
         loading={submitting}
         onConfirm={confirmDelete}
+      />
+      <ConfirmDialog
+        open={Boolean(deallocateTarget)}
+        onOpenChange={(open) => !open && setDeallocateTarget(null)}
+        title="Deallocate remittance?"
+        description="This clears all stock allocations for this remittance, sets it back to unallocated, and recomputes each vehicle’s payment status (partial / reserved / unpaid as appropriate)."
+        confirmLabel="Deallocate"
+        destructive
+        loading={submitting}
+        onConfirm={confirmDeallocate}
       />
       <Dialog open={Boolean(tagTarget)} onOpenChange={(open) => !open && setTagTarget(null)}>
         <DialogContent>

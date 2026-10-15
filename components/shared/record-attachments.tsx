@@ -67,19 +67,25 @@ export type AttachmentListItem = {
   object_path: string;
   content_type: string;
   created_at: string;
+  doc_kind?: string | null;
 };
 
 /** List attachments for a record (newest first). Toasts and returns [] on error. */
 export async function listRecordAttachments(
   entityType: AttachmentEntity,
   entityId: string,
+  opts?: { docKinds?: string[] }
 ): Promise<AttachmentListItem[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('record_attachments')
-    .select('id, file_name, object_path, content_type, created_at')
+    .select('id, file_name, object_path, content_type, created_at, doc_kind')
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .order('created_at', { ascending: false });
+  if (opts?.docKinds?.length) {
+    query = query.in('doc_kind', opts.docKinds);
+  }
+  const { data, error } = await query;
   if (error) {
     toast.error('Could not load attachments: ' + error.message);
     return [];

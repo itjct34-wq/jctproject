@@ -9,8 +9,11 @@ import { toast } from 'sonner';
 
 const KINDS: { kind: Exclude<VehicleDocKind, 'other'>; hint: string }[] = [
   { kind: 'bl', hint: 'PDF · sets Shipped' },
-  { kind: 'surrender', hint: 'sets Delivered' },
+  { kind: 'amend_bl', hint: 'Amend BL' },
+  { kind: 'surrender', hint: 'SD · sets Delivered' },
   { kind: 'waybill', hint: 'sets Delivered' },
+  { kind: 'export_certificate', hint: 'EC chip' },
+  { kind: 'auction_sheet', hint: 'Auction sheet' },
 ];
 
 export function VehicleShippingDocs({

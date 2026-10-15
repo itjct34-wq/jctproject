@@ -7,7 +7,20 @@ export type VehicleIncoterm = NonNullable<Vehicle['incoterm']>;
 export type VehicleFreightMode = NonNullable<Vehicle['freight_mode']>;
 export type VehicleCommissionStatus = NonNullable<Vehicle['commission_status']>;
 export type VehicleWorkflowStage = 'in_stock' | 'reserved' | 'booked' | 'shipped' | 'delivered';
-export type VehicleDocKind = 'bl' | 'surrender' | 'waybill' | 'other';
+export type VehicleDocKind =
+  | 'bl'
+  | 'amend_bl'
+  | 'surrender'
+  | 'draft'
+  | 'waybill'
+  | 'shipping_invoice'
+  | 'export_certificate'
+  | 'export_certificate_en'
+  | 'inspection'
+  | 'auction_sheet'
+  | 'spare_key'
+  | 'dhl'
+  | 'other';
 
 export const PAYMENT_STATUS_LABELS: Record<VehiclePaymentStatus, string> = {
   available: 'Available',
@@ -108,10 +121,28 @@ export function soldProfitUsd(vehicle: Pick<Vehicle, 'sold_price' | 'fob_usd' | 
 
 export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {
   bl: 'Bill of lading',
+  amend_bl: 'Amend BL',
   surrender: 'Surrender',
+  draft: 'Draft',
   waybill: 'Waybill',
-  other: 'Other',
+  shipping_invoice: 'Shipping invoice',
+  export_certificate: 'Export certificate',
+  export_certificate_en: 'Export certificate (EN)',
+  inspection: 'Inspection certificate',
+  auction_sheet: 'Auction sheet',
+  spare_key: 'Spare key',
+  dhl: 'DHL documents',
+  other: 'Other documents',
 };
+
+export const COURIER_SELECTION_OPTIONS = [
+  'DHL',
+  'EMS',
+  'FedEx',
+  'Japan Post',
+  'UPS',
+  'Other',
+] as const;
 
 export const PAYMENT_STATUS_STYLES: Record<VehiclePaymentStatus, string> = {
   available: 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -239,12 +270,103 @@ export function fobPreviewFromForm(bid: string, expense: string, tt: string) {
 }
 
 export const emptyShippingForm = {
-  shipping_port_of_loading: '',
-  shipping_port_of_discharge: '',
-  shipping_vessel_name: '',
-  shipping_bl_number: '',
   shipping_line: '',
+  shipping_vessel_name: '',
+  shipping_voyage_number: '',
   shipping_etd: '',
   shipping_eta: '',
+  shipping_port_of_loading: '',
+  shipping_place_of_delivery: '',
+  shipping_port_of_discharge: '',
+  shipping_forwarding_agent: '',
+  shipping_cut_off_date: '',
+  shipping_bl_number: '',
+  shipping_booking_number: '',
+  shipping_track_url: '',
+  shipping_bl_date: '',
+  freight_mode: '' as '' | VehicleFreightMode,
+  shipping_container_number: '',
+  shipping_freight_charges: '',
+  shipping_vanning_charges: '',
   shipping_notes: '',
 };
+
+export const emptyCourierForm = {
+  courier_selection: '',
+  courier_company: '',
+  courier_tracking_id: '',
+  courier_date: '',
+  courier_details: '',
+  courier_charges: '',
+};
+
+export function shippingFormFromVehicle(v: Vehicle): typeof emptyShippingForm {
+  return {
+    shipping_line: v.shipping_line || '',
+    shipping_vessel_name: v.shipping_vessel_name || '',
+    shipping_voyage_number: v.shipping_voyage_number || '',
+    shipping_etd: v.shipping_etd || '',
+    shipping_eta: v.shipping_eta || '',
+    shipping_port_of_loading: v.shipping_port_of_loading || '',
+    shipping_place_of_delivery: v.shipping_place_of_delivery || v.shipping_port_of_discharge || '',
+    shipping_port_of_discharge: v.shipping_port_of_discharge || '',
+    shipping_forwarding_agent: v.shipping_forwarding_agent || '',
+    shipping_cut_off_date: v.shipping_cut_off_date || '',
+    shipping_bl_number: v.shipping_bl_number || '',
+    shipping_booking_number: v.shipping_booking_number || '',
+    shipping_track_url: v.shipping_track_url || '',
+    shipping_bl_date: v.shipping_bl_date || '',
+    freight_mode: v.freight_mode === 'roro' || v.freight_mode === 'container' ? v.freight_mode : '',
+    shipping_container_number: v.shipping_container_number || '',
+    shipping_freight_charges: v.shipping_freight_charges != null ? String(v.shipping_freight_charges) : '',
+    shipping_vanning_charges: v.shipping_vanning_charges != null ? String(v.shipping_vanning_charges) : '',
+    shipping_notes: v.shipping_notes || '',
+  };
+}
+
+export function courierFormFromVehicle(v: Vehicle): typeof emptyCourierForm {
+  return {
+    courier_selection: v.courier_selection || '',
+    courier_company: v.courier_company || '',
+    courier_tracking_id: v.courier_tracking_id || '',
+    courier_date: v.courier_date || '',
+    courier_details: v.courier_details || '',
+    courier_charges: v.courier_charges != null ? String(v.courier_charges) : '',
+  };
+}
+
+export function shippingPayloadFromForm(form: typeof emptyShippingForm) {
+  const place = form.shipping_place_of_delivery.trim() || null;
+  return {
+    shipping_line: form.shipping_line.trim() || null,
+    shipping_vessel_name: form.shipping_vessel_name.trim() || null,
+    shipping_voyage_number: form.shipping_voyage_number.trim() || null,
+    shipping_etd: form.shipping_etd || null,
+    shipping_eta: form.shipping_eta || null,
+    shipping_port_of_loading: form.shipping_port_of_loading.trim() || null,
+    shipping_place_of_delivery: place,
+    shipping_port_of_discharge: place || form.shipping_port_of_discharge.trim() || null,
+    shipping_forwarding_agent: form.shipping_forwarding_agent.trim() || null,
+    shipping_cut_off_date: form.shipping_cut_off_date || null,
+    shipping_bl_number: form.shipping_bl_number.trim() || null,
+    shipping_booking_number: form.shipping_booking_number.trim() || null,
+    shipping_track_url: form.shipping_track_url.trim() || null,
+    shipping_bl_date: form.shipping_bl_date || null,
+    freight_mode: form.freight_mode === 'roro' || form.freight_mode === 'container' ? form.freight_mode : null,
+    shipping_container_number: form.shipping_container_number.trim() || null,
+    shipping_freight_charges: form.shipping_freight_charges === '' ? null : Number(form.shipping_freight_charges) || 0,
+    shipping_vanning_charges: form.shipping_vanning_charges === '' ? null : Number(form.shipping_vanning_charges) || 0,
+    shipping_notes: form.shipping_notes.trim() || null,
+  };
+}
+
+export function courierPayloadFromForm(form: typeof emptyCourierForm) {
+  return {
+    courier_selection: form.courier_selection.trim() || null,
+    courier_company: form.courier_company.trim() || null,
+    courier_tracking_id: form.courier_tracking_id.trim() || null,
+    courier_date: form.courier_date || null,
+    courier_details: form.courier_details.trim() || null,
+    courier_charges: form.courier_charges === '' ? null : Number(form.courier_charges) || 0,
+  };
+}

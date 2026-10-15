@@ -22,15 +22,19 @@ import { type GalleryImage, MultiImageUpload } from '@/components/shared/multi-i
 import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images';
 import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
 import { FobFormulaFields } from '@/components/vehicles/fob-formula-fields';
+import { EditCourierDialog } from '@/components/vehicles/edit-courier-dialog';
+import { EditShippingDialog } from '@/components/vehicles/edit-shipping-dialog';
+import { ReserveVehicleDialog } from '@/components/vehicles/reserve-vehicle-dialog';
 import { ShippingStepper } from '@/components/vehicles/shipping-stepper';
 import { VehicleShippingDocs } from '@/components/vehicles/vehicle-shipping-docs';
+import type { VehicleRemittanceRef } from '@/components/vehicles/vehicle-remittance-popover';
 import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
 import { parseStockCategory, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
 import { nextVehicleStockNumber } from '@/lib/utils/stock-number';
 import { mergeEngineIntoNotes, publicEngineFromNotes, stripEngineFromNotes } from '@/lib/public/vehicles';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
 import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
-import type { Customer, Payment, Vehicle } from '@/lib/types';
+import type { Customer, Office, Payment, Vehicle } from '@/lib/types';
 import {
   commissionAmountPkr,
   effectiveCommissionStatus,
@@ -39,6 +43,8 @@ import {
   parsePkrPerUsd,
   reservationExclusivityMessage,
   emptyShippingForm,
+  shippingFormFromVehicle,
+  shippingPayloadFromForm,
   FREIGHT_MODE_LABELS,
   FREIGHT_MODES,
   INCOTERMS,
@@ -50,7 +56,6 @@ import {
   SHIPPING_STATUSES,
   soldProfitUsd,
   suggestCommissionPkr,
-  WORKFLOW_STAGE_LABELS,
   workflowStage,
   type VehicleFreightMode,
   type VehicleIncoterm,
@@ -61,11 +66,35 @@ import { makeVehicleAvailable, vehicleCanMakeAvailable } from '@/lib/utils/make-
 import { Loader2, Pencil, Plus, Search, Ship, Tag, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type VehicleInvoiceRef = { id: string; invoice_code: string };
 type ProfileNameRow = { id: string; full_name: string | null; display_name: string | null; email: string | null };
-type CustomerListRow = Pick<Customer, 'id' | 'full_name' | 'customer_code' | 'country'>;
-type VehiclePayAgg = { count: number; allocated: number };
+type CustomerListRow = Pick<
+  Customer,
+  | 'id'
+  | 'full_name'
+  | 'customer_code'
+  | 'country'
+  | 'city'
+  | 'address_line1'
+  | 'phone'
+  | 'email'
+  | 'default_currency'
+  | 'assigned_to'
+  | 'company_name'
+>;
+type VehiclePayAgg = { count: number; allocated: number; remittances: VehicleRemittanceRef[] };
+
+const STOCK_FILTER_CHIPS: { id: string; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'available', label: 'Available' },
+  { id: 'reserved', label: 'Reserved' },
+  { id: 'unpaid', label: 'Unpaid' },
+  { id: 'partial_paid', label: 'Partial Paid' },
+  { id: 'paid', label: 'Paid' },
+  { id: 'delivered', label: 'Delivered' },
+];
 
 function profileDisplayName(p: ProfileNameRow | undefined) {
   if (!p) return '';
@@ -84,12 +113,13 @@ const emptyForm = {
   purchase_price: '', expense_jpy: String(FIXED_EXPENSE_JPY), tt_rate: String(DEFAULT_TT_RATE),
   notes: '', primary_image_url: '', source_country_code: 'JP',
   customer_id: '', sold_price: '', incoterm: 'FOB' as VehicleIncoterm,
-  freight_mode: '' as '' | VehicleFreightMode, reserved_until: '',
+  reserved_until: '',
   commission_pkr: '',
   payment_status: 'available' as VehiclePaymentStatus,
   shipping_status: 'not_booked' as VehicleShippingStatus,
   status: 'in_stock' as Vehicle['status'],
   ...emptyShippingForm,
+  freight_mode: '' as '' | VehicleFreightMode,
 };
 
 const LIST_TITLES: Record<StockCategory, { title: string; description: string }> = {
@@ -123,12 +153,14 @@ function VehiclesPage() {
   const canOverrideReservation = isAdmin() || hasRole('operations') || hasRole('manager');
   const canMakeAvailable = isAdmin();
   const canReserveStock =
-    (hasRole('sales_agent') || hasRole('freelancer')) && !canEditVehicle;
+    can('sales', 'create') ||
+    ((hasRole('sales_agent') || hasRole('freelancer')) && !canEditVehicle);
   const canEditShipping = canEditVehicle;
   const canRecordPayment = can('payments', 'create');
   const canMarkCommissionPaid = isAdmin() || hasRole('manager') || hasRole('accounts');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<CustomerListRow[]>([]);
+  const [offices, setOffices] = useState<Office[]>([]);
   const [vehiclePays, setVehiclePays] = useState<Record<string, VehiclePayAgg>>({});
   const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
   const [agentNames, setAgentNames] = useState<Record<string, string>>({});
@@ -147,25 +179,28 @@ function VehiclesPage() {
   const [form, setForm] = useState(emptyForm);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
   const [reserveOpen, setReserveOpen] = useState(false);
-  const [reserveCustomerId, setReserveCustomerId] = useState('');
-  const [reserveDays, setReserveDays] = useState('7');
-  const [reserveSoldPrice, setReserveSoldPrice] = useState('');
-  const [reserveIncoterm, setReserveIncoterm] = useState<VehicleIncoterm>('FOB');
-  const [reserveFreightMode, setReserveFreightMode] = useState<'' | VehicleFreightMode>('');
-  const [reserveCommissionPkr, setReserveCommissionPkr] = useState('');
   const [pkrPerUsd, setPkrPerUsd] = useState<number | null>(null);
   const [shippingOpen, setShippingOpen] = useState(false);
-  const [shippingForm, setShippingForm] = useState(emptyShippingForm);
+  const [courierOpen, setCourierOpen] = useState(false);
+  const [vehicleDocKinds, setVehicleDocKinds] = useState<Record<string, string[]>>({});
   const [payAmount, setPayAmount] = useState('');
   const [payDate, setPayDate] = useState('');
 
   const loadVehicles = useCallback(async () => {
     setLoading(true);
     await supabase.rpc('expire_reserved_vehicles');
-    const [vRes, cRes] = await Promise.all([
+    const [vRes, cRes, oRes] = await Promise.all([
       supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250),
-      supabase.from('customers').select('id, full_name, customer_code, country').order('full_name').limit(250),
+      supabase
+        .from('customers')
+        .select(
+          'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name'
+        )
+        .order('full_name')
+        .limit(250),
+      supabase.from('offices').select('*').eq('is_active', true).order('name'),
     ]);
+    if (oRes.data) setOffices(oRes.data as Office[]);
     if (vRes.error) toast.error(`Unable to load inventory: ${vRes.error.message}`);
     const list = (vRes.data || []) as Vehicle[];
     setVehicles(list);
@@ -182,9 +217,14 @@ function VehiclesPage() {
       ),
     ];
 
-    const [missCustRes, salesRes, itemRes] = await Promise.all([
+    const [missCustRes, salesRes, itemRes, docsRes] = await Promise.all([
       missingCustomerIds.length
-        ? supabase.from('customers').select('id, full_name, customer_code, country').in('id', missingCustomerIds)
+        ? supabase
+            .from('customers')
+            .select(
+              'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name'
+            )
+            .in('id', missingCustomerIds)
         : Promise.resolve({ data: [] as CustomerListRow[] }),
       vehicleIds.length
         ? supabase.from('sales').select('vehicle_id, customer_id, created_by, created_at').in('vehicle_id', vehicleIds).neq('status', 'cancelled')
@@ -192,9 +232,33 @@ function VehiclesPage() {
       vehicleIds.length
         ? supabase.from('invoice_items').select('vehicle_id, invoice_id, created_at').in('vehicle_id', vehicleIds).order('created_at', { ascending: false })
         : Promise.resolve({ data: [] as Array<{ vehicle_id: string | null; invoice_id: string; created_at: string }> }),
+      vehicleIds.length
+        ? supabase
+            .from('record_attachments')
+            .select('entity_id, doc_kind')
+            .eq('entity_type', 'vehicles')
+            .in('entity_id', vehicleIds)
+            .in('doc_kind', [
+              'bl',
+              'amend_bl',
+              'surrender',
+              'waybill',
+              'export_certificate',
+              'export_certificate_en',
+              'auction_sheet',
+            ])
+        : Promise.resolve({ data: [] as Array<{ entity_id: string; doc_kind: string | null }> }),
     ]);
     if (missCustRes.data?.length) customerRows = [...customerRows, ...missCustRes.data];
     setCustomers(customerRows);
+
+    const docMap: Record<string, string[]> = {};
+    for (const row of docsRes.data || []) {
+      if (!row.doc_kind) continue;
+      const list = docMap[row.entity_id] || (docMap[row.entity_id] = []);
+      if (!list.includes(row.doc_kind)) list.push(row.doc_kind);
+    }
+    setVehicleDocKinds(docMap);
 
     const saleByVehicle = new Map<string, { customer_id: string; created_by: string }>();
     for (const s of salesRes.data || []) {
@@ -216,7 +280,12 @@ function VehiclesPage() {
       }
     }
     if (missingCustomerIds.length) {
-      const { data: moreCust } = await supabase.from('customers').select('id, full_name, customer_code, country').in('id', missingCustomerIds);
+      const { data: moreCust } = await supabase
+        .from('customers')
+        .select(
+          'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name'
+        )
+        .in('id', missingCustomerIds);
       if (moreCust?.length) {
         customerRows = [...customerRows, ...moreCust];
         setCustomers(customerRows);
@@ -254,31 +323,54 @@ function VehiclesPage() {
     if (vehicleIds.length) {
       const { data: allocRows } = await supabase
         .from('payment_allocations')
-        .select('vehicle_id, allocate_amount, payments(status)')
+        .select('vehicle_id, allocate_amount, payments(id, payment_code, amount, currency, status)')
         .in('vehicle_id', vehicleIds);
       if (allocRows?.length) {
         for (const a of allocRows) {
-          const status = (a.payments as { status?: string } | null)?.status;
-          if (!a.vehicle_id || status === 'rejected') continue;
-          const row = payMap[a.vehicle_id] || { count: 0, allocated: 0 };
+          const pay = a.payments as {
+            id?: string;
+            payment_code?: string;
+            amount?: number;
+            currency?: string;
+            status?: string;
+          } | null;
+          const status = pay?.status;
+          if (!a.vehicle_id || status === 'rejected' || !pay?.id) continue;
+          const row = payMap[a.vehicle_id] || { count: 0, allocated: 0, remittances: [] };
           row.count += 1;
+          const amt = Number(a.allocate_amount) || Number(pay.amount) || 0;
           if (!status || status === 'received' || status === 'reconciled' || status === 'pending') {
-            row.allocated += Number(a.allocate_amount) || 0;
+            row.allocated += amt;
+          }
+          if (!row.remittances.some((r) => r.paymentId === pay.id)) {
+            row.remittances.push({
+              paymentId: pay.id,
+              paymentCode: pay.payment_code || pay.id.slice(0, 8),
+              amount: amt,
+              currency: pay.currency || 'USD',
+            });
           }
           payMap[a.vehicle_id] = row;
         }
       } else {
         const { data: payRows } = await supabase
           .from('payments')
-          .select('id, vehicle_id, amount, currency, status')
+          .select('id, payment_code, vehicle_id, amount, currency, status')
           .in('vehicle_id', vehicleIds);
         for (const p of payRows || []) {
           if (!p.vehicle_id || p.status === 'rejected') continue;
-          const row = payMap[p.vehicle_id] || { count: 0, allocated: 0 };
+          const row = payMap[p.vehicle_id] || { count: 0, allocated: 0, remittances: [] };
           row.count += 1;
+          const amt = Number(p.amount) || 0;
           if (p.status === 'received' || p.status === 'reconciled' || p.status === 'pending') {
-            row.allocated += Number(p.amount) || 0;
+            row.allocated += amt;
           }
+          row.remittances.push({
+            paymentId: p.id,
+            paymentCode: p.payment_code || p.id.slice(0, 8),
+            amount: amt,
+            currency: p.currency || 'USD',
+          });
           payMap[p.vehicle_id] = row;
         }
       }
@@ -324,7 +416,19 @@ function VehiclesPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return vehicles.filter((v) => {
-      const matchesStatus = statusFilter === 'all' || workflowStage(v) === statusFilter || v.status === statusFilter;
+      const pay = effectivePaymentStatus(v);
+      const ship = effectiveShippingStatus(v);
+      const allocated = vehiclePays[v.id]?.allocated || 0;
+      let matchesStatus = true;
+      if (statusFilter === 'available') matchesStatus = pay === 'available';
+      else if (statusFilter === 'reserved') matchesStatus = pay === 'reserved';
+      else if (statusFilter === 'unpaid') matchesStatus = pay === 'reserved' && allocated <= 0.009;
+      else if (statusFilter === 'partial_paid') matchesStatus = pay === 'partial_paid';
+      else if (statusFilter === 'paid') matchesStatus = pay === 'paid';
+      else if (statusFilter === 'delivered') matchesStatus = ship === 'delivered';
+      else if (statusFilter !== 'all') {
+        matchesStatus = workflowStage(v) === statusFilter || v.status === statusFilter;
+      }
       const matchesCategory = parseStockCategory(v.stock_category) === listCategory;
       const agent = agentNames[v.reserved_by || saleFallback[v.id]?.agentId || ''] || '';
       const customer = customers.find((c) => c.id === (v.customer_id || saleFallback[v.id]?.customerId))?.full_name || '';
@@ -332,7 +436,7 @@ function VehiclesPage() {
       const matchesSearch = !q || [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model, agent, customer, invoiceCode].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
       return matchesStatus && matchesCategory && matchesSearch;
     });
-  }, [vehicles, search, statusFilter, listCategory, agentNames, saleFallback, customers, vehicleInvoices]);
+  }, [vehicles, search, statusFilter, listCategory, agentNames, saleFallback, customers, vehicleInvoices, vehiclePays]);
 
   const fillFormFromVehicle = (v: Vehicle) => {
     setForm({
@@ -358,17 +462,10 @@ function VehiclesPage() {
       status: v.status,
       sold_price: v.sold_price != null ? String(v.sold_price) : '',
       incoterm: (v.incoterm as VehicleIncoterm) || 'FOB',
-      freight_mode: v.freight_mode === 'roro' || v.freight_mode === 'container' ? v.freight_mode : '',
       commission_pkr: v.commission_pkr != null ? String(v.commission_pkr) : '',
       reserved_until: v.reserved_until || '',
-      shipping_port_of_loading: v.shipping_port_of_loading || '',
-      shipping_port_of_discharge: v.shipping_port_of_discharge || '',
-      shipping_vessel_name: v.shipping_vessel_name || '',
-      shipping_bl_number: v.shipping_bl_number || '',
-      shipping_line: v.shipping_line || '',
-      shipping_etd: v.shipping_etd || '',
-      shipping_eta: v.shipping_eta || '',
-      shipping_notes: v.shipping_notes || '',
+      ...shippingFormFromVehicle(v),
+      freight_mode: v.freight_mode === 'roro' || v.freight_mode === 'container' ? v.freight_mode : '',
     });
   };
 
@@ -501,18 +598,11 @@ function VehiclesPage() {
       customer_id: form.customer_id || null,
       sold_price: form.sold_price ? Number(form.sold_price) : null,
       incoterm: form.incoterm || selected.incoterm || null,
-      freight_mode: form.freight_mode === 'roro' || form.freight_mode === 'container' ? form.freight_mode : null,
       reserved_until: form.reserved_until || null,
       payment_status: form.payment_status,
       shipping_status: form.shipping_status,
-      shipping_port_of_loading: form.shipping_port_of_loading.trim() || null,
-      shipping_port_of_discharge: form.shipping_port_of_discharge.trim() || null,
-      shipping_vessel_name: form.shipping_vessel_name.trim() || null,
-      shipping_bl_number: form.shipping_bl_number.trim() || null,
-      shipping_line: form.shipping_line.trim() || null,
-      shipping_etd: form.shipping_etd || null,
-      shipping_eta: form.shipping_eta || null,
-      shipping_notes: form.shipping_notes.trim() || null,
+      ...shippingPayloadFromForm(form),
+      freight_mode: form.freight_mode === 'roro' || form.freight_mode === 'container' ? form.freight_mode : null,
       updated_at: new Date().toISOString(),
     };
     if (form.status === 'on_hold' || form.status === 'archived') {
@@ -657,142 +747,21 @@ function VehiclesPage() {
       return;
     }
     setSelected(target);
-    setReserveCustomerId(target.customer_id || '');
-    setReserveDays('7');
-    setReserveSoldPrice(target.sold_price != null ? String(target.sold_price) : (target.fob_usd != null ? String(target.fob_usd) : target.listed_price != null ? String(target.listed_price) : ''));
-    setReserveIncoterm((target.incoterm as VehicleIncoterm) || 'FOB');
-    setReserveFreightMode(target.freight_mode === 'roro' || target.freight_mode === 'container' ? target.freight_mode : '');
-    setReserveCommissionPkr(target.commission_pkr != null ? String(target.commission_pkr) : '');
     setReserveOpen(true);
-  };
-
-  const submitReserve = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profile || !selected || !reserveCustomerId) return;
-    setSubmitting(true);
-    const { data: fresh, error: freshErr } = await supabase
-      .from('vehicles')
-      .select('id, status, payment_status, reserved_by')
-      .eq('id', selected.id)
-      .maybeSingle();
-    if (freshErr) {
-      setSubmitting(false);
-      toast.error(freshErr.message);
-      return;
-    }
-    const live = (fresh || selected) as Pick<Vehicle, 'id' | 'status' | 'payment_status' | 'reserved_by'>;
-    let names = agentNames;
-    if (live.reserved_by && !names[live.reserved_by]) {
-      const { data: holder } = await supabase
-        .from('profiles')
-        .select('id, full_name, display_name, email')
-        .eq('id', live.reserved_by)
-        .maybeSingle();
-      if (holder) {
-        names = { ...names, [holder.id]: profileDisplayName(holder as ProfileNameRow) };
-      }
-    }
-    const conflict = reservationExclusivityMessage(live, profile.id, names);
-    if (conflict) {
-      setSubmitting(false);
-      toast.error(conflict);
-      setReserveOpen(false);
-      await loadVehicles();
-      return;
-    }
-    const days = Math.max(1, Number(reserveDays) || 7);
-    const reservedUntil = new Date();
-    reservedUntil.setDate(reservedUntil.getDate() + days);
-    const reservedUntilStr = reservedUntil.toISOString().slice(0, 10);
-    const { data: claimed, error } = await supabase
-      .from('vehicles')
-      .update({
-        payment_status: 'reserved',
-        customer_id: reserveCustomerId,
-        reserved_by: profile.id,
-        reserved_until: reservedUntilStr,
-        sold_price: reserveSoldPrice ? Number(reserveSoldPrice) : null,
-        incoterm: reserveIncoterm,
-        freight_mode: reserveFreightMode === 'roro' || reserveFreightMode === 'container' ? reserveFreightMode : null,
-        commission_pkr: reserveCommissionPkr === '' ? null : Number(reserveCommissionPkr) || 0,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', selected.id)
-      .eq('payment_status', 'available')
-      .is('reserved_by', null)
-      .select('id')
-      .maybeSingle();
-    if (error) {
-      setSubmitting(false);
-      const msg = /already reserved by/i.test(error.message)
-        ? error.message.replace(/^.*already reserved by/i, 'Already reserved by')
-        : error.message;
-      toast.error(msg);
-      return;
-    }
-    if (!claimed) {
-      setSubmitting(false);
-      toast.error(reservationExclusivityMessage(live, profile.id, names) || 'Already reserved by another agent');
-      setReserveOpen(false);
-      await loadVehicles();
-      return;
-    }
-    await supabase.from('vehicle_status_history').insert({
-      vehicle_id: selected.id,
-      from_status: selected.status,
-      to_status: 'reserved',
-      note: `Reserved for ${customerLabel(reserveCustomerId)} · ${reserveIncoterm} · until ${reservedUntilStr}`,
-      changed_by: profile.id,
-    });
-    setSubmitting(false);
-    toast.success(`Reserved for ${customerLabel(reserveCustomerId)}`);
-    setReserveOpen(false);
-    await loadVehicles();
   };
 
   const openShippingEdit = (vehicle?: Vehicle | null) => {
     const target = vehicle || selected;
     if (!target) return;
     setSelected(target);
-    setShippingForm({
-      shipping_port_of_loading: target.shipping_port_of_loading || '',
-      shipping_port_of_discharge: target.shipping_port_of_discharge || '',
-      shipping_vessel_name: target.shipping_vessel_name || '',
-      shipping_bl_number: target.shipping_bl_number || '',
-      shipping_line: target.shipping_line || '',
-      shipping_etd: target.shipping_etd || '',
-      shipping_eta: target.shipping_eta || '',
-      shipping_notes: target.shipping_notes || '',
-    });
     setShippingOpen(true);
   };
 
-  const submitShipping = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selected || !canEditShipping) return;
-    setSubmitting(true);
-    const { error } = await supabase
-      .from('vehicles')
-      .update({
-        shipping_port_of_loading: shippingForm.shipping_port_of_loading.trim() || null,
-        shipping_port_of_discharge: shippingForm.shipping_port_of_discharge.trim() || null,
-        shipping_vessel_name: shippingForm.shipping_vessel_name.trim() || null,
-        shipping_bl_number: shippingForm.shipping_bl_number.trim() || null,
-        shipping_line: shippingForm.shipping_line.trim() || null,
-        shipping_etd: shippingForm.shipping_etd || null,
-        shipping_eta: shippingForm.shipping_eta || null,
-        shipping_notes: shippingForm.shipping_notes.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', selected.id);
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success('Booking saved');
-    setShippingOpen(false);
-    await loadVehicles();
+  const openCourierEdit = (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
+    setCourierOpen(true);
   };
 
   const markCommissionPaid = async (vehicleId: string) => {
@@ -1096,14 +1065,29 @@ function VehiclesPage() {
         ))}
       </div>
 
-      <Card><CardContent className="p-4">
+      <Card><CardContent className="space-y-3 p-4">
         <div className="erp-filter-bar">
-        <div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search stock no., chassis, make…" /></div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All stages</SelectItem>
-            {Object.entries(WORKFLOW_STAGE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-          </SelectContent></Select>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search stock no., chassis, make…" />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {STOCK_FILTER_CHIPS.map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => setStatusFilter(chip.id)}
+              className={cn(
+                'rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors',
+                statusFilter === chip.id
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'
+              )}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
       </CardContent></Card>
 
@@ -1119,7 +1103,7 @@ function VehiclesPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 pr-16">
           {filtered.map((v) => {
             const pay = effectivePaymentStatus(v);
             const pays = vehiclePays[v.id];
@@ -1135,8 +1119,11 @@ function VehiclesPage() {
                 invoice={vehicleInvoices[v.id] || null}
                 paymentCount={pays?.count || 0}
                 allocatedUsd={pays?.allocated || 0}
+                remittances={pays?.remittances || []}
+                docKinds={vehicleDocKinds[v.id] || []}
                 onViewInfo={() => setSelected(v)}
                 onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
+                onAssign={canEditVehicle && pay === 'available' ? () => openReserve(v) : undefined}
                 onReserve={canReserveStock && pay === 'available' ? () => openReserve(v) : undefined}
                 onMakeAvailable={
                   canMakeAvailable && vehicleCanMakeAvailable(v)
@@ -1144,6 +1131,7 @@ function VehiclesPage() {
                     : undefined
                 }
                 onShipping={canEditShipping ? () => openShippingEdit(v) : undefined}
+                onCourier={canEditShipping ? () => openCourierEdit(v) : undefined}
                 onDelete={canDeleteVehicle ? () => { setSelected(v); setDeleteOpen(true); } : undefined}
                 onMarkCommissionPaid={
                   canMarkCommissionPaid && effectiveCommissionStatus(v) === 'due'
@@ -1172,7 +1160,7 @@ function VehiclesPage() {
         </form>
       </DialogContent></Dialog>
 
-      <Sheet open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen && !makeAvailableOpen} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen && !courierOpen && !makeAvailableOpen} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">{selected && (<>
           <SheetHeader><SheetTitle>{selected.make} {selected.model}</SheetTitle><SheetDescription>{selected.stock_number} · {statusLabels[selected.status]}</SheetDescription></SheetHeader>
           {selected.primary_image_url && <img src={selected.primary_image_url} alt="" className="mt-4 rounded-lg w-full max-h-48 object-cover" />}
@@ -1239,84 +1227,31 @@ function VehiclesPage() {
         </>)}</SheetContent>
       </Sheet>
 
-      <Dialog open={reserveOpen} onOpenChange={setReserveOpen}><DialogContent>
-        <DialogHeader><DialogTitle>Reserve vehicle</DialogTitle></DialogHeader>
-        <form onSubmit={submitReserve} className="space-y-3">
-          <div className="space-y-1"><Label>Customer *</Label>
-            <Select value={reserveCustomerId} onValueChange={setReserveCustomerId}>
-              <SelectTrigger><SelectValue placeholder="Select your customer" /></SelectTrigger>
-              <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name} ({c.customer_code})</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1"><Label>Sold price (USD)</Label><Input type="number" value={reserveSoldPrice} onChange={(e) => setReserveSoldPrice(e.target.value)} /></div>
-          <div className="space-y-1"><Label>Shipment term</Label>
-            <Select value={reserveIncoterm} onValueChange={(v: VehicleIncoterm) => setReserveIncoterm(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{INCOTERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1"><Label>Freight mode</Label>
-            <Select value={reserveFreightMode || 'none'} onValueChange={(v) => setReserveFreightMode(v === 'none' ? '' : (v as VehicleFreightMode))}>
-              <SelectTrigger><SelectValue placeholder="Not set" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Not set</SelectItem>
-                {FREIGHT_MODES.map((m) => <SelectItem key={m} value={m}>{FREIGHT_MODE_LABELS[m]}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1"><Label>Hold (days)</Label><Input type="number" min={1} value={reserveDays} onChange={(e) => setReserveDays(e.target.value)} /></div>
-          <div className="space-y-1">
-            <Label>Commission (PKR)</Label>
-            <Input type="number" min={0} value={reserveCommissionPkr} onChange={(e) => setReserveCommissionPkr(e.target.value)} placeholder="Enter PKR" />
-            {pkrPerUsd != null && soldProfitUsd({ sold_price: reserveSoldPrice ? Number(reserveSoldPrice) : selected?.sold_price ?? null, fob_usd: selected?.fob_usd ?? null, listed_price: selected?.listed_price ?? null }) != null ? (
-              <button
-                type="button"
-                className="text-xs text-primary underline"
-                onClick={() => {
-                  const suggested = suggestCommissionPkr(
-                    soldProfitUsd({
-                      sold_price: reserveSoldPrice ? Number(reserveSoldPrice) : selected?.sold_price ?? null,
-                      fob_usd: selected?.fob_usd ?? null,
-                      listed_price: selected?.listed_price ?? null,
-                    }),
-                    pkrPerUsd,
-                    10
-                  );
-                  if (suggested != null) setReserveCommissionPkr(String(suggested));
-                }}
-              >
-                Use 10% of USD profit at configured PKR/USD ({pkrPerUsd})
-              </button>
-            ) : (
-              <p className="text-xs text-muted-foreground">Type the commission in PKR. No FX is applied unless pkr_per_usd is configured.</p>
-            )}
-          </div>
-          <DialogFooter><Button type="submit" disabled={submitting || !reserveCustomerId}>Confirm reserve</Button></DialogFooter>
-        </form>
-      </DialogContent></Dialog>
-
-      <Dialog open={shippingOpen} onOpenChange={setShippingOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle>Booking details</DialogTitle></DialogHeader>
-        <form onSubmit={submitShipping} className="space-y-3">
-          {selected ? <ShippingStepper vehicle={selected} /> : null}
-          <p className="text-xs text-muted-foreground">Saving these fields on a reserved unit sets Booked automatically.</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>POL</Label><Input value={shippingForm.shipping_port_of_loading} onChange={(e) => setShippingForm({ ...shippingForm, shipping_port_of_loading: e.target.value })} /></div>
-            <div className="space-y-1"><Label>POD</Label><Input value={shippingForm.shipping_port_of_discharge} onChange={(e) => setShippingForm({ ...shippingForm, shipping_port_of_discharge: e.target.value })} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>Vessel</Label><Input value={shippingForm.shipping_vessel_name} onChange={(e) => setShippingForm({ ...shippingForm, shipping_vessel_name: e.target.value })} /></div>
-            <div className="space-y-1"><Label>B/L number</Label><Input value={shippingForm.shipping_bl_number} onChange={(e) => setShippingForm({ ...shippingForm, shipping_bl_number: e.target.value })} /></div>
-          </div>
-          <div className="space-y-1"><Label>Shipping line</Label><Input value={shippingForm.shipping_line} onChange={(e) => setShippingForm({ ...shippingForm, shipping_line: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>ETD</Label><Input type="date" value={shippingForm.shipping_etd} onChange={(e) => setShippingForm({ ...shippingForm, shipping_etd: e.target.value })} /></div>
-            <div className="space-y-1"><Label>ETA</Label><Input type="date" value={shippingForm.shipping_eta} onChange={(e) => setShippingForm({ ...shippingForm, shipping_eta: e.target.value })} /></div>
-          </div>
-          <div className="space-y-1"><Label>Notes</Label><Textarea rows={2} value={shippingForm.shipping_notes} onChange={(e) => setShippingForm({ ...shippingForm, shipping_notes: e.target.value })} /></div>
-          <DialogFooter><Button type="submit" disabled={submitting}>Save booking</Button></DialogFooter>
-        </form>
-      </DialogContent></Dialog>
+      <ReserveVehicleDialog
+        open={reserveOpen}
+        onOpenChange={setReserveOpen}
+        vehicle={selected}
+        customers={
+          isSellingFocused && profile?.id
+            ? customers.filter((c) => !c.assigned_to || c.assigned_to === profile.id)
+            : customers
+        }
+        offices={offices}
+        agentNames={agentNames}
+        onSaved={() => loadVehicles()}
+      />
+      <EditShippingDialog
+        open={shippingOpen}
+        onOpenChange={setShippingOpen}
+        vehicle={selected}
+        onSaved={() => loadVehicles()}
+      />
+      <EditCourierDialog
+        open={courierOpen}
+        onOpenChange={setCourierOpen}
+        vehicle={selected}
+        onSaved={() => loadVehicles()}
+      />
 
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete vehicle?" description="Removes available stock only. Reserved or invoiced units are blocked." confirmLabel="Delete" destructive loading={submitting} onConfirm={confirmDelete} />
       <ConfirmDialog
