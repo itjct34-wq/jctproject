@@ -3,7 +3,7 @@
 ## Platform
 
 - **Engine**: PostgreSQL (Supabase), project ref **`omlejtzwodudghqqgaiz`**.
-- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure at least **019–023** are applied if public gallery, categories, or auction house view are missing.
+- **Migrations**: SQL files in `supabase/migrations/` (timestamped filenames). Apply in filename order on fresh environments; on the live JCT project, ensure at least **019–027** are applied if public gallery, categories, auction houses, freight notes, or bulk-upload history are missing.
 - **Types**: `lib/types/database.ts` and `lib/types/index.ts` mirror application usage (not auto-generated in repo).
 
 ## Core domains (selected tables)
@@ -12,7 +12,7 @@
 |--------|----------------|
 | RBAC | `profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`, `teams`, `team_members` |
 | CRM | `customers`, contacts, communications, requirements, `inquiries` |
-| Inventory | `vehicles`, `vehicle_status_history`, `vehicle_images` |
+| Inventory | `vehicles`, `vehicle_status_history`, `vehicle_images`, `bulk_import_batches` |
 | Auctions | `auction_listings`, `auction_bids`, `suppliers` (incl. auction houses), view **`auction_houses`** |
 | Sales | `sales`, `quotations`, `quotation_items` |
 | Finance | `invoices`, `invoice_items`, `payments`, `expenses` |
@@ -39,7 +39,7 @@
 
 Helper functions `has_role`, `has_permission`, `is_admin_user` are **`EXECUTE` granted to `authenticated` only** (not anon).
 
-## Migrations 019–023 (run on JCT SQL editor if not applied)
+## Migrations 019–027 (run on JCT SQL editor if not applied)
 
 Apply **in order** (file names under `supabase/migrations/`):
 
@@ -50,6 +50,10 @@ Apply **in order** (file names under `supabase/migrations/`):
 | **021** | `20261015023000_021_public_gallery_and_source_code_grant.sql` | Anon `SELECT` on gallery + `source_country_code`; public image policy for available vehicles |
 | **022** | `20261015030000_022_vehicle_stock_category.sql` | `stock_category`, `part_sku`, anon grants for catalog split |
 | **023** | `20261015040000_023_auction_houses_directory.sql` | View **`auction_houses`** over `suppliers` where `supplier_type = auction_house` |
+| **024** | `20261015050000_024_sales_freelancer_stock_invoice_guard.sql` | Sales/freelancer cannot insert/delete vehicles |
+| **025** | `20261015060000_025_vehicle_payment_shipping_rls.sql` | Payment/shipping tracks and sales-scoped RLS |
+| **026** | `20261016090000_026_document_freight_notes.sql` | Optional `freight_notes` on invoices and quotations |
+| **027** | `20261016100000_027_bulk_import_batches.sql` | `bulk_import_batches` history for sheet/ZIP imports; staff RLS (admin/operations/manager) |
 
 Earlier migrations **001–018** establish RBAC, CRM, inventory, sales/invoices, payments, security fixes, inquiries, avatars, invoice agent name, etc. New environments should run the full chain; production catch-up often needs **019–023** when enabling machinery/parts routes and photo ZIP gallery.
 

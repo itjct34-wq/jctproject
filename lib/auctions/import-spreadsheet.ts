@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type AuctionImportResult = { ok: number; failed: number; errors: string[] };
+export type AuctionImportResult = { ok: number; failed: number; errors: string[]; createdIds: string[] };
 
 export async function importAuctionSpreadsheetRows(
   supabase: SupabaseClient,
@@ -11,6 +11,7 @@ export async function importAuctionSpreadsheetRows(
   let ok = 0;
   let failed = 0;
   const errors: string[] = [];
+  const createdIds: string[] = [];
   const validResults = ['pending', 'won', 'lost', 'cancelled'];
   const sourceNote = extras?.sourceNote?.trim();
 
@@ -25,7 +26,7 @@ export async function importAuctionSpreadsheetRows(
     }
     const result = (r.result || 'pending').trim().toLowerCase();
     const notes = [r.notes?.trim(), sourceNote].filter(Boolean).join(' · ') || null;
-    const { error } = await supabase.from('auction_listings').insert({
+    const { data, error } = await supabase.from('auction_listings').insert({
       chassis_number: r.chassis_number?.trim() || null,
       make,
       model,
@@ -37,14 +38,16 @@ export async function importAuctionSpreadsheetRows(
       result: validResults.includes(result) ? result : 'pending',
       notes,
       created_by: profileId,
-    });
+    }).select('id').maybeSingle();
     if (error) {
       failed++;
       errors.push(`Row ${i + 2}: ${error.message}`);
     } else {
+      const id = (data as { id: string } | null)?.id;
+      if (id) createdIds.push(id);
       ok++;
     }
   }
 
-  return { ok, failed, errors };
+  return { ok, failed, errors, createdIds };
 }

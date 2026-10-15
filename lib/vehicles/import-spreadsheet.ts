@@ -35,7 +35,14 @@ function mapStatus(raw: string): string | 'invalid' {
   return 'invalid';
 }
 
-export type VehicleImportResult = { ok: number; failed: number; updated: number; errors: string[] };
+export type VehicleImportResult = {
+  ok: number;
+  failed: number;
+  updated: number;
+  errors: string[];
+  createdIds: string[];
+  updatedIds: string[];
+};
 
 export type VehicleImportDefaults = {
   sourceCountry?: string;
@@ -54,6 +61,8 @@ export async function importVehicleSpreadsheetRows(
   let failed = 0;
   let updated = 0;
   const errors: string[] = [];
+  const createdIds: string[] = [];
+  const updatedIds: string[] = [];
   const seenChassis = new Set<string>();
 
   const { data: existingRows } = await supabase.from('vehicles').select('id, chassis_number');
@@ -170,7 +179,10 @@ export async function importVehicleSpreadsheetRows(
       if (error && /source_country_code|stock_category|part_sku/i.test(error.message)) {
         error = (await retryVehicleWrite(supabase, 'update', payload, existingId)).error;
       }
-      if (!error) updated++;
+      if (!error) {
+        updated++;
+        updatedIds.push(existingId);
+      }
     } else {
       payload.created_by = profileId;
       let ins = await supabase.from('vehicles').insert(payload).select('id').maybeSingle();
@@ -202,10 +214,11 @@ export async function importVehicleSpreadsheetRows(
         }))
       );
     }
+    if (!existingId && vehicleId) createdIds.push(vehicleId);
     ok++;
   }
 
-  return { ok, failed, updated, errors };
+  return { ok, failed, updated, errors, createdIds, updatedIds };
 }
 
 async function retryVehicleWrite(

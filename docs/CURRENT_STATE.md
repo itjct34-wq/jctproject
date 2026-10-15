@@ -32,6 +32,7 @@ For full public catalog + ERP auction directory, production should include:
 - Table **`vehicle_images`** + bucket **`vehicle-images`** (020–021)
 - Column **`vehicles.stock_category`**, **`part_sku`** (022)
 - View **`auction_houses`** (023)
+- Table **`bulk_import_batches`** (027) for bulk sheet/ZIP undo history
 
 If machinery/parts pages error or photos never load, run migrations **019–023** in the Supabase SQL editor (files in `supabase/migrations/`).
 

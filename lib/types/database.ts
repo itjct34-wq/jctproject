@@ -337,6 +337,37 @@ export interface VehicleImage {
   created_at: string;
 }
 
+export type BulkImportKind = 'car' | 'machinery' | 'parts' | 'auctions' | 'photos';
+export type BulkImportSource = 'sheet' | 'zip';
+
+export interface BulkImportBatchPayload {
+  created_vehicle_ids?: string[];
+  updated_vehicle_ids?: string[];
+  listing_ids?: string[];
+  vehicle_ids?: string[];
+  image_ids?: string[];
+  storage_paths?: string[];
+  previous_covers?: { vehicle_id: string; primary_image_url: string | null }[];
+  created?: number;
+  updated?: number;
+  failed?: number;
+  photos?: number;
+  country?: string | null;
+  country_code?: string | null;
+  port?: string | null;
+}
+
+export interface BulkImportBatch {
+  id: string;
+  kind: BulkImportKind;
+  source: BulkImportSource;
+  filename: string;
+  created_by: string | null;
+  created_at: string;
+  payload: BulkImportBatchPayload;
+  status: 'active' | 'deleted';
+}
+
 export interface VehicleStatusHistory {
   id: string;
   vehicle_id: string;
