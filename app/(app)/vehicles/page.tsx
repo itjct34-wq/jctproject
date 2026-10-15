@@ -9,11 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StockListCard } from '@/components/vehicles/stock-list-card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/utils/format';
@@ -162,7 +161,6 @@ function VehiclesPage() {
   const [customers, setCustomers] = useState<CustomerListRow[]>([]);
   const [offices, setOffices] = useState<Office[]>([]);
   const [vehiclePays, setVehiclePays] = useState<Record<string, VehiclePayAgg>>({});
-  const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
   const [agentNames, setAgentNames] = useState<Record<string, string>>({});
   const [saleFallback, setSaleFallback] = useState<Record<string, { agentId: string; customerId: string }>>({});
   const [vehicleInvoices, setVehicleInvoices] = useState<Record<string, VehicleInvoiceRef>>({});
@@ -1043,7 +1041,7 @@ function VehiclesPage() {
           {selected ? (
             <VehicleShippingDocs
               vehicleId={selected.id}
-              allowUpload={canEditShipping}
+              allowDelete={canEditShipping}
               onChanged={() => { void loadVehicles(); void loadVehiclePayments(selected.id); }}
             />
           ) : null}
@@ -1103,7 +1101,7 @@ function VehiclesPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-3 pr-16">
+        <div className="space-y-4 pr-16">
           {filtered.map((v) => {
             const pay = effectivePaymentStatus(v);
             const pays = vehiclePays[v.id];
@@ -1111,8 +1109,6 @@ function VehiclesPage() {
               <StockListCard
                 key={v.id}
                 vehicle={v}
-                checked={Boolean(checkedIds[v.id])}
-                onCheckedChange={(on) => setCheckedIds((prev) => ({ ...prev, [v.id]: on }))}
                 customerName={rowCustomerName(v)}
                 customerCountry={rowCustomerCountry(v)}
                 agentName={rowAgentName(v)}
@@ -1160,72 +1156,148 @@ function VehiclesPage() {
         </form>
       </DialogContent></Dialog>
 
-      <Sheet open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen && !courierOpen && !makeAvailableOpen} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">{selected && (<>
-          <SheetHeader><SheetTitle>{selected.make} {selected.model}</SheetTitle><SheetDescription>{selected.stock_number} · {statusLabels[selected.status]}</SheetDescription></SheetHeader>
-          {selected.primary_image_url && <img src={selected.primary_image_url} alt="" className="mt-4 rounded-lg w-full max-h-48 object-cover" />}
-          <div className="mt-4"><ShippingStepper vehicle={selected} /></div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-            <div><p className="text-[10px] uppercase text-muted-foreground">FOB</p><p className="font-semibold">{fobLabel(selected)}</p></div>
-            <div><p className="text-[10px] uppercase text-muted-foreground">Sold / term</p><p className="font-semibold">{selected.sold_price != null ? `${formatMoney(Number(selected.sold_price), rowCurrency(selected))} ${selected.incoterm || ''}` : (selected.incoterm || '—')}</p></div>
-            <div><p className="text-[10px] uppercase text-muted-foreground">Freight</p><p className="font-semibold">{freightLabel(selected) || '—'}</p></div>
-            <div><p className="text-[10px] uppercase text-muted-foreground">Profit</p><p className="font-semibold">{soldProfitUsd(selected) != null ? formatMoney(soldProfitUsd(selected), rowCurrency(selected)) : '—'}</p></div>
-            <div>
-              <p className="text-[10px] uppercase text-muted-foreground">Commission</p>
-              <p className="font-semibold">
-                {commissionAmountPkr(selected) != null && Number(selected.commission_pkr) > 0
-                  ? formatMoney(Number(selected.commission_pkr), 'PKR')
-                  : '—'}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Badge variant="outline" className={PAYMENT_STATUS_STYLES[effectivePaymentStatus(selected)]}>{PAYMENT_STATUS_LABELS[effectivePaymentStatus(selected)]}</Badge>
-            <Badge variant="outline" className={SHIPPING_STATUS_STYLES[effectiveShippingStatus(selected)]}>{SHIPPING_STATUS_LABELS[effectiveShippingStatus(selected)]}</Badge>
-            {effectiveCommissionStatus(selected) === 'paid' ? (
-              <Badge className="border-emerald-600 bg-emerald-600 text-white">Commission paid</Badge>
-            ) : effectiveCommissionStatus(selected) === 'due' ? (
-              <Badge variant="outline" className="border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900">Commission due</Badge>
-            ) : null}
-          </div>
-          {rowAgentName(selected) ? (
-            <p className="mt-2 text-sm text-muted-foreground">Reserved by: {rowAgentName(selected)}</p>
+      <Dialog
+        open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen && !courierOpen && !makeAvailableOpen}
+        onOpenChange={(o) => !o && setSelected(null)}
+      >
+        <DialogContent fullscreen>
+          {selected ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {selected.make} {selected.model}
+                </DialogTitle>
+                <DialogDescription>
+                  {selected.stock_number} · {statusLabels[selected.status]}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-start gap-4">
+                  {selected.primary_image_url ? (
+                    <img
+                      src={selected.primary_image_url}
+                      alt=""
+                      className="h-36 w-48 shrink-0 rounded-lg object-cover sm:h-44 sm:w-60"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline" className={PAYMENT_STATUS_STYLES[effectivePaymentStatus(selected)]}>
+                        {PAYMENT_STATUS_LABELS[effectivePaymentStatus(selected)]}
+                      </Badge>
+                      <Badge variant="outline" className={SHIPPING_STATUS_STYLES[effectiveShippingStatus(selected)]}>
+                        {SHIPPING_STATUS_LABELS[effectiveShippingStatus(selected)]}
+                      </Badge>
+                      {effectiveCommissionStatus(selected) === 'paid' ? (
+                        <Badge className="border-emerald-600 bg-emerald-600 text-white">Commission paid</Badge>
+                      ) : effectiveCommissionStatus(selected) === 'due' ? (
+                        <Badge variant="outline" className="border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900">
+                          Commission due
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <ShippingStepper vehicle={selected} />
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">FOB</p>
+                        <p className="font-semibold">{fobLabel(selected)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Sold / term</p>
+                        <p className="font-semibold">
+                          {selected.sold_price != null
+                            ? `${formatMoney(Number(selected.sold_price), rowCurrency(selected))} ${selected.incoterm || ''}`
+                            : selected.incoterm || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Freight</p>
+                        <p className="font-semibold">{freightLabel(selected) || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Profit</p>
+                        <p className="font-semibold">
+                          {soldProfitUsd(selected) != null
+                            ? formatMoney(soldProfitUsd(selected), rowCurrency(selected))
+                            : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-muted-foreground">Commission</p>
+                        <p className="font-semibold">
+                          {commissionAmountPkr(selected) != null && Number(selected.commission_pkr) > 0
+                            ? formatMoney(Number(selected.commission_pkr), 'PKR')
+                            : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      {rowAgentName(selected) ? <p>Reserved by: {rowAgentName(selected)}</p> : null}
+                      {rowCustomerName(selected) ? <p>Customer: {rowCustomerName(selected)}</p> : null}
+                      {vehicleInvoices[selected.id] ? (
+                        <p className="text-foreground">
+                          Invoice:{' '}
+                          <Link
+                            className="font-medium text-primary underline"
+                            href={`/invoices?q=${encodeURIComponent(vehicleInvoices[selected.id].invoice_code)}`}
+                          >
+                            {vehicleInvoices[selected.id].invoice_code}
+                          </Link>
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {canReserveStock && effectivePaymentStatus(selected) === 'available' && (
+                        <Button size="sm" onClick={() => openReserve()}>
+                          <Tag className="mr-1 h-3.5 w-3.5" />
+                          Reserve
+                        </Button>
+                      )}
+                      {canEditVehicle && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            void openEdit();
+                          }}
+                        >
+                          <Pencil className="mr-1 h-3.5 w-3.5" />
+                          Edit stock
+                        </Button>
+                      )}
+                      {canEditShipping && (
+                        <Button size="sm" variant="outline" onClick={() => openShippingEdit()}>
+                          <Ship className="mr-1 h-3.5 w-3.5" />
+                          Booking
+                        </Button>
+                      )}
+                      {canDeleteVehicle && (
+                        <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}>
+                          <Trash2 className="mr-1 h-3.5 w-3.5" />
+                          Delete
+                        </Button>
+                      )}
+                      {canMarkCommissionPaid && effectiveCommissionStatus(selected) === 'due' && (
+                        <Button size="sm" disabled={submitting} onClick={() => void markCommissionPaid(selected.id)}>
+                          Mark commission paid
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <VehicleShippingDocs
+                  vehicleId={selected.id}
+                  allowDelete={canEditShipping}
+                  onChanged={() => {
+                    void loadVehicles();
+                  }}
+                />
+              </div>
+            </>
           ) : null}
-          {rowCustomerName(selected) ? (
-            <p className="text-sm text-muted-foreground">Customer: {rowCustomerName(selected)}</p>
-          ) : null}
-          {vehicleInvoices[selected.id] ? (
-            <p className="text-sm">
-              Invoice:{' '}
-              <Link className="font-medium text-primary underline" href={`/invoices?q=${encodeURIComponent(vehicleInvoices[selected.id].invoice_code)}`}>
-                {vehicleInvoices[selected.id].invoice_code}
-              </Link>
-            </p>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {canReserveStock && effectivePaymentStatus(selected) === 'available' && (
-              <Button size="sm" onClick={() => openReserve()}><Tag className="h-3.5 w-3.5 mr-1" />Reserve</Button>
-            )}
-            {canEditVehicle && (
-              <Button size="sm" variant="outline" onClick={() => { void openEdit(); }}><Pencil className="h-3.5 w-3.5 mr-1" />Edit stock</Button>
-            )}
-            {canEditShipping && (
-              <Button size="sm" variant="outline" onClick={() => openShippingEdit()}><Ship className="h-3.5 w-3.5 mr-1" />Booking</Button>
-            )}
-            {canDeleteVehicle && (
-              <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
-            )}
-            {canMarkCommissionPaid && effectiveCommissionStatus(selected) === 'due' && (
-              <Button size="sm" disabled={submitting} onClick={() => void markCommissionPaid(selected.id)}>Mark commission paid</Button>
-            )}
-          </div>
-          <VehicleShippingDocs
-            vehicleId={selected.id}
-            allowUpload={canEditShipping}
-            onChanged={() => { void loadVehicles(); }}
-          />
-        </>)}</SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ReserveVehicleDialog
         open={reserveOpen}

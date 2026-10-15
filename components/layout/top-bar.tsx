@@ -147,7 +147,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                       const map: Record<string, string> = {
                         tasks: '/tasks',
                         invoices: '/invoices',
-                        sales: '/sales',
+                        sales: '/vehicles',
                         vehicles: '/vehicles',
                         payments: '/payments',
                         shipments: '/shipments',

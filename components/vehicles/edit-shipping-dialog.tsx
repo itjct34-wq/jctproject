@@ -1,17 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-provider';
 import {
+  deleteRecordAttachment,
   listRecordAttachments,
   openRecordAttachmentInNewTab,
   uploadRecordAttachment,
   type AttachmentListItem,
 } from '@/components/shared/record-attachments';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,28 +80,47 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
   const [form, setForm] = useState(emptyShippingForm);
   const [files, setFiles] = useState<Partial<Record<VehicleDocKind, File | null>>>({});
   const [existing, setExisting] = useState<AttachmentListItem[]>([]);
-  const [notify, setNotify] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<AttachmentListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const reloadExisting = async () => {
+    if (!vehicle) return;
+    const rows = await listRecordAttachments('vehicles', vehicle.id, {
+      docKinds: SHIPPING_UPLOADS.map((u) => u.kind),
+    });
+    setExisting(rows);
+  };
 
   useEffect(() => {
     if (!open || !vehicle) return;
     setForm(shippingFormFromVehicle(vehicle));
     setFiles({});
-    setNotify(false);
-    void listRecordAttachments('vehicles', vehicle.id, {
-      docKinds: SHIPPING_UPLOADS.map((u) => u.kind),
-    }).then(setExisting);
+    setPendingDelete(null);
+    void reloadExisting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when dialog opens for this vehicle
   }, [open, vehicle]);
 
   const reset = () => {
     if (!vehicle) return;
     setForm(shippingFormFromVehicle(vehicle));
     setFiles({});
-    setNotify(false);
   };
 
   const set = <K extends keyof typeof emptyShippingForm>(key: K, value: (typeof emptyShippingForm)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const ok = await deleteRecordAttachment(pendingDelete.id, pendingDelete.object_path);
+    setDeleting(false);
+    if (!ok) return;
+    setPendingDelete(null);
+    toast.success('Attachment deleted');
+    await reloadExisting();
+    await onSaved();
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -135,18 +164,6 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
         setSubmitting(false);
         return;
       }
-    }
-
-    if (notify && vehicle.reserved_by) {
-      await supabase.from('notifications').insert({
-        user_id: vehicle.reserved_by,
-        title: 'Shipping updated',
-        message: `${vehicle.stock_number}: vessel / ETD / ETA / booking or documents were updated.`,
-        type: 'info',
-        related_module: 'vehicles',
-        related_id: vehicle.id,
-        is_read: false,
-      });
     }
 
     setSubmitting(false);
@@ -284,31 +301,32 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
           {existing.length ? (
             <div className="flex flex-wrap gap-2">
               {existing.map((row) => (
-                <button
+                <div
                   key={row.id}
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs hover:bg-muted"
-                  onClick={() => void openRecordAttachmentInNewTab(row.object_path)}
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 py-1 pl-2 pr-1 text-xs"
                 >
-                  <FileText className="h-3.5 w-3.5 text-red-600" />
-                  <span className="font-medium uppercase">{row.doc_kind || 'file'}</span>
-                  <span className="max-w-[10rem] truncate text-muted-foreground">{row.file_name}</span>
-                </button>
+                  <button
+                    type="button"
+                    className="inline-flex min-w-0 items-center gap-1.5 hover:opacity-80"
+                    onClick={() => void openRecordAttachmentInNewTab(row.object_path)}
+                  >
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-red-600" />
+                    <span className="font-medium uppercase">{row.doc_kind || 'file'}</span>
+                    <span className="max-w-[10rem] truncate text-muted-foreground">{row.file_name}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                    aria-label={`Delete ${row.file_name}`}
+                    disabled={deleting}
+                    onClick={() => setPendingDelete(row)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               ))}
             </div>
           ) : null}
-
-          <div className="space-y-1 rounded-lg border border-border/70 bg-muted/20 p-3">
-            <label className="flex items-start gap-2 text-sm font-medium">
-              <Checkbox checked={notify} onCheckedChange={(v) => setNotify(v === true)} className="mt-0.5" />
-              <span>Notify the customer in the app</span>
-            </label>
-            <p className="pl-6 text-xs text-muted-foreground">
-              If you changed the vessel, voyage, ETD, ETA or container, or uploaded a B/L, waybill or surrender, the
-              buyer is told (documents only if they are allowed to see them). Leave it unticked when you are correcting
-              a mistake.
-            </p>
-          </div>
 
           <DialogFooter className="gap-2 sm:gap-2">
             <Button type="button" variant="outline" onClick={reset} disabled={submitting}>
@@ -320,6 +338,40 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(openAlert) => {
+          if (!openAlert && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this attachment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete ? (
+                <>
+                  <span className="block font-medium text-foreground">{pendingDelete.file_name}</span>
+                  <span className="mt-2 block">This removes the file from storage. This cannot be undone.</span>
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

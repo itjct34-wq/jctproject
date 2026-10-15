@@ -185,7 +185,7 @@ function OperationsDashboardPage() {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: 'Sales by currency', value: moneyLine(data.salesByCurrency), sub: `${data.totalSales} sales`, href: '/sales', icon: TrendingUp },
+          { label: 'Sales by currency', value: moneyLine(data.salesByCurrency), sub: `${data.totalSales} sales`, href: '/vehicles', icon: TrendingUp },
           { label: 'Outstanding invoices', value: moneyLine(data.outstandingByCurrency), sub: 'Unpaid + partial, not mixed', href: '/invoices', icon: Receipt },
           { label: 'Payments received', value: formatCurrency(data.paymentsJpy, 'JPY'), sub: 'JPY ledger', href: '/payments', icon: CreditCard },
           { label: 'Expenses', value: moneyLine(data.expensesByCurrency), sub: 'Approved + paid', href: '/expenses', icon: DollarSign },
