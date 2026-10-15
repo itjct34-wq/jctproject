@@ -208,6 +208,7 @@ export function RecordAttachments({
   allowUpload = true,
   allowDelete = allowUpload,
   embedded = false,
+  emptyLabel,
 }: {
   entityType: AttachmentEntity;
   entityId: string;
@@ -219,6 +220,8 @@ export function RecordAttachments({
   /** When false, hide delete controls. Defaults to `allowUpload`. */
   allowDelete?: boolean;
   embedded?: boolean;
+  /** When set, empty state is a short line instead of the large dashed dropzone. */
+  emptyLabel?: string;
 }) {
   const { profile } = useAuth();
   const [rows, setRows] = useState<AttachmentRow[]>([]);
@@ -316,23 +319,29 @@ export function RecordAttachments({
     </label>
   );
 
+  const compactEmpty = Boolean(emptyLabel) || !allowUpload;
+
   return (
-    <section className={embedded ? 'mt-2 space-y-3' : 'mt-4 space-y-3 rounded-xl border border-border p-4'}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Paperclip className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold">Attached files</h3>
-            {!loading && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {rows.length}
-              </span>
-            )}
+    <section className={embedded ? 'space-y-3' : 'mt-4 space-y-3 rounded-xl border border-border p-4'}>
+      {!compactEmpty || rows.length > 0 || allowUpload ? (
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Paperclip className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">Attached files</h3>
+              {!loading && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  {rows.length}
+                </span>
+              )}
+            </div>
+            {!compactEmpty ? (
+              <p className="mt-1 text-xs text-muted-foreground">Receipts, PDFs, and photos for this record. Click View to open.</p>
+            ) : null}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Receipts, PDFs, and photos for this record. Click View to open.</p>
+          {allowUpload && rows.length > 0 ? fileInput : null}
         </div>
-        {allowUpload && rows.length > 0 ? fileInput : null}
-      </div>
+      ) : null}
 
       {preview && (
         <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-2">
@@ -356,11 +365,15 @@ export function RecordAttachments({
       {loading ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading attached files…</p>
       ) : rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-4 text-center">
-          <p className="text-sm font-medium">No file attached yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">Upload a receipt or document here, then use View to open it.</p>
-          {allowUpload ? <div className="mt-3 flex justify-center">{fileInput}</div> : null}
-        </div>
+        emptyLabel || !allowUpload ? (
+          <p className="text-sm text-muted-foreground">{emptyLabel || 'No documents.'}</p>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border p-4 text-center">
+            <p className="text-sm font-medium">No file attached yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Upload a receipt or document here, then use View to open it.</p>
+            <div className="mt-3 flex justify-center">{fileInput}</div>
+          </div>
+        )
       ) : (
         <ul className="space-y-2">
           {rows.map((row) => (
@@ -396,7 +409,9 @@ export function RecordAttachments({
           ))}
         </ul>
       )}
-      <p className="text-[11px] text-muted-foreground">Private files. View uses a short-lived signed link and respects your record permissions. Maximum 20 MB per file.</p>
+      {!compactEmpty || rows.length > 0 ? (
+        <p className="text-[11px] text-muted-foreground">Private files. View uses a short-lived signed link and respects your record permissions. Maximum 20 MB per file.</p>
+      ) : null}
 
       <AlertDialog
         open={Boolean(pendingDelete)}
