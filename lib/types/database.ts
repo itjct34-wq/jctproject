@@ -470,6 +470,7 @@ export interface Quotation {
   status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted';
   valid_until: string | null;
   notes: string | null;
+  freight_notes: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -508,6 +509,7 @@ export interface Invoice {
   vessel_name: string | null;
   bl_number: string | null;
   freight_total: number | null;
+  freight_notes: string | null;
   insurance_total: number | null;
   other_charges: number | null;
   discount_total: number | null;

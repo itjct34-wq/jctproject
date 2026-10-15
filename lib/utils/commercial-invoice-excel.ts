@@ -1,10 +1,300 @@
 import ExcelJS from 'exceljs';
-import type { Invoice, InvoiceItem, Customer } from '@/lib/types';
-import { formatDepositRatio } from '@/lib/jct-official';
+import type { Invoice, InvoiceItem, Customer, Quotation } from '@/lib/types';
+import { decodeInvoiceVehicle, extractChassis, formatDepositRatio, formatDocumentNo } from '@/lib/jct-official';
 
-const RED = 'E30613';
-const BLACK = '0D0D0D';
-const GRAY = 'F5F5F5';
+type TradeLine = {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  discount?: number;
+};
+
+const NAVY = '0B1F3A';
+const RED = 'C4161C';
+const WHITE = 'FFFFFF';
+const THIN = { style: 'thin' as const, color: { argb: NAVY } };
+const BORDER = { top: THIN, bottom: THIN, left: THIN, right: THIN };
+
+type ExcelLine = {
+  chassis: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  deposit?: string;
+};
+
+function headerFill(argb: string): ExcelJS.Fill {
+  return { type: 'pattern', pattern: 'solid', fgColor: { argb } };
+}
+
+function styleHeader(cell: ExcelJS.Cell, fill = NAVY) {
+  cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: WHITE } };
+  cell.fill = headerFill(fill);
+  cell.border = BORDER;
+  cell.alignment = { vertical: 'middle', wrapText: true };
+}
+
+function styleBody(cell: ExcelJS.Cell, opts?: { bold?: boolean; align?: ExcelJS.Alignment['horizontal'] }) {
+  cell.font = { name: 'Arial', size: 9, bold: opts?.bold };
+  cell.border = BORDER;
+  cell.alignment = { vertical: 'middle', horizontal: opts?.align || 'left', wrapText: true };
+}
+
+function money(n: number) {
+  return Number(n || 0);
+}
+
+function lineFromItem(item: InvoiceItem | TradeLine): ExcelLine {
+  const bits = decodeInvoiceVehicle(item.description);
+  const chassis = bits.chassis_number || extractChassis(item.description) || '—';
+  const car = [bits.make, bits.model, bits.year, bits.engine].filter(Boolean).join(' ') || item.description;
+  const extra = [bits.colour, bits.transmission].filter(Boolean).join(' · ');
+  const qty = Number(item.quantity || 1);
+  const unit = Number(item.unit_price || 0);
+  const total = Number(item.line_total || 0) || qty * unit;
+  const deposit =
+    'discount' in item ? formatDepositRatio((item as InvoiceItem).discount, unit) : undefined;
+  return {
+    chassis,
+    description: extra ? `${car} (${extra})` : car,
+    quantity: qty,
+    unit_price: unit,
+    line_total: total,
+    deposit,
+  };
+}
+
+async function downloadWorkbook(wb: ExcelJS.Workbook, filename: string) {
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportTradeDocumentExcel(opts: {
+  title: string;
+  documentNo: string;
+  issueDate: string;
+  currency: string;
+  customer?: Customer | null;
+  shipmentType?: string | null;
+  shipmentMode?: string | null;
+  shipmentTerm?: string | null;
+  portOfLoading?: string | null;
+  portOfDischarge?: string | null;
+  lines: ExcelLine[];
+  vehiclesTotal: number;
+  freight: number;
+  freightNotes?: string | null;
+  insurance?: number;
+  other?: number;
+  discount?: number;
+  grandTotal: number;
+  verifyUrl?: string;
+  notes?: string | null;
+  filename: string;
+  showDeposit?: boolean;
+}) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Japan Circular Trading';
+  wb.created = new Date();
+  const ws = wb.addWorksheet(opts.title, {
+    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+  });
+
+  const lastCol = opts.showDeposit ? 6 : 5;
+  ws.columns = [
+    { width: 18 },
+    { width: 36 },
+    { width: 10 },
+    { width: 14 },
+    ...(opts.showDeposit ? [{ width: 12 }] : []),
+    { width: 16 },
+  ];
+
+  const mergeTo = (row: number) => {
+    ws.mergeCells(row, 1, row, lastCol);
+  };
+
+  mergeTo(1);
+  ws.getCell(1, 1).value = 'JAPAN CIRCULAR TRADING CO., LTD.';
+  ws.getCell(1, 1).font = { name: 'Arial', size: 16, bold: true, color: { argb: NAVY } };
+
+  mergeTo(2);
+  ws.getCell(2, 1).value = opts.title;
+  ws.getCell(2, 1).font = { name: 'Arial', size: 14, bold: true, color: { argb: RED } };
+
+  mergeTo(3);
+  ws.getCell(3, 1).value = formatDocumentNo(opts.documentNo);
+  ws.getCell(3, 1).font = { name: 'Arial', size: 11, bold: true };
+
+  const consignee = [
+    customerLabel('Name', opts.customer?.company_name || opts.customer?.full_name),
+    customerLabel('contact', opts.customer?.phone || opts.customer?.whatsapp),
+    customerLabel('Email', opts.customer?.email),
+    customerLabel(
+      'Address',
+      [opts.customer?.address_line1, opts.customer?.city, opts.customer?.country].filter(Boolean).join(', ')
+    ),
+  ].join('\n');
+
+  ws.getCell(5, 1).value = 'Consignee';
+  styleHeader(ws.getCell(5, 1));
+  ws.mergeCells(5, 2, 5, lastCol);
+  ws.getCell(5, 2).value = consignee;
+  styleBody(ws.getCell(5, 2));
+  ws.getRow(5).height = 56;
+
+  const meta = [
+    ['Date', opts.issueDate, 'Currency', opts.currency],
+    ['Type', opts.shipmentType || 'RORO', 'Mode', opts.shipmentMode || ''],
+    ['Term', opts.shipmentTerm || 'FOB', 'POL', opts.portOfLoading || 'Nagoya, Japan'],
+    ['POD', opts.portOfDischarge || '—', '', ''],
+  ];
+  let row = 7;
+  meta.forEach((pair) => {
+    ws.getCell(row, 1).value = pair[0];
+    styleHeader(ws.getCell(row, 1));
+    ws.getCell(row, 2).value = pair[1];
+    styleBody(ws.getCell(row, 2));
+    if (pair[2]) {
+      ws.getCell(row, 3).value = pair[2];
+      styleHeader(ws.getCell(row, 3));
+      ws.mergeCells(row, 4, row, lastCol);
+      ws.getCell(row, 4).value = pair[3];
+      styleBody(ws.getCell(row, 4));
+    } else {
+      ws.mergeCells(row, 2, row, lastCol);
+    }
+    row += 1;
+  });
+
+  row += 1;
+  mergeTo(row);
+  ws.getCell(row, 1).value = 'VEHICLES';
+  styleHeader(ws.getCell(row, 1), NAVY);
+  row += 1;
+
+  const vehicleHeaders = opts.showDeposit
+    ? ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Deposit', 'Vehicle cost']
+    : ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Vehicle cost'];
+  vehicleHeaders.forEach((h, i) => {
+    const cell = ws.getCell(row, i + 1);
+    cell.value = h;
+    styleHeader(cell, RED);
+    cell.alignment = { horizontal: i >= 2 ? 'right' : 'left', vertical: 'middle' };
+  });
+  row += 1;
+
+  const lines = opts.lines.length ? opts.lines : [{ chassis: '—', description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  lines.forEach((line) => {
+    const values = opts.showDeposit
+      ? [line.chassis, line.description, line.quantity, money(line.unit_price), line.deposit || '—', money(line.line_total)]
+      : [line.chassis, line.description, line.quantity, money(line.unit_price), money(line.line_total)];
+    values.forEach((val, i) => {
+      const cell = ws.getCell(row, i + 1);
+      cell.value = val as ExcelJS.CellValue;
+      styleBody(cell, { align: i >= 2 ? 'right' : 'left' });
+      if (typeof val === 'number' && i >= 3 && !(opts.showDeposit && i === 4)) cell.numFmt = '#,##0.00';
+    });
+    row += 1;
+  });
+
+  ws.mergeCells(row, 1, row, lastCol - 1);
+  ws.getCell(row, 1).value = 'Vehicles total';
+  styleHeader(ws.getCell(row, 1));
+  ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
+  ws.getCell(row, lastCol).value = money(opts.vehiclesTotal);
+  ws.getCell(row, lastCol).numFmt = '#,##0.00';
+  styleHeader(ws.getCell(row, lastCol));
+  row += 2;
+
+  mergeTo(row);
+  ws.getCell(row, 1).value = 'FREIGHT';
+  styleHeader(ws.getCell(row, 1), NAVY);
+  row += 1;
+  ws.mergeCells(row, 1, row, lastCol - 2);
+  ws.getCell(row, 1).value = 'Description';
+  styleHeader(ws.getCell(row, 1), RED);
+  ws.getCell(row, lastCol - 1).value = 'Currency';
+  styleHeader(ws.getCell(row, lastCol - 1), RED);
+  ws.getCell(row, lastCol).value = 'Amount';
+  styleHeader(ws.getCell(row, lastCol), RED);
+  row += 1;
+  ws.mergeCells(row, 1, row, lastCol - 2);
+  ws.getCell(row, 1).value = opts.freightNotes?.trim() || 'Container freight';
+  styleBody(ws.getCell(row, 1));
+  ws.getCell(row, lastCol - 1).value = opts.currency;
+  styleBody(ws.getCell(row, lastCol - 1));
+  ws.getCell(row, lastCol).value = money(opts.freight);
+  ws.getCell(row, lastCol).numFmt = '#,##0.00';
+  styleBody(ws.getCell(row, lastCol), { align: 'right' });
+  row += 1;
+  ws.mergeCells(row, 1, row, lastCol - 1);
+  ws.getCell(row, 1).value = 'Freight total';
+  styleHeader(ws.getCell(row, 1));
+  ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
+  ws.getCell(row, lastCol).value = money(opts.freight);
+  ws.getCell(row, lastCol).numFmt = '#,##0.00';
+  styleHeader(ws.getCell(row, lastCol));
+  row += 2;
+
+  mergeTo(row);
+  ws.getCell(row, 1).value = 'TOTALS';
+  styleHeader(ws.getCell(row, 1), NAVY);
+  row += 1;
+
+  const totals: [string, number, boolean?][] = [
+    ['Vehicles total', opts.vehiclesTotal],
+    ['Freight', opts.freight],
+  ];
+  if (opts.insurance) totals.push(['Insurance', opts.insurance]);
+  if (opts.other) totals.push(['Other charges', opts.other]);
+  if (opts.discount) totals.push(['Discount', -opts.discount]);
+  totals.forEach(([lab, val]) => {
+    ws.mergeCells(row, 1, row, lastCol - 1);
+    ws.getCell(row, 1).value = lab;
+    styleBody(ws.getCell(row, 1), { align: 'right' });
+    ws.getCell(row, lastCol).value = money(val);
+    ws.getCell(row, lastCol).numFmt = '#,##0.00';
+    styleBody(ws.getCell(row, lastCol), { align: 'right' });
+    row += 1;
+  });
+  ws.mergeCells(row, 1, row, lastCol - 1);
+  ws.getCell(row, 1).value = 'GRAND TOTAL';
+  styleHeader(ws.getCell(row, 1), RED);
+  ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
+  ws.getCell(row, lastCol).value = money(opts.grandTotal);
+  ws.getCell(row, lastCol).numFmt = `"${opts.currency}"#,##0.00`;
+  styleHeader(ws.getCell(row, lastCol), RED);
+  row += 2;
+
+  if (opts.verifyUrl) {
+    mergeTo(row);
+    ws.getCell(row, 1).value = `Verify authenticity: ${opts.verifyUrl}`;
+    ws.getCell(row, 1).font = { name: 'Arial', size: 8, color: { argb: '0066CC' } };
+    row += 1;
+  }
+  if (opts.notes) {
+    mergeTo(row);
+    ws.getCell(row, 1).value = `Notes: ${opts.notes}`;
+    ws.getCell(row, 1).font = { name: 'Arial', size: 8 };
+  }
+
+  await downloadWorkbook(wb, opts.filename);
+}
+
+function customerLabel(label: string, value?: string | null) {
+  return `${label}: ${value?.trim() || '—'}`;
+}
 
 export async function exportCommercialInvoiceExcel(opts: {
   invoice: Invoice;
@@ -13,238 +303,69 @@ export async function exportCommercialInvoiceExcel(opts: {
   verifyUrl?: string;
 }) {
   const { invoice, items, customer, verifyUrl } = opts;
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Japan Circular Trading';
-  wb.created = new Date();
-
-  const ws = wb.addWorksheet('Invoice', {
-    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
-  });
-
-  ws.columns = [
-    { width: 4 }, { width: 6 }, { width: 28 }, { width: 12 }, { width: 18 },
-    { width: 14 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 14 },
-  ];
-
-  ws.mergeCells('B2:F2');
-  ws.getCell('B2').value = 'JAPAN CIRCULAR TRADING';
-  ws.getCell('B2').font = { name: 'Arial', size: 18, bold: true, color: { argb: RED } };
-
-  ws.mergeCells('B3:F3');
-  ws.getCell('B3').value = 'Car Importing & Exporting Xpert';
-  ws.getCell('B3').font = { name: 'Arial', size: 9, italic: true, color: { argb: '666666' } };
-
-  ws.mergeCells('B4:F4');
-  ws.getCell('B4').value = '2-505-101 Daitoro, Nakagawa-ku, Nagoya, Aichi 454-0943, Japan';
-  ws.getCell('B4').font = { name: 'Arial', size: 8, color: { argb: '666666' } };
-
-  ws.mergeCells('B5:F5');
-  ws.getCell('B5').value = 'Tel: +81 70-2241-6356  |  info@japancirculartrading.com';
-  ws.getCell('B5').font = { name: 'Arial', size: 8, color: { argb: '666666' } };
-
-  ws.mergeCells('H2:J2');
-  ws.getCell('H2').value = 'INVOICE';
-  ws.getCell('H2').font = { name: 'Arial', size: 24, bold: true };
-  ws.getCell('H2').alignment = { horizontal: 'right' };
-
-  ws.mergeCells('H3:J3');
-  ws.getCell('H3').value = invoice.invoice_code;
-  ws.getCell('H3').font = { name: 'Arial', size: 11, bold: true };
-  ws.getCell('H3').alignment = { horizontal: 'right' };
-
-  for (let c = 2; c <= 10; c++) {
-    ws.getCell(6, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RED } };
-  }
-  ws.getRow(6).height = 4;
-
-  ws.getCell('B8').value = 'Date';
-  ws.getCell('B8').font = { size: 8, color: { argb: '888888' } };
-  ws.getCell('C8').value = invoice.issue_date;
-  ws.getCell('C8').font = { bold: true };
-
-  ws.getCell('D8').value = 'Currency';
-  ws.getCell('D8').font = { size: 8, color: { argb: '888888' } };
-  ws.getCell('E8').value = invoice.currency;
-  ws.getCell('E8').font = { bold: true };
-
-  ws.getCell('F8').value = 'Incoterms';
-  ws.getCell('F8').font = { size: 8, color: { argb: '888888' } };
-  ws.getCell('G8').value = invoice.incoterms || 'FOB';
-  ws.getCell('G8').font = { bold: true };
-
-  ws.getCell('H8').value = 'Type';
-  ws.getCell('H8').font = { size: 8, color: { argb: '888888' } };
-  ws.getCell('I8').value = invoice.shipment_type || 'RORO';
-  ws.getCell('I8').font = { bold: true };
-
-  ws.mergeCells('B10:J10');
-  ws.getCell('B10').value = '  SHIPPING TERMS';
-  ws.getCell('B10').font = { size: 9, bold: true, color: { argb: 'FFFFFF' } };
-  ws.getCell('B10').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLACK } };
-
-  const shipData: [string, string][] = [
-    ['Mode', invoice.container_mode || 'RORO Vessel'],
-    ['POL', invoice.port_of_loading || 'Nagoya, Japan'],
-    ['POD', invoice.port_of_discharge || ''],
-    ['Vessel', invoice.vessel_name || ''],
-    ['BL No', invoice.bl_number || ''],
-  ];
-  let col = 2;
-  shipData.forEach(([lab, val]) => {
-    ws.getCell(11, col).value = lab;
-    ws.getCell(11, col).font = { size: 7, color: { argb: '888888' } };
-    ws.getCell(11, col + 1).value = val;
-    ws.getCell(11, col + 1).font = { size: 9, bold: true };
-    col += 2;
-  });
-
-  ws.mergeCells('B13:E13');
-  ws.getCell('B13').value = '  SELLER';
-  ws.getCell('B13').font = { size: 9, bold: true, color: { argb: 'FFFFFF' } };
-  ws.getCell('B13').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RED } };
-
-  ws.mergeCells('G13:J13');
-  ws.getCell('G13').value = '  BUYER / CONSIGNEE';
-  ws.getCell('G13').font = { size: 9, bold: true, color: { argb: 'FFFFFF' } };
-  ws.getCell('G13').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLACK } };
-
-  const sellerLines = [
-    'Japan Circular Trading',
-    '2-505-101 Daitoro, Nakagawa-ku',
-    'Nagoya, Aichi 454-0943, Japan',
-    '+81 70-2241-6356',
-    'info@japancirculartrading.com',
-  ];
-  sellerLines.forEach((line, i) => {
-    ws.mergeCells(`B${14 + i}:E${14 + i}`);
-    ws.getCell(`B${14 + i}`).value = line;
-    ws.getCell(`B${14 + i}`).font = { size: 8 };
-    ws.getCell(`B${14 + i}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRAY } };
-  });
-
-  const buyerLines = [
-    customer?.full_name || '',
-    customer?.address_line1 || '',
-    [customer?.city, customer?.country].filter(Boolean).join(', '),
-    customer?.phone || '',
-    customer?.email || '',
-  ];
-  buyerLines.forEach((line, i) => {
-    ws.mergeCells(`G${14 + i}:J${14 + i}`);
-    ws.getCell(`G${14 + i}`).value = line;
-    ws.getCell(`G${14 + i}`).font = { size: 8 };
-  });
-
-  ws.mergeCells('B20:J20');
-  ws.getCell('B20').value = '  VEHICLE / CARGO DETAILS';
-  ws.getCell('B20').font = { size: 9, bold: true, color: { argb: 'FFFFFF' } };
-  ws.getCell('B20').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLACK } };
-
-  const headers = ['#', 'Description', 'Qty', 'Unit Price', 'Deposit', 'Amount'];
-  const headerCols = [2, 3, 5, 7, 8, 9];
-  headers.forEach((h, i) => {
-    const cell = ws.getCell(21, headerCols[i]);
-    cell.value = h;
-    cell.font = { size: 8, bold: true, color: { argb: 'FFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RED } };
-    cell.alignment = { horizontal: i === 1 ? 'left' : 'right' };
-  });
-  ws.mergeCells('C21:D21');
-
-  items.forEach((item, idx) => {
-    const r = 22 + idx;
-    ws.getCell(r, 2).value = idx + 1;
-    ws.mergeCells(`C${r}:D${r}`);
-    ws.getCell(r, 3).value = item.description;
-    ws.getCell(r, 5).value = item.quantity;
-    ws.getCell(r, 7).value = Number(item.unit_price);
-    ws.getCell(r, 7).numFmt = '#,##0.00';
-    ws.getCell(r, 8).value = formatDepositRatio(item.discount, item.unit_price);
-    ws.getCell(r, 8).alignment = { horizontal: 'right' };
-    ws.getCell(r, 9).value = Number(item.line_total);
-    ws.getCell(r, 9).numFmt = '#,##0.00';
-    [2, 3, 5, 7, 8, 9].forEach((c) => {
-      ws.getCell(r, c).font = { size: 8 };
-      ws.getCell(r, c).border = {
-        top: { style: 'thin', color: { argb: 'DDDDDD' } },
-        bottom: { style: 'thin', color: { argb: 'DDDDDD' } },
-        left: { style: 'thin', color: { argb: 'DDDDDD' } },
-        right: { style: 'thin', color: { argb: 'DDDDDD' } },
-      };
-    });
-  });
-
-  const totalStart = 22 + Math.max(items.length, 1) + 1;
   const freight = Number(invoice.freight_total || 0);
   const insurance = Number(invoice.insurance_total || 0);
   const other = Number(invoice.other_charges || 0);
   const discount = Number(invoice.discount_total || 0);
-  const grand =
-    Number(invoice.subtotal || 0) +
-    Number(invoice.tax || 0) +
-    freight +
-    insurance +
-    other -
-    discount;
-
-  const totals: [string, number][] = [
-    ['Subtotal', Number(invoice.subtotal)],
-    ['Insurance', insurance],
-    ['Other charges', other],
-    ['Discount', -discount],
-  ];
-  totals.forEach(([lab, val], i) => {
-    const r = totalStart + i;
-    ws.mergeCells(`B${r}:H${r}`);
-    ws.getCell(`B${r}`).value = lab;
-    ws.getCell(`B${r}`).alignment = { horizontal: 'right' };
-    ws.getCell(`B${r}`).font = { size: 8, color: { argb: '666666' } };
-    ws.getCell(r, 9).value = val;
-    ws.getCell(r, 9).numFmt = '#,##0.00';
-    ws.getCell(r, 9).font = { size: 9 };
+  const vehiclesTotal = Number(invoice.subtotal || 0);
+  const grand = vehiclesTotal + Number(invoice.tax || 0) + freight + insurance + other - discount;
+  await exportTradeDocumentExcel({
+    title: 'INVOICE',
+    documentNo: invoice.invoice_code,
+    issueDate: invoice.issue_date,
+    currency: invoice.currency,
+    customer,
+    shipmentType: invoice.shipment_type,
+    shipmentMode: invoice.container_mode,
+    shipmentTerm: invoice.incoterms,
+    portOfLoading: invoice.port_of_loading,
+    portOfDischarge: invoice.port_of_discharge,
+    lines: items.map(lineFromItem),
+    vehiclesTotal,
+    freight,
+    freightNotes: invoice.freight_notes,
+    insurance,
+    other,
+    discount,
+    grandTotal: grand,
+    verifyUrl,
+    notes: invoice.notes,
+    filename: `${invoice.invoice_code}_Invoice.xlsx`,
+    showDeposit: true,
   });
+}
 
-  const gt = totalStart + totals.length;
-  ws.mergeCells(`B${gt}:H${gt}`);
-  ws.getCell(`B${gt}`).value = 'GRAND TOTAL';
-  ws.getCell(`B${gt}`).font = { size: 11, bold: true, color: { argb: 'FFFFFF' } };
-  ws.getCell(`B${gt}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RED } };
-  ws.getCell(`B${gt}`).alignment = { horizontal: 'right' };
-  for (let c = 2; c <= 8; c++) {
-    ws.getCell(gt, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RED } };
-  }
-  ws.getCell(gt, 9).value = grand;
-  ws.getCell(gt, 9).numFmt = `"${invoice.currency}"#,##0.00`;
-  ws.getCell(gt, 9).font = { size: 12, bold: true, color: { argb: 'FFFFFF' } };
-  ws.getCell(gt, 9).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: RED } };
-
-  if (verifyUrl) {
-    const vr = gt + 2;
-    ws.mergeCells(`B${vr}:J${vr}`);
-    ws.getCell(`B${vr}`).value = `Verify authenticity: ${verifyUrl}`;
-    ws.getCell(`B${vr}`).font = { size: 8, color: { argb: '0066CC' } };
-  }
-
-  const nr = gt + 4;
-  ws.mergeCells(`B${nr}:J${nr}`);
-  ws.getCell(`B${nr}`).value =
-    'Terms: Vehicles sold as-is. Title & risk per Incoterms. Full payment before document release. Japanese law / Nagoya jurisdiction.';
-  ws.getCell(`B${nr}`).font = { size: 7, color: { argb: '888888' } };
-
-  if (invoice.notes) {
-    ws.mergeCells(`B${nr + 1}:J${nr + 1}`);
-    ws.getCell(`B${nr + 1}`).value = `Notes: ${invoice.notes}`;
-    ws.getCell(`B${nr + 1}`).font = { size: 8 };
-  }
-
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+export async function exportQuotationExcel(opts: {
+  quotation: Quotation;
+  items: TradeLine[];
+  customer?: Customer | null;
+  verifyUrl?: string;
+}) {
+  const { quotation, items, customer, verifyUrl } = opts;
+  const freight = Number(quotation.freight || 0);
+  const insurance = Number(quotation.insurance || 0);
+  const other = Number(quotation.other_fees || 0);
+  const vehiclesTotal = Number(quotation.subtotal || 0);
+  const grand = Number(quotation.total || vehiclesTotal + freight + insurance + other);
+  await exportTradeDocumentExcel({
+    title: 'QUOTATION',
+    documentNo: quotation.quotation_code,
+    issueDate: quotation.created_at?.slice(0, 10) || '',
+    currency: quotation.currency,
+    customer,
+    shipmentTerm: quotation.price_type,
+    shipmentType: 'RORO',
+    shipmentMode: 'RORO Vessel',
+    lines: items.map(lineFromItem),
+    vehiclesTotal,
+    freight,
+    freightNotes: quotation.freight_notes,
+    insurance,
+    other,
+    grandTotal: grand,
+    verifyUrl,
+    notes: quotation.notes,
+    filename: `${quotation.quotation_code}_Quotation.xlsx`,
+    showDeposit: false,
   });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${invoice.invoice_code}_Commercial_Invoice.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
