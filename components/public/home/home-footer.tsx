@@ -6,66 +6,65 @@ import { PUBLIC_SOURCE_MARKETS, sourceMarketPath } from '@/lib/public/source-mar
 
 export function HomeFooter() {
   return (
-    <footer className="border-t border-[var(--jct-border)] bg-white text-[var(--jct-muted)]">
+    <footer className="jct-site-footer text-[var(--jct-muted)]">
       <div className="jct-home-wrap grid gap-8 py-12 md:grid-cols-4">
         <div className="space-y-4 md:col-span-2">
-          <BrandLogo placement="footer" />
-          <p className="max-w-md text-sm leading-relaxed">
+          <span className="inline-flex rounded-xl bg-white/80 px-2 py-1.5 ring-1 ring-[var(--jct-navy)]/10">
+            <BrandLogo placement="footer" />
+          </span>
+          <p className="max-w-md text-sm leading-relaxed text-[var(--jct-muted)]">
             Used vehicle export from Nagoya, Japan. Auction sourcing, inspection support, RORO and container shipping
             under FOB, C&amp;F and CIF.
           </p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Export destinations</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Export destinations</p>
           <ul className="flex flex-wrap gap-2">
             {DESTINATION_COUNTRIES.map((country) => (
               <li key={country.iso2}>
-                <Link
-                  href={`/inventory`}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--jct-border)] bg-[var(--jct-panel)] px-2 py-1"
-                >
+                <Link href={`/inventory`} className="jct-chip">
                   <CountryFlag country={country.name} size="sm" />
-                  <span className="text-xs text-[var(--jct-navy)]">{country.name}</span>
+                  <span>{country.name}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Explore</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Explore</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/inventory" className="hover:text-[var(--jct-navy)]">Cars</Link></li>
+            <li><Link href="/inventory" className="jct-footer-link">Cars</Link></li>
             {PUBLIC_SOURCE_MARKETS.slice(0, 4).map((market) => (
               <li key={market.code}>
-                <Link href={sourceMarketPath(market)} className="hover:text-[var(--jct-navy)]">
+                <Link href={sourceMarketPath(market)} className="jct-footer-link">
                   Stock from {market.name}
                 </Link>
               </li>
             ))}
-            <li><Link href="/machinery" className="hover:text-[var(--jct-navy)]">Machinery</Link></li>
-            <li><Link href="/parts" className="hover:text-[var(--jct-navy)]">Parts</Link></li>
-            <li><Link href="/blog" className="hover:text-[var(--jct-navy)]">Guides</Link></li>
-            <li><Link href="/verify-agent" className="hover:text-[var(--jct-navy)]">Verify agent</Link></li>
-            <li><Link href="/about" className="hover:text-[var(--jct-navy)]">About</Link></li>
-            <li><Link href="/contact" className="hover:text-[var(--jct-navy)]">Contact</Link></li>
+            <li><Link href="/machinery" className="jct-footer-link">Machinery</Link></li>
+            <li><Link href="/parts" className="jct-footer-link">Parts</Link></li>
+            <li><Link href="/blog" className="jct-footer-link">Guides</Link></li>
+            <li><Link href="/verify-agent" className="jct-footer-link">Verify agent</Link></li>
+            <li><Link href="/about" className="jct-footer-link">About</Link></li>
+            <li><Link href="/contact" className="jct-footer-link">Contact</Link></li>
           </ul>
         </div>
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Contact</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Contact</p>
           <ul className="space-y-2 text-sm">
             <li>Nagoya, Aichi 454-0943, Japan</li>
-            <li><a href="tel:+817022416356" className="hover:text-[var(--jct-navy)]">+81 70-2241-6356</a></li>
+            <li><a href="tel:+817022416356" className="jct-footer-link">+81 70-2241-6356</a></li>
             <li>
-              <a href="mailto:info@japancirculartrading.com" className="hover:text-[var(--jct-navy)]">
+              <a href="mailto:info@japancirculartrading.com" className="jct-footer-link">
                 info@japancirculartrading.com
               </a>
             </li>
           </ul>
-          <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Staff</p>
-          <Link href="/login" className="text-sm hover:text-[var(--jct-navy)]">
+          <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Staff</p>
+          <Link href="/login" className="jct-btn-secondary px-4 py-2 text-sm">
             ERP login
           </Link>
         </div>
       </div>
-      <div className="border-t border-[var(--jct-border)] py-4 text-center text-xs text-[var(--jct-muted-2)]">
+      <div className="jct-site-footer-bar py-4 text-center text-xs text-[var(--jct-muted-2)]">
         <p>© {new Date().getFullYear()} Japan Circular Trading Co., Ltd.</p>
         <p className="mt-1">
           Brand names, logos and flags belong to their respective owners. JCT is not affiliated with them.

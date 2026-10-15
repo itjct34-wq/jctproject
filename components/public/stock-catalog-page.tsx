@@ -179,7 +179,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
             <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
             <p className="mt-3 font-medium text-[var(--jct-navy)]">{catalog.emptyTitle}</p>
             <p className="mt-1 text-sm text-[var(--jct-muted)]">Try clearing filters or contact us for sourcing.</p>
-            <Link href="/contact" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white">
+            <Link href="/contact" className="jct-btn-primary mt-5 px-5">
               Request sourcing
             </Link>
           </div>

@@ -68,7 +68,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
           <div className="mt-12 rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-10 text-center">
             <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
             <p className="mt-3 font-medium text-[var(--jct-navy)]">Not available</p>
-            <Link href={catalog.path} className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white">
+            <Link href={catalog.path} className="jct-btn-primary mt-5 px-5">
               Browse stock
             </Link>
           </div>
@@ -131,14 +131,11 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link
                   href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
-                  className="inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-6 text-sm font-semibold text-white hover:bg-[#c23024]"
+                  className="jct-btn-primary px-6"
                 >
                   {catalog.inquireLabel}
                 </Link>
-                <Link
-                  href="/verify-agent"
-                  className="inline-flex min-h-11 items-center rounded-lg border border-[var(--jct-navy)] px-6 text-sm font-medium text-[var(--jct-navy)]"
-                >
+                <Link href="/verify-agent" className="jct-btn-secondary px-6">
                   Verify agent
                 </Link>
               </div>

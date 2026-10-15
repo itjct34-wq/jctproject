@@ -11,13 +11,13 @@ export function CtaBand() {
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
             href="/contact"
-            className="inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white hover:bg-[#c23024]"
+            className="jct-btn-primary px-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             Request a car
           </Link>
           <Link
             href="/verify-agent"
-            className="inline-flex min-h-11 items-center rounded-lg border border-white/40 px-5 text-sm font-medium text-white hover:bg-white/10"
+            className="inline-flex min-h-11 items-center rounded-full border-2 border-white/55 px-5 text-sm font-semibold text-white transition-colors hover:border-white hover:bg-white/12"
           >
             Verify an agent first
           </Link>

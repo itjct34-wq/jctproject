@@ -65,7 +65,7 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
         </div>
         <Link
           href={href}
-          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--jct-navy)] bg-[var(--jct-navy)] px-4 text-sm font-semibold text-white transition-colors hover:border-[var(--jct-vermilion)] hover:bg-[var(--jct-vermilion)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border-2 border-[var(--jct-navy)] bg-[var(--jct-navy)] px-5 text-sm font-semibold text-white transition-colors hover:border-[#b83226] hover:bg-[var(--jct-vermilion)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
         >
           View details
         </Link>

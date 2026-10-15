@@ -57,16 +57,10 @@ export function SourceMarketPage({ market }: { market: PublicSourceMarket }) {
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href={inventoryQueryForSource(market.code)}
-            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--jct-navy)] px-4 text-sm font-medium text-[var(--jct-navy)] hover:bg-[var(--jct-panel)]"
-          >
+          <Link href={inventoryQueryForSource(market.code)} className="jct-btn-secondary px-4">
             View in full inventory
           </Link>
-          <Link
-            href="/contact"
-            className="inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024]"
-          >
+          <Link href="/contact" className="jct-btn-primary px-4">
             Request sourcing
           </Link>
         </div>
@@ -82,10 +76,7 @@ export function SourceMarketPage({ market }: { market: PublicSourceMarket }) {
             <p className="mt-2 text-sm text-[var(--jct-muted)]">
               We are preparing {market.name} listings. Tell us what you need and our team will source it for you.
             </p>
-            <Link
-              href="/contact"
-              className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-5 text-sm font-semibold text-white"
-            >
+            <Link href="/contact" className="jct-btn-primary mt-5 px-5">
               Contact sales
             </Link>
           </div>

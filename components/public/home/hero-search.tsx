@@ -123,7 +123,7 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
       <div className="mt-4">
         <button
           type="submit"
-          className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-navy)] sm:w-auto sm:min-w-[160px]"
+          className="jct-btn-primary h-11 w-full px-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-navy)] sm:w-auto sm:min-w-[160px]"
         >
           Search cars
         </button>

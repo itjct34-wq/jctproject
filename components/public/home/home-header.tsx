@@ -27,40 +27,44 @@ export function HomeHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--jct-border)] bg-white">
+    <header className="jct-site-header sticky top-0 z-50">
       <div className="jct-home-wrap flex min-h-[72px] items-center justify-between gap-4 py-2.5 sm:min-h-[88px] md:min-h-[104px] lg:min-h-[112px] lg:py-3">
         <Link
           href="/"
-          className="flex min-w-0 shrink items-center py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          className="flex min-w-0 shrink items-center rounded-lg bg-white/70 px-2 py-1 shadow-[0_2px_12px_rgba(11,31,51,0.06)] ring-1 ring-[var(--jct-navy)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
           aria-label="Japan Circular Trading home"
         >
           <BrandLogo placement="header" />
         </Link>
-        <nav className="hidden shrink-0 items-center gap-1 lg:flex" aria-label="Primary">
+        <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'inline-flex min-h-11 items-center rounded-lg px-3 text-sm text-[var(--jct-muted)] transition-colors hover:bg-[var(--jct-panel)] hover:text-[var(--jct-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]',
-                navLinkActive(pathname, item.href)
-                  ? 'bg-[var(--jct-panel)] font-medium text-[var(--jct-navy)]'
-                  : ''
+                'jct-nav-link focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]',
+                navLinkActive(pathname, item.href) && 'is-active'
               )}
             >
               {item.label}
             </Link>
           ))}
           <Link
+            href="/inventory"
+            className="jct-btn-secondary ml-2 px-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          >
+            Search stock
+          </Link>
+          <Link
             href="/contact"
-            className="ml-2 inline-flex min-h-11 items-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024]"
+            className="jct-btn-primary ml-2 px-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-navy)]"
           >
             Request a car
           </Link>
         </nav>
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-[var(--jct-navy)] hover:bg-[var(--jct-panel)] lg:hidden"
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border-2 border-[var(--jct-navy)]/20 bg-white/90 text-[var(--jct-navy)] hover:border-[var(--jct-vermilion)] hover:text-[var(--jct-vermilion)] lg:hidden"
           aria-expanded={open}
           aria-controls="home-mobile-nav"
           aria-label={open ? 'Close menu' : 'Open menu'}
@@ -70,22 +74,32 @@ export function HomeHeader() {
         </button>
       </div>
       {open && (
-        <div id="home-mobile-nav" className="border-t border-[var(--jct-border)] bg-white px-4 py-3 lg:hidden">
+        <div id="home-mobile-nav" className="jct-site-header-mobile px-4 py-3 lg:hidden">
           <nav className="flex flex-col gap-1" aria-label="Mobile">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-3 text-base text-[var(--jct-navy)] hover:bg-[var(--jct-panel)]"
+                className={cn(
+                  'rounded-full px-4 py-3 text-base text-[var(--jct-navy)] hover:bg-white hover:shadow-[inset_0_-2px_0_var(--jct-vermilion)]',
+                  navLinkActive(pathname, item.href) && 'bg-white font-semibold shadow-[inset_0_-2px_0_var(--jct-vermilion)]'
+                )}
               >
                 {item.label}
               </Link>
             ))}
             <Link
+              href="/inventory"
+              onClick={() => setOpen(false)}
+              className="jct-btn-secondary mt-2 w-full px-4 py-3 text-center text-base"
+            >
+              Search stock
+            </Link>
+            <Link
               href="/contact"
               onClick={() => setOpen(false)}
-              className="mt-1 rounded-lg bg-[var(--jct-vermilion)] px-4 py-3 text-center text-base font-semibold text-white"
+              className="jct-btn-primary mt-2 w-full px-4 py-3 text-center text-base"
             >
               Request a car
             </Link>
