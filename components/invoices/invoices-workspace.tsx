@@ -29,6 +29,7 @@ import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } f
 import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
+import { customerContactErrorMessage, isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
 import { toast } from 'sonner';
 
 export type InvoiceWorkspaceKind = 'commercial' | 'auction';
@@ -258,22 +259,20 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     const name = form.guest_name.trim();
     const email = form.guest_email.trim();
     const phone = form.guest_phone.trim();
-    if (!name) {
-      toast.error('Enter the customer name');
-      return null;
-    }
-    if (!email && !phone) {
-      toast.error('Enter customer email or phone');
+    const address = form.guest_address.trim();
+    const missing = isCustomerConsigneeComplete({ full_name: name, email, phone, address_line1: address });
+    if (missing) {
+      toast.error(missing);
       return null;
     }
     const payload = {
       full_name: name,
       company_name: form.guest_company.trim() || null,
-      email: email || null,
-      phone: phone || null,
+      email,
+      phone,
       country: form.guest_country.trim() || null,
       city: form.guest_city.trim() || null,
-      address_line1: form.guest_address.trim() || null,
+      address_line1: address,
       customer_type: form.guest_company.trim() ? 'company' : 'individual',
       status: 'active',
       created_by: profile.id,
@@ -285,7 +284,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       setCustomers((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created]));
       return created.id;
     }
-    if (email) {
+    if (error?.code === '23505' && email) {
       const { data: existing } = await supabase.from('customers').select('*').ilike('email', email).maybeSingle();
       if (existing) {
         const found = existing as Customer;
@@ -294,7 +293,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         return found.id;
       }
     }
-    toast.error(error?.message || 'Could not save customer details');
+    toast.error(customerContactErrorMessage(error));
     return null;
   };
 
@@ -439,9 +438,15 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const kindInvoices = invoices.filter((inv) => (isAuction ? isAuctionDepositInvoice(inv) : !isAuctionDepositInvoice(inv)));
   const stats = { total: kindInvoices.length, unpaid: kindInvoices.filter((i) => i.payment_status === 'unpaid').length, paid: kindInvoices.filter((i) => i.payment_status === 'paid').length, outstanding: kindInvoices.filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial').reduce((sum, i) => sum + i.total, 0) };
 
+  const selectedCustomer = customers.find((c) => c.id === form.customer_id) || null;
   const canSaveInvoice =
     form.customer_mode === 'manual'
-      ? Boolean(form.guest_name.trim() && (form.guest_email.trim() || form.guest_phone.trim()))
+      ? !isCustomerConsigneeComplete({
+          full_name: form.guest_name,
+          email: form.guest_email,
+          phone: form.guest_phone,
+          address_line1: form.guest_address,
+        })
       : Boolean(form.customer_id);
 
   const updateLine = (idx: number, patch: Partial<LineDraft>) => {
@@ -476,22 +481,51 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
           </div>
           {form.customer_mode === 'existing' ? (
-            <div className="space-y-2">
-              <Label>Customer *</Label>
-              <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}{c.customer_code ? ` · ${c.customer_code}` : ''}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Customer *</Label>
+                <Select
+                  value={form.customer_id}
+                  onValueChange={(v) => {
+                    const c = customers.find((x) => x.id === v);
+                    setForm({
+                      ...form,
+                      customer_id: v,
+                      guest_name: c?.full_name || '',
+                      guest_company: c?.company_name || '',
+                      guest_email: c?.email || '',
+                      guest_phone: c?.phone || '',
+                      guest_country: c?.country || '',
+                      guest_city: c?.city || '',
+                      guest_address: c?.address_line1 || '',
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                  <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}{c.customer_code ? ` · ${c.customer_code}` : ''}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              {selectedCustomer && (
+                <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Consignee (from customer)</p>
+                  <p className="mt-1 font-medium">{selectedCustomer.full_name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Contact: {selectedCustomer.phone || '—'}</p>
+                  <p className="text-xs text-muted-foreground">Email: {selectedCustomer.email || '—'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Address: {[selectedCustomer.address_line1, selectedCustomer.city, selectedCustomer.country].filter(Boolean).join(', ') || '—'}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2"><Label>Full name *</Label><Input value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Customer name" /></div>
+              <div className="space-y-1 sm:col-span-2"><Label>Consignee Name *</Label><Input value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Consignee name" required /></div>
               <div className="space-y-1"><Label>Company</Label><Input value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Company (optional)" /></div>
-              <div className="space-y-1"><Label>Phone *</Label><Input value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone or email required" /></div>
-              <div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email or phone required" /></div>
+              <div className="space-y-1"><Label>Contact *</Label><Input value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone (unique)" required /></div>
+              <div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email (unique)" required /></div>
               <div className="space-y-1"><Label>Country</Label><Input value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} /></div>
               <div className="space-y-1"><Label>City</Label><Input value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} /></div>
-              <div className="space-y-1 sm:col-span-2"><Label>Address</Label><Input value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} /></div>
+              <div className="space-y-1 sm:col-span-2"><Label>Address *</Label><Input value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
             </div>
           )}
         </div>

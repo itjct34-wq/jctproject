@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { supabase } from '@/lib/supabase/client';
 import type { Payment, PaymentAllocation, Vehicle } from '@/lib/types';
-import { remittanceAmount, remittanceRemaining, vehicleSoldPrice } from '@/lib/remittance';
+import { isUnknownRemittance, remittanceAmount, remittanceRemaining, vehicleSoldPrice } from '@/lib/remittance';
 import { formatMoney } from '@/lib/utils/format';
 import { toast } from 'sonner';
 
@@ -132,6 +132,10 @@ export default function AllocateRemittancePage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!payment || !profile || !canAllocate) return;
+    if (isUnknownRemittance(payment) || !payment.customer_id) {
+      toast.error('Tag customer and sales agent before allocating to stock');
+      return;
+    }
     const ready = lines.filter((l) => l.vehicle_id);
     if (!ready.length) {
       toast.error('Add at least one stock line');
@@ -197,6 +201,20 @@ export default function AllocateRemittancePage() {
   }
   if (!payment) {
     return <p className="p-8 text-sm text-muted-foreground">Remittance not found.</p>;
+  }
+
+  if (isUnknownRemittance(payment) || !payment.customer_id) {
+    return (
+      <div className="space-y-4 p-8">
+        <RemittanceCrumb current="Allocate" />
+        <p className="text-sm text-muted-foreground">
+          This is an Unknown TT. Tag customer and sales agent on Remittances before allocating to stock.
+        </p>
+        <Button type="button" variant="outline" onClick={() => router.push('/payments?tab=unknown')}>
+          Back to Unknown TT
+        </Button>
+      </div>
+    );
   }
 
   return (

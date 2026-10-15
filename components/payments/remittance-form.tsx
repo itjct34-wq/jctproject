@@ -64,12 +64,17 @@ function moneyNum(raw: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
-type Props = { payment?: Payment };
+type Props = {
+  payment?: Payment;
+  /** Create/edit as Unknown TT (no customer required). */
+  unknown?: boolean;
+};
 
-export function RemittanceForm({ payment }: Props) {
+export function RemittanceForm({ payment, unknown = false }: Props) {
   const router = useRouter();
   const { profile } = useAuth();
   const isEdit = Boolean(payment);
+  const isUnknownMode = unknown || Boolean(payment?.is_unknown && !payment?.customer_id);
   const [form, setForm] = useState(emptyForm);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [offices, setOffices] = useState<Office[]>([]);
@@ -187,8 +192,11 @@ export function RemittanceForm({ payment }: Props) {
 
   const payload = () => {
     const rate = moneyNum(form.exchange_rate) || 1;
+    const asUnknown = isUnknownMode && !form.customer_id;
     return {
-      customer_id: form.customer_id,
+      customer_id: asUnknown ? null : form.customer_id,
+      sales_agent_id: asUnknown ? null : undefined,
+      is_unknown: asUnknown,
       office_id: form.office_id || null,
       shift_id: form.shift_id || null,
       remitter_name: form.remitter_name.trim(),
@@ -212,7 +220,7 @@ export function RemittanceForm({ payment }: Props) {
   };
 
   const validate = () => {
-    if (!form.customer_id) return 'Customer is required';
+    if (!isUnknownMode && !form.customer_id) return 'Customer is required';
     if (!form.office_id) return 'Office is required';
     if (!form.currency) return 'Currency is required';
     if (!form.remitter_name.trim()) return 'Remitter is required';
@@ -235,24 +243,29 @@ export function RemittanceForm({ payment }: Props) {
     }
     setSubmitting(true);
     const body = payload();
+    // Avoid wiping sales_agent_id on normal edits when key is undefined.
+    const updateBody = Object.fromEntries(
+      Object.entries({ ...body, updated_at: new Date().toISOString() }).filter(([, v]) => v !== undefined),
+    );
+    const listHref = isUnknownMode ? '/payments?tab=unknown' : '/payments';
     if (isEdit && payment) {
-      const { error } = await supabase
-        .from('payments')
-        .update({ ...body, updated_at: new Date().toISOString() })
-        .eq('id', payment.id);
+      const { error } = await supabase.from('payments').update(updateBody).eq('id', payment.id);
       setSubmitting(false);
       if (error) {
         toast.error(`Could not update remittance: ${error.message}`);
         return;
       }
-      toast.success('Remittance updated');
-      router.push('/payments');
+      toast.success(isUnknownMode ? 'Unknown TT updated' : 'Remittance updated');
+      router.push(listHref);
       router.refresh();
       return;
     }
+    const insertBody = Object.fromEntries(
+      Object.entries({ ...body, created_by: profile.id }).filter(([, v]) => v !== undefined),
+    );
     const { data: created, error } = await supabase
       .from('payments')
-      .insert({ ...body, created_by: profile.id })
+      .insert(insertBody)
       .select('id')
       .maybeSingle();
     if (error || !created) {
@@ -265,8 +278,8 @@ export function RemittanceForm({ payment }: Props) {
       if (!ok) toast.error(`Remittance saved but ${file.name} did not upload`);
     }
     setSubmitting(false);
-    toast.success('Remittance created');
-    router.push('/payments');
+    toast.success(isUnknownMode ? 'Unknown TT saved to inbox' : 'Remittance created');
+    router.push(listHref);
     router.refresh();
   };
 
@@ -282,16 +295,25 @@ export function RemittanceForm({ payment }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Field label="Customer" ja="お客様" required>
-          <SearchableSelect
-            value={form.customer_id}
-            onChange={(customer_id) => setForm({ ...form, customer_id })}
-            options={customerOptions}
-            placeholder="Search Customer"
-            searchPlaceholder="Search customer"
-          />
-          {taggedName ? <p className="text-xs text-muted-foreground">Tagged With: {taggedName}</p> : null}
-        </Field>
+        {isUnknownMode ? (
+          <Field label="Customer" ja="お客様">
+            <Input value="Unknown — tag later" readOnly className="bg-muted" />
+            <p className="text-xs text-muted-foreground">
+              Held in Unknown TT until customer and sales agent are tagged.
+            </p>
+          </Field>
+        ) : (
+          <Field label="Customer" ja="お客様" required>
+            <SearchableSelect
+              value={form.customer_id}
+              onChange={(customer_id) => setForm({ ...form, customer_id })}
+              options={customerOptions}
+              placeholder="Search Customer"
+              searchPlaceholder="Search customer"
+            />
+            {taggedName ? <p className="text-xs text-muted-foreground">Tagged With: {taggedName}</p> : null}
+          </Field>
+        )}
         <Field label="Office" ja="オフィス" required>
           <Select
             value={form.office_id}
@@ -412,6 +434,8 @@ export function RemittanceForm({ payment }: Props) {
             </>
           ) : isEdit ? (
             'Save'
+          ) : isUnknownMode ? (
+            'Save Unknown TT'
           ) : (
             'Create'
           )}

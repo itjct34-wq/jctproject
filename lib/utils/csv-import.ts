@@ -333,10 +333,10 @@ export const AUCTION_CSV_SAMPLE = [
 
 export const CUSTOMER_CSV_HEADERS = [
   'full_name', 'company_name', 'customer_type', 'email', 'phone', 'whatsapp',
-  'country', 'city', 'source', 'status', 'notes',
+  'address_line1', 'country', 'city', 'source', 'status', 'notes',
 ];
 
 export const CUSTOMER_CSV_SAMPLE = [
   'Amina Hassan', 'Hassan Motors', 'company', 'amina@example.com', '+254700000000', '+254700000000',
-  'Kenya', 'Nairobi', 'website', 'lead', 'Prefers hybrids',
+  'Bahamas Nassau', 'Bahamas', 'Nassau', 'website', 'lead', 'Prefers hybrids',
 ];

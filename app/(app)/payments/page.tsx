@@ -1,15 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ChevronDown, Loader2, Plus, Search } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
@@ -17,10 +18,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { SearchableSelect } from '@/components/payments/searchable-select';
+import { TtDocumentChip } from '@/components/payments/tt-document-chip';
+import { RemittanceCurrencyDashboard } from '@/components/payments/remittance-currency-dashboard';
 import { supabase } from '@/lib/supabase/client';
 import type { Customer, Payment, PaymentAllocation, Profile } from '@/lib/types';
-import { paymentDisplayId, remittanceAmount, remittanceInstructed, remittanceRemaining } from '@/lib/remittance';
+import {
+  aggregateRemittanceByCurrency,
+  isUnknownRemittance,
+  paymentDisplayId,
+  remittanceAmount,
+  remittanceInstructed,
+  remittanceRemaining,
+} from '@/lib/remittance';
 import { formatMoney } from '@/lib/utils/format';
 import { toast } from 'sonner';
 import { ERP_LIST_LIMIT } from '@/lib/erp/list-page';
@@ -31,6 +44,8 @@ type PaymentRow = Payment & {
   payment_allocations?: AllocRow[] | null;
 };
 
+type StaffOpt = { id: string; full_name: string | null; display_name: string | null };
+
 function isoDay(value: string | null | undefined) {
   if (!value) return '—';
   const day = value.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -40,18 +55,32 @@ function isoDay(value: string | null | undefined) {
   return format(d, 'yyyy-MM-dd');
 }
 
-export default function RemittancesPage() {
-  const { can, hasRole, isSellingFocused } = usePermissions();
+function RemittancesPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { can, hasRole, isSellingFocused, isElevatedStaff } = usePermissions();
   const canCreate = can('payments', 'create');
   const canEdit = can('payments', 'edit');
   const canDelete = can('payments', 'delete') || hasRole('accounts');
+  const canManageUnknown = isElevatedStaff;
+  const tab = searchParams.get('tab') === 'unknown' ? 'unknown' : 'all';
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [agents, setAgents] = useState<Record<string, string>>({});
+  const [staff, setStaff] = useState<StaffOpt[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [tagTarget, setTagTarget] = useState<PaymentRow | null>(null);
+  const [tagCustomerId, setTagCustomerId] = useState('');
+  const [tagAgentId, setTagAgentId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const setTab = (next: 'all' | 'unknown') => {
+    const qs = next === 'unknown' ? '?tab=unknown' : '';
+    router.replace(`/payments${qs}`);
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -102,25 +131,40 @@ export default function RemittancesPage() {
     } else {
       setRows((nested.data || []) as PaymentRow[]);
     }
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, display_name')
-      .limit(250);
+    const [{ data: profiles }, { data: custAll }] = await Promise.all([
+      supabase.from('profiles').select('id, full_name, display_name').eq('is_active', true).limit(250),
+      canManageUnknown
+        ? supabase.from('customers').select('id, customer_code, full_name, phone, assigned_to').order('full_name').limit(500)
+        : Promise.resolve({ data: [] as Customer[] }),
+    ]);
     const map: Record<string, string> = {};
-    for (const p of (profiles || []) as Pick<Profile, 'id' | 'full_name' | 'display_name'>[]) {
+    const staffRows = (profiles || []) as StaffOpt[];
+    for (const p of staffRows) {
       map[p.id] = p.full_name?.trim() || p.display_name?.trim() || '';
     }
     setAgents(map);
+    setStaff(staffRows);
+    setCustomers((custAll || []) as Customer[]);
     setLoading(false);
-  }, []);
+  }, [canManageUnknown]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (tab === 'unknown' && !canManageUnknown) {
+      router.replace('/payments');
+    }
+  }, [tab, canManageUnknown, router]);
+
+  const unknownCount = useMemo(() => rows.filter((p) => isUnknownRemittance(p)).length, [rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((p) => {
+      const unknown = isUnknownRemittance(p);
+      if (tab === 'unknown' ? !unknown : unknown) return false;
       const alloc = p.allocation_status || 'unallocated';
       const matchesStatus = statusFilter === 'all' || alloc === statusFilter;
       const cust = p.customers;
@@ -137,7 +181,7 @@ export default function RemittancesPage() {
         .toLowerCase();
       return matchesStatus && (!q || hay.includes(q));
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, tab]);
 
   const confirmDelete = async () => {
     if (!deleteId) return;
@@ -153,46 +197,128 @@ export default function RemittancesPage() {
     void loadData();
   };
 
-  const stats = {
-    total: rows.length,
-    unallocated: rows.filter((p) => (p.allocation_status || 'unallocated') !== 'allocated').length,
-    allocated: rows.filter((p) => p.allocation_status === 'allocated').length,
+  const openTag = (p: PaymentRow) => {
+    setTagTarget(p);
+    setTagCustomerId('');
+    setTagAgentId('');
   };
+
+  const onTagCustomer = (customer_id: string) => {
+    setTagCustomerId(customer_id);
+    const cust = customers.find((c) => c.id === customer_id);
+    if (cust?.assigned_to) setTagAgentId(cust.assigned_to);
+  };
+
+  const confirmTag = async () => {
+    if (!tagTarget) return;
+    if (!tagCustomerId) {
+      toast.error('Customer is required');
+      return;
+    }
+    if (!tagAgentId) {
+      toast.error('Sales agent is required');
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('payments')
+      .update({
+        customer_id: tagCustomerId,
+        sales_agent_id: tagAgentId,
+        is_unknown: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', tagTarget.id);
+    setSubmitting(false);
+    if (error) {
+      toast.error(`Could not tag: ${error.message}`);
+      return;
+    }
+    toast.success('Tagged — remittance is ready to allocate');
+    setTagTarget(null);
+    router.replace('/payments');
+    void loadData();
+  };
+
+  const tryAllocate = (p: PaymentRow) => {
+    if (isUnknownRemittance(p) || !p.customer_id) {
+      toast.error('Tag customer and sales agent before allocating to stock');
+      return;
+    }
+    router.push(`/payments/${p.id}/allocate`);
+  };
+
+  const currencyTotals = useMemo(() => aggregateRemittanceByCurrency(rows), [rows]);
+
+  const customerOptions = customers.map((c) => ({
+    value: c.id,
+    label: `${c.full_name} (${c.customer_code})`,
+    keywords: `${c.phone || ''} ${c.customer_code}`,
+  }));
+  const agentOptions = staff.map((s) => ({
+    value: s.id,
+    label: s.full_name?.trim() || s.display_name?.trim() || s.id,
+    keywords: s.display_name || '',
+  }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Remittance Management"
         description={
-          isSellingFocused
-            ? 'T/T remittances for your customers — create, allocate to stock, or edit'
-            : 'Record bank remittances and allocate them to stock'
+          tab === 'unknown'
+            ? 'Bank T/Ts waiting for customer and sales agent tagging'
+            : isSellingFocused
+              ? 'T/T remittances for your customers — create, allocate to stock, or edit'
+              : 'Record bank remittances and allocate them to stock'
         }
         actions={
-          canCreate ? (
-            <Button size="sm" asChild>
-              <Link href="/payments/new">
-                <Plus className="mr-1.5 h-4 w-4" />
-                Add remittance
-              </Link>
-            </Button>
+          canCreate || canManageUnknown ? (
+            <div className="flex flex-wrap gap-2">
+              {canManageUnknown ? (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/payments/new?unknown=1">
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Add Unknown TT
+                  </Link>
+                </Button>
+              ) : null}
+              {canCreate ? (
+                <Button size="sm" asChild>
+                  <Link href="/payments/new">
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Add remittance
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
           ) : undefined
         }
       />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        {[
-          { label: 'Total remittances', value: stats.total },
-          { label: 'Unallocated', value: stats.unallocated },
-          { label: 'Allocated', value: stats.allocated },
-        ].map((s) => (
-          <Card key={s.label} className="border-border/60">
+
+      {canManageUnknown ? (
+        <Tabs value={tab} onValueChange={(v) => setTab(v === 'unknown' ? 'unknown' : 'all')}>
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="unknown">
+              Unknown TT{unknownCount ? ` (${unknownCount})` : ''}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
+
+      {tab === 'unknown' ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <Card className="border-border/60">
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold text-primary">{s.value}</p>
+              <p className="text-xs text-muted-foreground">Unknown TT</p>
+              <p className="text-xl font-bold text-primary">{unknownCount}</p>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <RemittanceCurrencyDashboard totals={currencyTotals} />
+      )}
       <Card className="border-border/60">
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 md:flex-row">
@@ -202,19 +328,25 @@ export default function RemittancesPage() {
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search remitter, customer, code..."
+                placeholder={
+                  tab === 'unknown'
+                    ? 'Search remitter, bank, code...'
+                    : 'Search remitter, customer, code...'
+                }
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="unallocated">Unallocated</SelectItem>
-                <SelectItem value="allocated">Allocated</SelectItem>
-              </SelectContent>
-            </Select>
+            {tab === 'all' ? (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="unallocated">Unallocated</SelectItem>
+                  <SelectItem value="allocated">Allocated</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -226,7 +358,11 @@ export default function RemittancesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-14 text-center text-sm text-muted-foreground">
-            {isSellingFocused ? 'No remittances for your customers yet.' : 'No remittances found.'}
+            {tab === 'unknown'
+              ? 'No unknown T/Ts in the inbox.'
+              : isSellingFocused
+                ? 'No remittances for your customers yet.'
+                : 'No remittances found.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -247,7 +383,12 @@ export default function RemittancesPage() {
                 {filtered.map((p) => {
                   const allocs = p.payment_allocations || [];
                   const remaining = remittanceRemaining(p, allocs);
-                  const status = p.allocation_status === 'allocated' ? 'ALLOCATED' : 'UNALLOCATED';
+                  const unknown = isUnknownRemittance(p);
+                  const status = unknown
+                    ? 'UNKNOWN'
+                    : p.allocation_status === 'allocated'
+                      ? 'ALLOCATED'
+                      : 'UNALLOCATED';
                   const cust = p.customers;
                   const tagged =
                     (cust?.assigned_to && agents[cust.assigned_to]) ||
@@ -266,10 +407,19 @@ export default function RemittancesPage() {
                         <p>Received: {isoDay(p.received_date)}</p>
                       </td>
                       <td className="px-3 py-3 text-xs leading-5">
-                        <p>ID: {cust?.customer_code || '—'}</p>
-                        <p className="font-medium text-foreground">{cust?.full_name || '—'}</p>
-                        <p>{cust?.phone || ''}</p>
-                        {tagged ? <p>Tagged With: {tagged}</p> : null}
+                        {unknown ? (
+                          <>
+                            <p className="font-medium text-amber-800">Untagged</p>
+                            <p className="text-muted-foreground">Customer / agent unknown</p>
+                          </>
+                        ) : (
+                          <>
+                            <p>ID: {cust?.customer_code || '—'}</p>
+                            <p className="font-medium text-foreground">{cust?.full_name || '—'}</p>
+                            <p>{cust?.phone || ''}</p>
+                            {tagged ? <p>Tagged With: {tagged}</p> : null}
+                          </>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-xs leading-5">
                         <p className="font-medium uppercase">{p.remitter_name || '—'}</p>
@@ -284,12 +434,18 @@ export default function RemittancesPage() {
                       </td>
                       <td className="px-3 py-3 text-xs">{stockIds || '—'}</td>
                       <td className="px-3 py-3">
-                        <span className="text-xs font-bold tracking-wide text-primary">{status}</span>
+                        <span
+                          className={
+                            unknown
+                              ? 'text-xs font-bold tracking-wide text-amber-800'
+                              : 'text-xs font-bold tracking-wide text-primary'
+                          }
+                        >
+                          {status}
+                        </span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="inline-flex h-7 min-w-[2rem] items-center justify-center rounded bg-red-600 px-1.5 text-[11px] font-bold text-white">
-                          TT
-                        </span>
+                        <TtDocumentChip paymentId={p.id} canEdit={canEdit || canManageUnknown} />
                       </td>
                       <td className="px-3 py-3">
                         <DropdownMenu>
@@ -300,14 +456,20 @@ export default function RemittancesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {canEdit ? (
+                            {unknown && canManageUnknown ? (
+                              <DropdownMenuItem onSelect={() => openTag(p)}>Tag customer / agent</DropdownMenuItem>
+                            ) : null}
+                            {canEdit || (unknown && canManageUnknown) ? (
                               <DropdownMenuItem asChild>
                                 <Link href={`/payments/${p.id}/edit`}>Edit</Link>
                               </DropdownMenuItem>
                             ) : null}
                             {canCreate || canEdit ? (
-                              <DropdownMenuItem asChild>
-                                <Link href={`/payments/${p.id}/allocate`}>Allocate</Link>
+                              <DropdownMenuItem
+                                onSelect={() => tryAllocate(p)}
+                                disabled={unknown}
+                              >
+                                Allocate
                               </DropdownMenuItem>
                             ) : null}
                             {canDelete ? (
@@ -336,6 +498,69 @@ export default function RemittancesPage() {
         loading={submitting}
         onConfirm={confirmDelete}
       />
+      <Dialog open={Boolean(tagTarget)} onOpenChange={(open) => !open && setTagTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tag Unknown TT</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Assign customer and sales agent so this remittance appears in the normal list and can be allocated to
+              stock.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Customer *</Label>
+              <SearchableSelect
+                value={tagCustomerId}
+                onChange={onTagCustomer}
+                options={customerOptions}
+                placeholder="Search customer"
+                searchPlaceholder="Search customer"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Sales agent *</Label>
+              <SearchableSelect
+                value={tagAgentId}
+                onChange={setTagAgentId}
+                options={agentOptions}
+                placeholder="Search agent"
+                searchPlaceholder="Search agent"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setTagTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={submitting} onClick={() => void confirmTag()}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Tag'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+export default function RemittancesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading remittances...
+        </div>
+      }
+    >
+      <RemittancesPageInner />
+    </Suspense>
   );
 }

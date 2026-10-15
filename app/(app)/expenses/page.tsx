@@ -25,10 +25,10 @@ import { currentPayrollPeriod, lastDayOfPayrollPeriod, OFFICE_EXPENSE_CATEGORIES
 import { formatMoney } from '@/lib/utils/format';
 
 const statusStyles: Record<Expense['status'], string> = {
-  pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  rejected: 'bg-red-50 text-red-700 border-red-200',
-  paid: 'bg-blue-50 text-blue-700 border-blue-200',
+  pending: 'border-warning/45 bg-warning/15 text-warning',
+  approved: 'border-success/40 bg-success/15 text-success',
+  rejected: 'border-destructive/40 bg-destructive/15 text-destructive',
+  paid: 'border-info/40 bg-info/15 text-info',
 };
 
 const emptyForm = {
@@ -454,11 +454,11 @@ export default function ExpensesPage() {
         }
       />
       {canPaySalary ? (
-        <Card className="border-border/60">
+        <Card>
           <CardContent className="space-y-4 p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="font-semibold">Payroll</p>
+                <p className="font-semibold text-primary">Payroll</p>
                 <p className="text-sm text-muted-foreground">Post monthly salary from user payroll as a paid Salary expense, tagged to the staff office.</p>
               </div>
               <div className="flex flex-wrap items-end gap-2">
@@ -485,28 +485,28 @@ export default function ExpensesPage() {
             {salaryStaff.length === 0 ? (
               <p className="text-sm text-muted-foreground">No staff have a salary on Users & Teams yet.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="erp-table-scroll">
+                <table className="erp-data-table">
+                  <thead>
                     <tr>
-                      <th className="py-2">Staff</th>
-                      <th className="py-2">Office</th>
-                      <th className="py-2">Salary</th>
-                      <th className="py-2">This month</th>
-                      <th className="py-2" />
+                      <th>Staff</th>
+                      <th>Office</th>
+                      <th>Salary</th>
+                      <th>This month</th>
+                      <th />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/70">
+                  <tbody>
                     {salaryStaff.map((person) => {
                       const paid = paidSalaryIds.has(person.id);
                       const row = payroll[person.id];
                       return (
                         <tr key={person.id}>
-                          <td className="py-2 font-medium">{personName(person)}</td>
-                          <td className="py-2">{officeName(person.office_id) || '—'}</td>
-                          <td className="py-2">{formatMoney(Number(row.salary_amount) || 0, row.salary_currency || 'PKR')}</td>
-                          <td className="py-2">{paid ? <Badge variant="outline" className={statusStyles.paid}>Paid</Badge> : 'Unpaid'}</td>
-                          <td className="py-2 text-right">
+                          <td className="font-medium">{personName(person)}</td>
+                          <td>{officeName(person.office_id) || '—'}</td>
+                          <td>{formatMoney(Number(row.salary_amount) || 0, row.salary_currency || 'PKR')}</td>
+                          <td>{paid ? <Badge variant="outline" className={statusStyles.paid}>Paid</Badge> : 'Unpaid'}</td>
+                          <td className="text-right">
                             <Button size="sm" disabled={paid || payingUser === person.id} onClick={() => void paySalary(person.id)}>
                               {payingUser === person.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pay salary'}
                             </Button>
@@ -528,17 +528,17 @@ export default function ExpensesPage() {
           { label: 'Approved', value: stats.approved },
           { label: 'Total amount', value: stats.totalAmount.toLocaleString() },
         ].map((s) => (
-          <Card key={s.label} className="border-border/60">
+          <Card key={s.label}>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold">{s.value}</p>
+              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+              <p className="erp-stat-value mt-0.5">{s.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card className="border-border/60">
+      <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col gap-3 md:flex-row">
+          <div className="erp-filter-bar">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search code, vendor, category..." />
@@ -586,22 +586,22 @@ export default function ExpensesPage() {
           </div>
         </CardContent>
       </Card>
-      <Card className="overflow-hidden border-border/60">
+      <Card className="overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading expenses...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-14 text-center">
+          <div className="flex flex-col items-center justify-center p-12 text-center">
             <Wallet className="mb-3 h-10 w-10 text-muted-foreground/50" />
-            <h3 className="font-semibold">No expenses found</h3>
+            <h3 className="font-semibold text-primary">No expenses found</h3>
             <p className="mt-1 text-sm text-muted-foreground">Record an office bill or adjust your filters.</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/70">
+          <div className="divide-y divide-border">
             {filtered.map((e) => (
-              <button key={e.id} onClick={() => setSelected(e)} className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/40">
+              <button key={e.id} onClick={() => setSelected(e)} className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/45">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Receipt className="h-5 w-5" />
                 </div>

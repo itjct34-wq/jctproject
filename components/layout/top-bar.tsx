@@ -68,7 +68,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/90 border-b border-border flex items-center px-3 sm:px-4 gap-2 sm:gap-3 shadow-[0_1px_0_hsl(var(--gold)/0.35)]">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/95 px-3 shadow-[0_1px_0_hsl(var(--gold)/0.45)] backdrop-blur supports-[backdrop-filter]:bg-card/90 sm:gap-3 sm:px-4">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"

@@ -122,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <TopBar onMenuClick={() => setMobileOpen(true)} />
         <main
           id="main-content"
-          className="flex-1 min-w-0 p-3 sm:p-4 md:p-6 max-w-[1600px] w-full mx-auto"
+          className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-3 sm:p-4 md:p-5 lg:p-6"
         >
           <div className="animate-fade-in">{children}</div>
         </main>

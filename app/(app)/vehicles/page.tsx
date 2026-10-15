@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
@@ -37,6 +37,7 @@ import {
   effectivePaymentStatus,
   effectiveShippingStatus,
   parsePkrPerUsd,
+  reservationExclusivityMessage,
   emptyShippingForm,
   FREIGHT_MODE_LABELS,
   FREIGHT_MODES,
@@ -56,6 +57,7 @@ import {
   type VehiclePaymentStatus,
   type VehicleShippingStatus,
 } from '@/lib/vehicle-lifecycle';
+import { makeVehicleAvailable, vehicleCanMakeAvailable } from '@/lib/utils/make-vehicle-available';
 import { Loader2, Pencil, Plus, Search, Ship, Tag, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -107,6 +109,7 @@ function fobFromForm(form: typeof emptyForm) {
 
 function VehiclesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const listCategory: StockCategory =
     searchParams.get('category') === 'machinery' || searchParams.get('category') === 'parts'
       ? (searchParams.get('category') as StockCategory)
@@ -117,6 +120,8 @@ function VehiclesPage() {
   const canCreateVehicle = can('vehicles', 'create');
   const canEditVehicle = can('vehicles', 'edit');
   const canDeleteVehicle = can('vehicles', 'delete');
+  const canOverrideReservation = isAdmin() || hasRole('operations') || hasRole('manager');
+  const canMakeAvailable = isAdmin();
   const canReserveStock =
     (hasRole('sales_agent') || hasRole('freelancer')) && !canEditVehicle;
   const canEditShipping = canEditVehicle;
@@ -138,6 +143,7 @@ function VehiclesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [makeAvailableOpen, setMakeAvailableOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
   const [reserveOpen, setReserveOpen] = useState(false);
@@ -515,8 +521,24 @@ function VehiclesPage() {
     if (reserving && form.payment_status === 'available') {
       updatePayload.payment_status = 'reserved';
       updatePayload.reserved_by = profile?.id || selected.reserved_by;
-    } else if (reserving && !selected.reserved_by) {
+    } else if (reserving && (!selected.reserved_by || canOverrideReservation)) {
       updatePayload.reserved_by = profile?.id || selected.reserved_by;
+    } else if (
+      canOverrideReservation
+      && !form.customer_id
+      && form.payment_status === 'available'
+    ) {
+      updatePayload.reserved_by = null;
+      updatePayload.reserved_until = null;
+    }
+    const editConflict =
+      reserving && !canOverrideReservation
+        ? reservationExclusivityMessage(selected, profile?.id, agentNames)
+        : null;
+    if (editConflict) {
+      setSubmitting(false);
+      toast.error(editConflict);
+      return;
     }
     let { error } = await supabase.from('vehicles').update(updatePayload).eq('id', selected.id);
     if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|sold_price|incoterm|freight_mode|commission_pkr|commission_status/i.test(error.message)) {
@@ -565,6 +587,47 @@ function VehiclesPage() {
     await loadVehicles();
   };
 
+  const openMakeAvailable = (vehicle?: Vehicle | null) => {
+    if (!canMakeAvailable) {
+      toast.error('Only admin can make a vehicle available');
+      return;
+    }
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
+    setMakeAvailableOpen(true);
+  };
+
+  const confirmMakeAvailable = async () => {
+    if (!profile || !selected) return;
+    if (!canMakeAvailable) {
+      toast.error('Only admin can make a vehicle available');
+      return;
+    }
+    setSubmitting(true);
+    const result = await makeVehicleAvailable({ vehicle: selected, actorId: profile.id });
+    setSubmitting(false);
+    if (!result.ok) {
+      if (result.block?.kind === 'tt_allocated') {
+        const href = result.block.allocateHref;
+        toast.error(result.block.message, {
+          action: {
+            label: 'Open allocate',
+            onClick: () => router.push(href),
+          },
+        });
+        setMakeAvailableOpen(false);
+        return;
+      }
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`${selected.stock_number} is available again`);
+    setMakeAvailableOpen(false);
+    setSelected(null);
+    await loadVehicles();
+  };
+
   const customerLabel = (id: string | null | undefined) =>
     id ? customers.find((c) => c.id === id)?.full_name || 'Customer' : '';
 
@@ -588,6 +651,11 @@ function VehiclesPage() {
   const openReserve = (vehicle?: Vehicle | null) => {
     const target = vehicle || selected;
     if (!target) return;
+    const conflict = reservationExclusivityMessage(target, profile?.id, agentNames);
+    if (conflict) {
+      toast.error(conflict);
+      return;
+    }
     setSelected(target);
     setReserveCustomerId(target.customer_id || '');
     setReserveDays('7');
@@ -601,12 +669,42 @@ function VehiclesPage() {
   const submitReserve = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !selected || !reserveCustomerId) return;
+    setSubmitting(true);
+    const { data: fresh, error: freshErr } = await supabase
+      .from('vehicles')
+      .select('id, status, payment_status, reserved_by')
+      .eq('id', selected.id)
+      .maybeSingle();
+    if (freshErr) {
+      setSubmitting(false);
+      toast.error(freshErr.message);
+      return;
+    }
+    const live = (fresh || selected) as Pick<Vehicle, 'id' | 'status' | 'payment_status' | 'reserved_by'>;
+    let names = agentNames;
+    if (live.reserved_by && !names[live.reserved_by]) {
+      const { data: holder } = await supabase
+        .from('profiles')
+        .select('id, full_name, display_name, email')
+        .eq('id', live.reserved_by)
+        .maybeSingle();
+      if (holder) {
+        names = { ...names, [holder.id]: profileDisplayName(holder as ProfileNameRow) };
+      }
+    }
+    const conflict = reservationExclusivityMessage(live, profile.id, names);
+    if (conflict) {
+      setSubmitting(false);
+      toast.error(conflict);
+      setReserveOpen(false);
+      await loadVehicles();
+      return;
+    }
     const days = Math.max(1, Number(reserveDays) || 7);
     const reservedUntil = new Date();
     reservedUntil.setDate(reservedUntil.getDate() + days);
     const reservedUntilStr = reservedUntil.toISOString().slice(0, 10);
-    setSubmitting(true);
-    const { error } = await supabase
+    const { data: claimed, error } = await supabase
       .from('vehicles')
       .update({
         payment_status: 'reserved',
@@ -619,10 +717,24 @@ function VehiclesPage() {
         commission_pkr: reserveCommissionPkr === '' ? null : Number(reserveCommissionPkr) || 0,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', selected.id);
+      .eq('id', selected.id)
+      .eq('payment_status', 'available')
+      .is('reserved_by', null)
+      .select('id')
+      .maybeSingle();
     if (error) {
       setSubmitting(false);
-      toast.error(error.message);
+      const msg = /already reserved by/i.test(error.message)
+        ? error.message.replace(/^.*already reserved by/i, 'Already reserved by')
+        : error.message;
+      toast.error(msg);
+      return;
+    }
+    if (!claimed) {
+      setSubmitting(false);
+      toast.error(reservationExclusivityMessage(live, profile.id, names) || 'Already reserved by another agent');
+      setReserveOpen(false);
+      await loadVehicles();
       return;
     }
     await supabase.from('vehicle_status_history').insert({
@@ -980,24 +1092,26 @@ function VehiclesPage() {
 
       <div className="grid grid-cols-3 gap-3">
         {[{ l: 'Total', v: stats.total }, { l: 'Available', v: stats.available }, { l: 'Reserved', v: stats.reserved }].map((s) => (
-          <Card key={s.l} className="border-border/60"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.l}</p><p className="text-xl font-bold">{s.v}</p></CardContent></Card>
+          <Card key={s.l}><CardContent className="p-4"><p className="text-xs font-medium text-muted-foreground">{s.l}</p><p className="erp-stat-value mt-0.5">{s.v}</p></CardContent></Card>
         ))}
       </div>
 
-      <Card className="border-border/60"><CardContent className="p-4 flex flex-col md:flex-row gap-3">
+      <Card><CardContent className="p-4">
+        <div className="erp-filter-bar">
         <div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search stock no., chassis, make…" /></div>
         <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All stages</SelectItem>
             {Object.entries(WORKFLOW_STAGE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent></Select>
+        </div>
       </CardContent></Card>
 
       {loading ? (
-        <Card className="border-border/60"><div className="p-14 flex justify-center"><Loader2 className="animate-spin h-4 w-4" /></div></Card>
+        <Card><div className="flex justify-center p-12"><Loader2 className="h-4 w-4 animate-spin" /></div></Card>
       ) : filtered.length === 0 ? (
-        <Card className="border-border/60">
-          <div className="p-14 text-center text-muted-foreground">
+        <Card>
+          <div className="p-12 text-center text-muted-foreground">
             <p>No {listCopy.title.toLowerCase()} in this list yet.</p>
             {isSellingFocused ? (
               <p className="mt-2 text-sm">You see available stock plus vehicles you reserved. Other agents&apos; reserved units stay hidden.</p>
@@ -1005,7 +1119,7 @@ function VehiclesPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {filtered.map((v) => {
             const pay = effectivePaymentStatus(v);
             const pays = vehiclePays[v.id];
@@ -1024,6 +1138,11 @@ function VehiclesPage() {
                 onViewInfo={() => setSelected(v)}
                 onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
                 onReserve={canReserveStock && pay === 'available' ? () => openReserve(v) : undefined}
+                onMakeAvailable={
+                  canMakeAvailable && vehicleCanMakeAvailable(v)
+                    ? () => openMakeAvailable(v)
+                    : undefined
+                }
                 onShipping={canEditShipping ? () => openShippingEdit(v) : undefined}
                 onDelete={canDeleteVehicle ? () => { setSelected(v); setDeleteOpen(true); } : undefined}
                 onMarkCommissionPaid={
@@ -1053,7 +1172,7 @@ function VehiclesPage() {
         </form>
       </DialogContent></Dialog>
 
-      <Sheet open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen && !makeAvailableOpen} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">{selected && (<>
           <SheetHeader><SheetTitle>{selected.make} {selected.model}</SheetTitle><SheetDescription>{selected.stock_number} · {statusLabels[selected.status]}</SheetDescription></SheetHeader>
           {selected.primary_image_url && <img src={selected.primary_image_url} alt="" className="mt-4 rounded-lg w-full max-h-48 object-cover" />}
@@ -1200,6 +1319,16 @@ function VehiclesPage() {
       </DialogContent></Dialog>
 
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete vehicle?" description="Removes available stock only. Reserved or invoiced units are blocked." confirmLabel="Delete" destructive loading={submitting} onConfirm={confirmDelete} />
+      <ConfirmDialog
+        open={makeAvailableOpen}
+        onOpenChange={setMakeAvailableOpen}
+        title="Make vehicle available?"
+        description="This clears the reservation (agent, customer, sold price, commission), deletes or trims linked reservation invoices, and sets the unit back to available / in stock. If a remittance / TT is still allocated to this vehicle, you must unallocate it first."
+        confirmLabel="Make available"
+        destructive
+        loading={submitting}
+        onConfirm={confirmMakeAvailable}
+      />
     </div>
   );
 }

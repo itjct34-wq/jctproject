@@ -139,13 +139,13 @@ export default function AgentLedgerPage() {
         title="Agent ledger"
         description="Remittances, sold stock, balances, profit, and vehicle commissions for one agent"
       />
-      <Card className="border-border/60">
+      <Card>
         <CardContent className="p-4">
           {loadingAgents ? (
             <p className="text-sm text-muted-foreground">Loading agents...</p>
           ) : isSellingFocused ? (
             <p className="text-sm">
-              Showing your ledger: <span className="font-semibold">{personName(profile || undefined)}</span>
+              Showing your ledger: <span className="font-semibold text-primary">{personName(profile || undefined)}</span>
             </p>
           ) : (
             <div className="max-w-md">
@@ -161,7 +161,7 @@ export default function AgentLedgerPage() {
         </CardContent>
       </Card>
       {loading ? (
-        <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading ledger...
         </div>
@@ -177,40 +177,42 @@ export default function AgentLedgerPage() {
               { label: 'Commission due', value: formatMoney(totals.commissionsDue, 'PKR') },
               { label: 'Commission paid', value: formatMoney(totals.commissionsPaid, 'PKR') },
             ].map((s) => (
-              <Card key={s.label} className="border-border/60">
+              <Card key={s.label}>
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                  <p className="text-lg font-bold text-primary">{s.value}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+                  <p className="mt-0.5 text-lg font-bold text-primary">{s.value}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
-          <Card className="overflow-hidden border-border/60">
-            <div className="border-b border-border/70 px-4 py-3 font-semibold">Remittances tagged to this agent</div>
+          <Card className="overflow-hidden">
+            <div className="border-b border-border px-4 py-2.5 text-sm font-semibold text-primary">
+              Remittances tagged to this agent
+            </div>
             {payments.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">No remittances tagged via sales agent or assigned customer.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <div className="erp-table-scroll">
+                <table className="erp-data-table min-w-[720px]">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2">Code</th>
-                      <th className="px-3 py-2">Customer</th>
-                      <th className="px-3 py-2">Received</th>
-                      <th className="px-3 py-2">Unallocated</th>
-                      <th className="px-3 py-2">Status</th>
+                      <th>Code</th>
+                      <th>Customer</th>
+                      <th>Received</th>
+                      <th>Unallocated</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/70">
+                  <tbody>
                     {payments.map((p) => {
                       const remaining = remittanceRemaining(p, allocs.filter((a) => a.payment_id === p.id));
                       return (
                         <tr key={p.id}>
-                          <td className="px-3 py-2 font-medium">{p.payment_code}</td>
-                          <td className="px-3 py-2">{p.customers?.full_name || '—'}</td>
-                          <td className="px-3 py-2">{formatMoney(remittanceAmount(p), p.currency)}</td>
-                          <td className="px-3 py-2">{formatMoney(remaining, p.currency)}</td>
-                          <td className="px-3 py-2">{p.allocation_status || 'unallocated'}</td>
+                          <td className="font-medium">{p.payment_code}</td>
+                          <td>{p.customers?.full_name || '—'}</td>
+                          <td>{formatMoney(remittanceAmount(p), p.currency)}</td>
+                          <td>{formatMoney(remaining, p.currency)}</td>
+                          <td className="font-medium capitalize">{p.allocation_status || 'unallocated'}</td>
                         </tr>
                       );
                     })}
@@ -219,25 +221,27 @@ export default function AgentLedgerPage() {
               </div>
             )}
           </Card>
-          <Card className="overflow-hidden border-border/60">
-            <div className="border-b border-border/70 px-4 py-3 font-semibold">Sold / reserved vehicles</div>
+          <Card className="overflow-hidden">
+            <div className="border-b border-border px-4 py-2.5 text-sm font-semibold text-primary">
+              Sold / reserved vehicles
+            </div>
             {vehicles.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">No reserved or sold vehicles for this agent.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] text-left text-sm">
-                  <thead className="bg-primary text-primary-foreground text-[11px] uppercase tracking-wide">
+              <div className="erp-table-scroll">
+                <table className="erp-data-table min-w-[980px]">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2">Stock</th>
-                      <th className="px-3 py-2">Customer</th>
-                      <th className="px-3 py-2">Sold</th>
-                      <th className="px-3 py-2">FOB</th>
-                      <th className="px-3 py-2">Profit</th>
-                      <th className="px-3 py-2">Balance due</th>
-                      <th className="px-3 py-2">Commission</th>
+                      <th>Stock</th>
+                      <th>Customer</th>
+                      <th>Sold</th>
+                      <th>FOB</th>
+                      <th>Profit</th>
+                      <th>Balance due</th>
+                      <th>Commission</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/70">
+                  <tbody>
                     {vehicles.map((v) => {
                       const currency = v.listed_currency || 'USD';
                       const profit = soldProfitUsd(v);
@@ -247,26 +251,32 @@ export default function AgentLedgerPage() {
                       const paid = commissionPaidPkr(v);
                       return (
                         <tr key={v.id}>
-                          <td className="px-3 py-2.5">
+                          <td>
                             <p className="font-medium">{v.stock_number}</p>
                             <p className="text-xs text-muted-foreground">
                               {v.make} {v.model}
                             </p>
                           </td>
-                          <td className="px-3 py-2.5">{customerName(v.customer_id)}</td>
-                          <td className="px-3 py-2.5">{formatMoney(vehicleSoldPrice(v), currency)}</td>
-                          <td className="px-3 py-2.5">{fob != null ? formatMoney(fob, currency) : '—'}</td>
-                          <td className="px-3 py-2.5">{profit != null ? formatMoney(profit, currency) : '—'}</td>
-                          <td className="px-3 py-2.5">{formatMoney(vehicleBalanceDue(v, allocs), currency)}</td>
-                          <td className="px-3 py-2.5">
+                          <td>{customerName(v.customer_id)}</td>
+                          <td>{formatMoney(vehicleSoldPrice(v), currency)}</td>
+                          <td>{fob != null ? formatMoney(fob, currency) : '—'}</td>
+                          <td>{profit != null ? formatMoney(profit, currency) : '—'}</td>
+                          <td>{formatMoney(vehicleBalanceDue(v, allocs), currency)}</td>
+                          <td>
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge
                                 variant="outline"
-                                className={status === 'paid' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : status === 'due' ? 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800' : ''}
+                                className={
+                                  status === 'paid'
+                                    ? 'border-success/40 bg-success/15 text-success'
+                                    : status === 'due'
+                                      ? 'border-warning/45 bg-warning/15 text-warning'
+                                      : ''
+                                }
                               >
                                 {COMMISSION_STATUS_LABELS[status]}
                               </Badge>
-                              <span className="text-xs">
+                              <span className="text-xs text-muted-foreground">
                                 due {formatMoney(due, 'PKR')} · paid {formatMoney(paid, 'PKR')}
                               </span>
                             </div>

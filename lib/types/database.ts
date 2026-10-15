@@ -602,6 +602,8 @@ export interface Payment {
   remit_date?: string | null;
   received_date?: string | null;
   allocation_status?: 'unallocated' | 'allocated';
+  /** True while held in Unknown TT inbox (no customer/agent yet). */
+  is_unknown?: boolean;
   payment_date: string;
   amount: number;
   currency: string;
