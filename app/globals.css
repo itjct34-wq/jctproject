@@ -136,8 +136,8 @@
 .erp-shell .erp-data-table td {
   @apply px-3 py-2.5 align-middle;
 }
-.erp-shell .erp-data-table tbody tr {
-  @apply hover:bg-muted/45;
+.erp-shell .erp-data-table tbody tr:hover {
+  background-color: hsl(var(--muted) / 0.45);
 }
 .erp-shell .erp-stat-value {
   @apply text-xl font-bold text-primary;
