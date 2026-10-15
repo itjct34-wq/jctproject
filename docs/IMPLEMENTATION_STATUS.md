@@ -37,7 +37,7 @@ Snapshot aligned with codebase on branch **`feat/vehicle-commercial-workflow`**.
 | Migrations 001–018 | Assumed on prod | RBAC through invoice agent name |
 | Migrations 019–023 | Required for latest public features | See [DATABASE.md](DATABASE.md); apply on JCT Supabase if missing |
 | Migration **027** | Applied on JCT project | `bulk_import_batches` sheet/ZIP history |
-| Migrations **028–030** | Required | FOB workflow, sales own-records RLS, TOTP/reservation expiry |
+| Migrations **028–031** | Required | FOB workflow, sales own-records, TOTP/expiry, customer assignment RLS |
 
 ## Remaining / follow-up
 

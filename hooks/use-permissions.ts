@@ -95,6 +95,9 @@ export function usePermissions() {
   };
 
   const isSellingFocused = usesSalesFocusedNav(roleNames);
+  const isElevatedStaff = roleNames.some((r) =>
+    ['super_admin', 'admin', 'operations', 'manager', 'accounts'].includes(r)
+  );
 
-  return { hasRole, isSuperAdmin, isAdmin, can, canView, roleNames, isSellingFocused };
+  return { hasRole, isSuperAdmin, isAdmin, can, canView, roleNames, isSellingFocused, isElevatedStaff };
 }
