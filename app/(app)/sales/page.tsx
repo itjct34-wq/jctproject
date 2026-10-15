@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,8 @@ const emptyForm = {
 
 export default function SalesPage() {
   const { profile } = useAuth();
+  const { can } = usePermissions();
+  const canDeleteSale = can('sales', 'delete');
   const [sales, setSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -542,7 +545,9 @@ export default function SalesPage() {
               </div>
               <div className="mt-6 flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit</Button>
-                <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+                {canDeleteSale && (
+                  <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+                )}
                 {(['confirmed', 'paid', 'shipped', 'delivered', 'cancelled'] as Sale['status'][]).map((st) => (
                   <Button key={st} size="sm" variant="secondary" onClick={() => updateStatus(st)}>{st}</Button>
                 ))}

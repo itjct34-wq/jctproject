@@ -49,9 +49,16 @@ Users hold roles via **`user_roles`** (active flag). Self-assignment of roles is
 
 These are not gated by RLS alone; they use **`requireAdmin`** (`lib/admin-auth.ts`).
 
-## Sales agent navigation
+## Sales agent & freelancer navigation
 
-Users with **`sales_agent`** and no elevated staff role (`admin`, `operations`, `manager`, `accounts`, `super_admin`) get a **sales-focused sidebar** via `getNavGroupsForRoles()` in `lib/nav.tsx`. Administration, Operations, Export & Shipping, and auction purchase links are hidden. Direct URLs to admin pages may still exist; RLS remains the data gate.
+Users with **`sales_agent`** or **`freelancer`** and **no** elevated staff role (`admin`, `operations`, `manager`, `accounts`, `super_admin`) get a **sales-focused sidebar** via `getNavGroupsForRoles()` in `lib/nav.tsx` (`usesSalesFocusedNav()`). Administration, Operations, Export & Shipping, and auction **purchase** links are hidden. **Auction invoices** stay visible under Finance. Direct URLs to admin pages may still exist; RLS remains the data gate.
+
+| Route | Role |
+|-------|------|
+| `/dashboard` | **Sales home** for selling-only roles (`SalesDashboard` KPIs: my customers, reserved stock, quotes/invoices, tagged T/T read-only, stock to reserve). Ops/admin roles see the full ERP dashboard on the same path. |
+| Post-login (`getPostLoginPath`) | Selling-only → `/dashboard`; staff → `/dashboard` (ops view) |
+
+Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboard.
 
 ## Sales agent & freelancer data rules
 
@@ -64,7 +71,10 @@ Users with **`sales_agent`** and no elevated staff role (`admin`, `operations`, 
 | Download vehicle courier docs | Yes (view-only upload) | Yes |
 | Create invoices / quotations | Yes | Yes (quotations; invoices create via RLS `024`) |
 | Edit invoices (UI + RLS) | Yes (UI); RLS update still manager/accounts/admin | Create only; no invoice update in RLS |
-| Delete invoices or vehicles | No (UI + RLS: admin only) | No |
+| Delete reservations (`sales`) | No (UI `can('sales','delete')`; RLS `sales_delete_admin`) | No |
+| Delete quotations | No (UI; RLS `quotations_delete_admin`) | No |
+| Delete invoices (commercial or auction deposit) | No (UI `can('invoices','delete')`; RLS `invoices_delete_admin`) | No |
+| Delete vehicles | No (UI + RLS: admin only) | No |
 | Add / import vehicles | No (UI + RLS: operations/manager/admin) | No |
 | Edit stock specs / pricing | No | No |
 | Edit shipping on vehicles | No | No |

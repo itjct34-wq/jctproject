@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,8 @@ const emptyForm = {
 
 export default function QuotationsPage() {
   const { profile } = useAuth();
+  const { can } = usePermissions();
+  const canDeleteQuotation = can('sales', 'delete');
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -660,10 +663,12 @@ export default function QuotationsPage() {
                   <Pencil className="mr-1.5 h-3.5 w-3.5" />
                   Edit
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}>
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                  Delete
-                </Button>
+                {canDeleteQuotation && (
+                  <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}>
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                )}
               </div>
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-3">
