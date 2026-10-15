@@ -106,9 +106,9 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-5">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">FOB price</p>
-                <p className="mt-1 font-display text-3xl font-bold text-[var(--jct-navy)]">
+              <div className="jct-stock-panel jct-stock-panel-accent p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB price</p>
+                <p className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--jct-navy)]">
                   {vehicle.listed_price != null
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency)
                     : 'Ask for quote'}
@@ -152,7 +152,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
 
 function spec(label: string, value: string, Icon: typeof Gauge) {
   return (
-    <div key={label} className="rounded-xl border border-[var(--jct-border)] bg-white p-3">
+    <div key={label} className="rounded-xl border border-[var(--jct-navy)]/12 bg-white p-3 shadow-[0_2px_12px_rgba(11,31,51,0.04)]">
       <dt className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">
         <Icon className="h-3 w-3" /> {label}
       </dt>
