@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/components/public/brand-logo';
+import { getPostLoginPath } from '@/lib/nav';
 
 function LoginForm() {
   const router = useRouter();
@@ -24,7 +25,7 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error, roleNames } = await signIn(email, password);
 
     if (error) {
       toast.error(error);
@@ -32,7 +33,12 @@ function LoginForm() {
       return;
     }
 
-    const redirect = searchParams.get('redirect') || '/dashboard';
+    const requested = searchParams.get('redirect');
+    const defaultPath = getPostLoginPath(roleNames ?? []);
+    const redirect =
+      requested && requested !== '/dashboard' && requested !== '/'
+        ? requested
+        : defaultPath;
     router.push(redirect);
     router.refresh();
   };

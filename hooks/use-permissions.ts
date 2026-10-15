@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useAuth } from '@/lib/auth-provider';
 import type { PermissionModule, PermissionAction, RoleName } from '@/lib/types';
 
@@ -49,7 +50,7 @@ const EXPORT_ROLES: RoleName[] = ['admin', 'manager', 'accounts', 'operations', 
 
 export function usePermissions() {
   const { roles } = useAuth();
-  const roleNames = roles.map((r) => r.name);
+  const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
 
   const hasRole = (role: RoleName): boolean => roleNames.includes(role);
   const isSuperAdmin = (): boolean => roleNames.includes('super_admin');
