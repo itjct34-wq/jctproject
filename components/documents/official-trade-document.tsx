@@ -29,8 +29,6 @@ export type TradeLine = {
   transmission?: string | null;
 };
 
-export type TradeLayoutVariant = 'standard' | 'breakdown';
-
 type Props = {
   kind: 'invoice' | 'quotation';
   title: string;
@@ -62,7 +60,6 @@ type Props = {
   showQr?: boolean;
   includeBankNotice?: boolean;
   depositMode?: 'ratio' | 'amount';
-  layoutVariant?: TradeLayoutVariant;
 };
 
 function customerAddress(customer?: Customer | null) {
@@ -172,7 +169,6 @@ export function OfficialTradeDocument({
   showQr = true,
   includeBankNotice = false,
   depositMode = 'ratio',
-  layoutVariant = 'standard',
 }: Props) {
   const displayLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
   const units = displayLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || displayLines.length;
@@ -184,7 +180,6 @@ export function OfficialTradeDocument({
   const mode = shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel');
   const printedNo = formatDocumentNo(documentNo);
   const showDeposit = kind === 'invoice';
-  const breakdown = layoutVariant === 'breakdown';
   const vehiclesSum =
     vehiclesTotal ??
     displayLines.reduce(
@@ -198,7 +193,7 @@ export function OfficialTradeDocument({
   const computedGrand = vehiclesSum + freight + insurance + other - discount;
   const total = Number.isFinite(grandTotal) ? grandTotal : computedGrand;
   const freightLabel = freightNotes?.trim() || 'Container freight';
-  const vehicleColSpan = breakdown ? (showDeposit ? 5 : 4) : showDeposit ? 4 : 3;
+  const vehicleColSpan = showDeposit ? 5 : 4;
   const totalWord = kind === 'quotation' ? 'Quotation total' : 'Invoice total';
 
   return (
@@ -213,9 +208,6 @@ export function OfficialTradeDocument({
           <div className="text-right shrink-0">
             <h1 className="text-[22px] font-black leading-none tracking-tight text-[#0b1f3a]">{title}</h1>
             <p className="mt-1 font-mono text-[12px] font-bold text-[#0b1f3a]">{printedNo}</p>
-            {breakdown && (
-              <p className="mt-1 text-[8px] font-semibold uppercase tracking-wide text-[#c4161c]">Line-level breakdown</p>
-            )}
           </div>
         </header>
 
@@ -307,12 +299,11 @@ export function OfficialTradeDocument({
           <thead>
             <tr>
               <th className="px-1.5 py-0.5 text-left">Chassis</th>
-              <th className="px-1.5 py-0.5 text-left">{breakdown ? 'Vehicle / specification' : 'Car information'}</th>
-              {!breakdown && <th className="px-1.5 py-0.5 text-left">Additional info</th>}
-              {breakdown && <th className="px-1.5 py-0.5 text-center">Qty</th>}
-              {breakdown && <th className="px-1.5 py-0.5 text-right">Unit price</th>}
+              <th className="px-1.5 py-0.5 text-left">Vehicle / specification</th>
+              <th className="px-1.5 py-0.5 text-center">Qty</th>
+              <th className="px-1.5 py-0.5 text-right">Unit price</th>
               {showDeposit && <th className="px-1.5 py-0.5 text-center">Deposit</th>}
-              <th className="px-1.5 py-0.5 text-right">{breakdown ? 'Line total' : 'Vehicle cost'}</th>
+              <th className="px-1.5 py-0.5 text-right">Line total</th>
             </tr>
           </thead>
           <tbody>
@@ -328,37 +319,18 @@ export function OfficialTradeDocument({
                 <tr key={idx}>
                   <td className="px-1.5 py-0.5 font-mono text-[7.5px] align-top">{row.chassis}</td>
                   <td className="px-1.5 py-0.5 align-top">
-                    {breakdown ? (
-                      <>
-                        <p className="font-semibold leading-tight">
-                          {[row.make, row.model].filter(Boolean).join(' ') || '—'}
-                        </p>
-                        <p className="leading-tight">
-                          {[row.year, row.engine, row.colour, row.transmission].filter(Boolean).join(' · ') || '—'}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <LabeledLine label="Make" value={row.make} />
-                        <LabeledLine label="Model" value={row.model} />
-                        <LabeledLine label="Year" value={row.year} />
-                        <LabeledLine label="Engine" value={row.engine} />
-                      </>
-                    )}
+                    <p className="font-semibold leading-tight">
+                      {[row.make, row.model].filter(Boolean).join(' ') || '—'}
+                    </p>
+                    <p className="leading-tight">
+                      {[row.year, row.engine, row.colour, row.transmission].filter(Boolean).join(' · ') || '—'}
+                    </p>
                   </td>
-                  {!breakdown && (
-                    <td className="px-1.5 py-0.5 align-top">
-                      <LabeledLine label="Colour" value={row.colour} />
-                      <p className="text-[8px] leading-[1.25]">{cellText(row.transmission)}</p>
-                    </td>
-                  )}
-                  {breakdown && <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{row.qty}</td>}
-                  {breakdown && (
-                    <td className="px-1.5 py-0.5 text-right align-middle font-medium">{formatMoney(row.unit, currency)}</td>
-                  )}
+                  <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{row.qty}</td>
+                  <td className="px-1.5 py-0.5 text-right align-middle font-medium">{formatMoney(row.unit, currency)}</td>
                   {showDeposit && <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{deposit}</td>}
                   <td className="px-1.5 py-0.5 text-right align-middle font-medium">
-                    {formatMoney(breakdown ? row.amount : row.unit, currency)}
+                    {formatMoney(row.amount, currency)}
                   </td>
                 </tr>
               );

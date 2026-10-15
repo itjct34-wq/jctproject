@@ -102,7 +102,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [companySettings, setCompanySettings] = useState<Pick<CompanySettings, 'id' | 'invoice_prefix' | 'invoice_next_number'> | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
   const [printBankNotice, setPrintBankNotice] = useState(false);
-  const [printBreakdown, setPrintBreakdown] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -734,11 +733,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <Switch checked={printBankNotice} onCheckedChange={setPrintBankNotice} />
               Bank notice page {printBankNotice ? 'on' : 'off'}
             </label>
-            <label className="flex items-center gap-2">
-              <Switch checked={printBreakdown} onCheckedChange={setPrintBreakdown} />
-              Breakdown invoice {printBreakdown ? 'on' : 'off'}
-            </label>
-            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page. Breakdown shows qty, unit price, and line totals plus the freight table. Keep bank notice off for a single page.</p>
+            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page. Keep bank notice off for a single page.</p>
           </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">
@@ -752,7 +747,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   showQr={printShowQr}
                   includeBankNotice={printBankNotice}
                   variant={isAuction ? 'auction_deposit' : 'commercial'}
-                  layoutVariant={printBreakdown ? 'breakdown' : 'standard'}
                 />
               </div>
             </div>
