@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BrandLogo } from '@/components/public/brand-logo';
 import { CountryFlag } from '@/components/public/country-flag';
 import { DESTINATION_COUNTRIES } from '@/lib/public/countries';
+import { PUBLIC_SOURCE_MARKETS, sourceMarketPath } from '@/lib/public/source-markets';
 
 export function HomeFooter() {
   return (
@@ -31,7 +32,16 @@ export function HomeFooter() {
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-muted-2)]">Explore</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/inventory" className="hover:text-[var(--jct-navy)]">Inventory</Link></li>
+            <li><Link href="/inventory" className="hover:text-[var(--jct-navy)]">Cars</Link></li>
+            {PUBLIC_SOURCE_MARKETS.slice(0, 4).map((market) => (
+              <li key={market.code}>
+                <Link href={sourceMarketPath(market)} className="hover:text-[var(--jct-navy)]">
+                  Stock from {market.name}
+                </Link>
+              </li>
+            ))}
+            <li><Link href="/machinery" className="hover:text-[var(--jct-navy)]">Machinery</Link></li>
+            <li><Link href="/parts" className="hover:text-[var(--jct-navy)]">Parts</Link></li>
             <li><Link href="/blog" className="hover:text-[var(--jct-navy)]">Guides</Link></li>
             <li><Link href="/verify-agent" className="hover:text-[var(--jct-navy)]">Verify agent</Link></li>
             <li><Link href="/about" className="hover:text-[var(--jct-navy)]">About</Link></li>

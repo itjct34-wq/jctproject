@@ -93,7 +93,7 @@ export function BulkImportDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent fullscreen className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent fullscreen>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

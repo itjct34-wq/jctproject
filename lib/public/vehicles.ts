@@ -1,14 +1,17 @@
 import { createPublicSupabase } from '@/lib/supabase/public';
 import { countryDisplayName, normalizeIso2 } from '@/lib/public/countries';
+import { parseStockCategory, type StockCategory } from '@/lib/stock-category';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Columns granted to anon on public.vehicles. Chassis is not selected on the public site. */
 export const PUBLIC_VEHICLE_COLUMNS =
-  'id, stock_number, make, model, model_grade, model_year, registration_year, color, mileage_km, transmission, fuel_type, source_country, source_country_code, listed_price, listed_currency, status, primary_image_url, notes';
+  'id, stock_number, stock_category, part_sku, make, model, model_grade, model_year, registration_year, color, mileage_km, transmission, fuel_type, source_country, source_country_code, listed_price, listed_currency, status, primary_image_url, notes';
 
 export type PublicVehicle = {
   id: string;
   stock_number: string;
+  stock_category?: StockCategory | string | null;
+  part_sku?: string | null;
   make: string;
   model: string;
   model_grade: string | null;
@@ -119,20 +122,39 @@ export function groupVehiclesBySource(vehicles: PublicVehicle[]): { key: string;
     }));
 }
 
-const FALLBACK_COLUMNS = PUBLIC_VEHICLE_COLUMNS.replace(', source_country_code', '');
+const FALLBACK_COLUMNS = PUBLIC_VEHICLE_COLUMNS.replace(', stock_category', '')
+  .replace(', source_country_code', '')
+  .replace(', part_sku', '');
+
+const COLUMNS_WITHOUT_CATEGORY = PUBLIC_VEHICLE_COLUMNS.replace(', stock_category', '').replace(', part_sku', '');
 
 export async function selectListedVehicles(
   db: SupabaseClient,
-  opts: { id?: string; limit?: number } = {}
+  opts: { id?: string; limit?: number; category?: StockCategory } = {}
 ) {
-  const run = (cols: string) => {
+  const run = (cols: string, filterCategory: boolean) => {
     let query = db.from('vehicles').select(cols).in('status', ['in_stock', 'reserved']);
+    if (filterCategory && opts.category) {
+      query =
+        opts.category === 'car'
+          ? query.or('stock_category.eq.car,stock_category.is.null')
+          : query.eq('stock_category', opts.category);
+    }
     if (opts.id) return query.eq('id', opts.id).maybeSingle();
     return query.order('stock_number', { ascending: false }).limit(opts.limit ?? 96);
   };
-  const first = await run(PUBLIC_VEHICLE_COLUMNS);
+  const first = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category));
   if (!first.error) return first;
-  return run(FALLBACK_COLUMNS);
+  if (opts.category && opts.category !== 'car') {
+    return { data: opts.id ? null : [], error: null };
+  }
+  const withoutCategory = await run(COLUMNS_WITHOUT_CATEGORY, false);
+  if (!withoutCategory.error) return withoutCategory;
+  return run(FALLBACK_COLUMNS, false);
+}
+
+export function listedVehicleCategory(vehicle: Pick<PublicVehicle, 'stock_category'>): StockCategory {
+  return parseStockCategory(vehicle.stock_category);
 }
 
 export async function loadVehicleGallery(db: SupabaseClient, vehicleIds: string[]): Promise<VehicleImageRow[]> {
@@ -146,10 +168,10 @@ export async function loadVehicleGallery(db: SupabaseClient, vehicleIds: string[
   return data as VehicleImageRow[];
 }
 
-export async function loadPublicVehicles(limit = 96): Promise<PublicVehicle[]> {
+export async function loadPublicVehicles(limit = 96, category?: StockCategory): Promise<PublicVehicle[]> {
   const db = createPublicSupabase();
   if (!db) return [];
-  const { data, error } = await selectListedVehicles(db, { limit });
+  const { data, error } = await selectListedVehicles(db, { limit, category });
   if (error || !data) return [];
   const rows = (Array.isArray(data) ? data : [data]) as unknown as Omit<PublicVehicle, 'gallery'>[];
   const images = await loadVehicleGallery(
@@ -159,10 +181,10 @@ export async function loadPublicVehicles(limit = 96): Promise<PublicVehicle[]> {
   return attachGallery(rows, images);
 }
 
-export async function loadPublicVehicle(id: string): Promise<PublicVehicle | null> {
+export async function loadPublicVehicle(id: string, category?: StockCategory): Promise<PublicVehicle | null> {
   const db = createPublicSupabase();
   if (!db || !id) return null;
-  const { data, error } = await selectListedVehicles(db, { id });
+  const { data, error } = await selectListedVehicles(db, { id, category });
   if (error || !data) return null;
   const images = await loadVehicleGallery(db, [id]);
   return attachGallery([data as unknown as Omit<PublicVehicle, 'gallery'>], images)[0] || null;

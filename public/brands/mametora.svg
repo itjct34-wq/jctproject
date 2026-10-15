@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img">
+  <title>Mametora</title>
+  <!-- Simplified bean mark (mame = bean); original geometry -->
+  <path fill="#1B7A3D" d="M14.5 16.5c1.2-7.2 8.6-12.2 16.2-10.4 6.4 1.5 11.2 8.2 10.6 15.2-.7 8.6-7.4 16.4-16.2 17.6-7.4 1-13.4-3.8-14.4-10.8-1-6.6 1.4-12.8 3.8-11.6z"/>
+  <path fill="#3DA35D" d="M22 15c2.4-3.4 7.2-4.2 10.2-1.6 2.4 2.1 2.8 6 .8 9.2-2 3.2-6.2 4.6-9.2 2.8-2.6-1.6-3.6-6.4-1.8-10.4z"/>
+</svg>

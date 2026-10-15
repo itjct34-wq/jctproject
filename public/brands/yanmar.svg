@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img">
+  <title>Yanmar</title>
+  <!-- Simplified dual-sail mark (original geometry, Yanmar navy) -->
+  <g fill="#00205B">
+    <polygon points="4,42 18,6 28,6 14,42"/>
+    <polygon points="20,42 34,6 44,6 30,42"/>
+  </g>
+</svg>

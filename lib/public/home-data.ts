@@ -20,7 +20,7 @@ const EMPTY: HomeData = { arrivals: [], makes: [], modelsByMake: {} };
 
 export async function loadHomeData(): Promise<HomeData> {
   try {
-    const stock = await loadPublicVehicles(200);
+    const stock = await loadPublicVehicles(200, 'car');
     if (!stock.length) return EMPTY;
 
     const counts = new Map<string, number>();

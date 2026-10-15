@@ -30,18 +30,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: vehicles, error: vErr } = await admin.from('vehicles').select('id, chassis_number');
+  let { data: vehicles, error: vErr } = await admin.from('vehicles').select('id, chassis_number, stock_number, part_sku');
+  if (vErr) {
+    ({ data: vehicles, error: vErr } = await admin.from('vehicles').select('id, chassis_number, stock_number'));
+  }
   if (vErr) return NextResponse.json({ error: vErr.message }, { status: 400 });
 
   const inspected = await inspectVehiclePhotoZip(
     zip,
-    (vehicles || []) as { id: string; chassis_number: string }[]
+    (vehicles || []) as { id: string; chassis_number: string; stock_number?: string | null; part_sku?: string | null }[]
   );
 
   const attached: { chassis: string; photos: number }[] = [];
   for (const match of inspected.matches) {
-    if (!match.vehicleId || !match.chassis) continue;
-    const folder = chassisStorageFolder(match.chassis);
+    if (!match.vehicleId) continue;
+    const folder = chassisStorageFolder(match.chassis || match.folder);
     const rows: { vehicle_id: string; image_url: string; sort_order: number; is_primary: boolean }[] = [];
     for (let p = 0; p < match.photos.length; p++) {
       const photo = match.photos[p];
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
       primary_image_url: rows[0].image_url,
       updated_at: new Date().toISOString(),
     }).eq('id', match.vehicleId);
-    attached.push({ chassis: match.chassis, photos: rows.length });
+    attached.push({ chassis: match.chassis || match.folder, photos: rows.length });
   }
 
   return NextResponse.json({

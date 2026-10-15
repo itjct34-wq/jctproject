@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Search } from 'lucide-react';
 import { DESTINATION_PORTS } from '@/lib/public/catalog';
 
 const BUDGETS = [
@@ -21,6 +22,7 @@ type Props = {
 
 export function HeroSearch({ makes, modelsByMake }: Props) {
   const router = useRouter();
+  const [keyword, setKeyword] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [budget, setBudget] = useState('');
@@ -31,19 +33,42 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const params = new URLSearchParams();
+    const term = keyword.trim();
     if (make) params.set('make', make);
-    if (model) params.set('q', model);
+    if (term) params.set('q', term);
+    else if (model) params.set('q', model);
+    if (budget) params.set('budget_max', budget);
+    if (port) params.set('port', port);
     const qs = params.toString();
     router.push(qs ? `/inventory?${qs}` : '/inventory');
   };
 
   const field =
-    'mt-1.5 h-11 w-full rounded-lg border border-[var(--jct-border)] bg-white px-3 text-sm text-[var(--jct-navy)] outline-none focus-visible:border-[var(--jct-vermilion)] focus-visible:ring-2 focus-visible:ring-[var(--jct-vermilion)]/20 disabled:bg-[var(--jct-panel)] disabled:text-[var(--jct-muted-2)]';
+    'mt-1.5 h-11 min-w-0 w-full rounded-lg border border-[var(--jct-border)] bg-white px-3 text-sm text-[var(--jct-navy)] outline-none focus-visible:border-[var(--jct-vermilion)] focus-visible:ring-2 focus-visible:ring-[var(--jct-vermilion)]/20 disabled:cursor-not-allowed disabled:bg-[var(--jct-panel)] disabled:text-[var(--jct-muted-2)]';
+
+  const labelClass = 'block text-xs font-semibold text-[var(--jct-muted)]';
 
   return (
-    <form onSubmit={submit} className="rounded-2xl border border-[var(--jct-border)] bg-white p-4 shadow-[0_12px_40px_rgba(11,31,51,0.12)] sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <label className="text-xs font-medium text-[var(--jct-muted)]">
+    <form
+      onSubmit={submit}
+      className="rounded-2xl border border-[var(--jct-border)] bg-white p-4 shadow-[0_12px_40px_rgba(11,31,51,0.12)] sm:p-5"
+    >
+      <label className={labelClass}>
+        Search make, model or keyword
+        <div className="relative mt-1.5">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--jct-muted-2)]" aria-hidden />
+          <input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="e.g. Toyota Prius, hybrid, 2020…"
+            className={`${field} mt-0 pl-10`}
+          />
+        </div>
+      </label>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label className={labelClass}>
           Make
           <select
             className={field}
@@ -61,7 +86,7 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
             ))}
           </select>
         </label>
-        <label className="text-xs font-medium text-[var(--jct-muted)]">
+        <label className={labelClass}>
           Model
           <select className={field} value={model} disabled={!make} onChange={(e) => setModel(e.target.value)}>
             <option value="">{make ? 'Any model' : 'Choose make first'}</option>
@@ -72,7 +97,7 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
             ))}
           </select>
         </label>
-        <label className="text-xs font-medium text-[var(--jct-muted)]">
+        <label className={labelClass}>
           Max budget (FOB)
           <select className={field} value={budget} onChange={(e) => setBudget(e.target.value)}>
             {BUDGETS.map((item) => (
@@ -82,7 +107,7 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
             ))}
           </select>
         </label>
-        <label className="text-xs font-medium text-[var(--jct-muted)]">
+        <label className={labelClass}>
           Destination port
           <select className={field} value={port} onChange={(e) => setPort(e.target.value)}>
             <option value="">Choose port</option>
@@ -93,15 +118,17 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
             ))}
           </select>
         </label>
-        <div className="flex items-end">
-          <button
-            type="submit"
-            className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-navy)]"
-          >
-            Search cars
-          </button>
-        </div>
       </div>
+
+      <div className="mt-4">
+        <button
+          type="submit"
+          className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[var(--jct-vermilion)] px-4 text-sm font-semibold text-white hover:bg-[#c23024] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-navy)] sm:w-auto sm:min-w-[160px]"
+        >
+          Search cars
+        </button>
+      </div>
+
       <p className="mt-3 text-sm text-[var(--jct-muted-2)]">
         Can&apos;t find it?{' '}
         <Link href="/contact" className="font-medium text-[var(--jct-vermilion)] underline-offset-2 hover:underline">

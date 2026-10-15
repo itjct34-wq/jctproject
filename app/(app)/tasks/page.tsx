@@ -202,7 +202,7 @@ export default function TasksPage() {
                 New Task
               </Button>
             </DialogTrigger>
-            <DialogContent fullscreen className="sm:max-w-md">
+            <DialogContent fullscreen>
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
               </DialogHeader>
@@ -456,7 +456,7 @@ export default function TasksPage() {
       </Card>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent fullscreen className="sm:max-w-md">
+        <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>

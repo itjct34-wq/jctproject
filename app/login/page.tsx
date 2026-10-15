@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/public/brand-logo';
 
 function LoginForm() {
   const router = useRouter();
@@ -40,16 +41,9 @@ function LoginForm() {
     <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-red-50/30 px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <img
-              src="/images/705607377_122127683871150897_4165866362055650133_n-removebg-preview.png"
-              alt="Japan Circular Trading"
-              className="w-16 h-16 rounded-xl object-contain bg-white border border-border shadow-sm p-1"
-            />
-            <div className="text-left">
-              <h1 className="text-xl font-bold text-foreground tracking-tight">Japan Circular Trading</h1>
-              <p className="text-xs text-muted-foreground">Co., Ltd. — Nagoya, Japan</p>
-            </div>
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <BrandLogo placement="header" className="justify-center" />
+            <p className="text-xs text-muted-foreground">Co., Ltd. — Nagoya, Japan · ERP</p>
           </div>
         </div>
 

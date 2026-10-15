@@ -1,7 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+
+/** Public gallery autoplay interval (loop). Pause on hover/focus and after thumb clicks. */
+export const GALLERY_AUTOPLAY_MS = 2200;
 
 type Props = {
   images: string[];
@@ -11,6 +14,10 @@ type Props = {
 export function VehicleGallery({ images, alt }: Props) {
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
+  const [hoverOrFocus, setHoverOrFocus] = useState(false);
+  const [thumbHold, setThumbHold] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const thumbResumeRef = useRef<number | null>(null);
   const count = images.length;
   const current = images[active];
 
@@ -21,6 +28,36 @@ export function VehicleGallery({ images, alt }: Props) {
     },
     [count]
   );
+
+  const pauseForThumbClick = useCallback((index: number) => {
+    setActive(index);
+    setThumbHold(true);
+    if (thumbResumeRef.current != null) window.clearTimeout(thumbResumeRef.current);
+    thumbResumeRef.current = window.setTimeout(() => {
+      setThumbHold(false);
+      thumbResumeRef.current = null;
+    }, GALLERY_AUTOPLAY_MS);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduceMotion(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (thumbResumeRef.current != null) window.clearTimeout(thumbResumeRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (count <= 1 || open || hoverOrFocus || thumbHold || reduceMotion) return;
+    const id = window.setInterval(() => go(1), GALLERY_AUTOPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [count, open, hoverOrFocus, thumbHold, reduceMotion, go]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +79,16 @@ export function VehicleGallery({ images, alt }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      onMouseEnter={() => setHoverOrFocus(true)}
+      onMouseLeave={() => setHoverOrFocus(false)}
+      onFocusCapture={() => setHoverOrFocus(true)}
+      onBlurCapture={(event) => {
+        const next = event.relatedTarget as Node | null;
+        if (!next || !event.currentTarget.contains(next)) setHoverOrFocus(false);
+      }}
+    >
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -66,7 +112,7 @@ export function VehicleGallery({ images, alt }: Props) {
             <button
               key={url + i}
               type="button"
-              onClick={() => setActive(i)}
+              onClick={() => pauseForThumbClick(i)}
               aria-label={`Photo ${i + 1}`}
               className={`relative h-16 w-[4.5rem] shrink-0 overflow-hidden rounded-lg border ${
                 i === active ? 'border-[var(--jct-vermilion)] ring-1 ring-[var(--jct-vermilion)]' : 'border-[var(--jct-border)]'

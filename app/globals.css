@@ -107,7 +107,15 @@
 }
 
 /* Public marketing pages share the JCT light navy/red shell. */
-.public-site { color-scheme: light; }
+.public-site {
+  color-scheme: light;
+  --jct-navy: #0B1F33;
+  --jct-vermilion: #D8392B;
+  --jct-panel: #F3F5F7;
+  --jct-border: #DDE3E9;
+  --jct-muted: #3B4C5D;
+  --jct-muted-2: #4A5B6C;
+}
 
 /* Homepage redesign tokens — scoped so ERP and other public pages stay unchanged. */
 .jct-home {
@@ -165,7 +173,9 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem 1.75rem 2rem;
+  width: 100%;
+  max-width: none;
 }
 [data-dialog-workform='true'] [data-slot='dialog-footer'] {
   position: sticky;

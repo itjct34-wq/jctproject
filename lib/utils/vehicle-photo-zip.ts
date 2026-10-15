@@ -11,7 +11,19 @@ export const MAX_PHOTO_ZIP_BYTES = 200 * 1024 * 1024;
 export const MAX_PHOTOS_PER_VEHICLE = 30;
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 
-export type VehicleChassisRow = { id: string; chassis_number: string };
+export type VehicleChassisRow = {
+  id: string;
+  chassis_number: string;
+  stock_number?: string | null;
+  part_sku?: string | null;
+};
+
+/** Storage folder key: chassis, then part SKU, then stock number. */
+export function vehiclePhotoFolderKey(
+  row: Pick<VehicleChassisRow, 'chassis_number' | 'stock_number' | 'part_sku'>
+): string {
+  return (row.chassis_number || row.part_sku || row.stock_number || '').trim();
+}
 
 export type ZipPhotoEntry = {
   path: string;
@@ -40,8 +52,10 @@ export async function inspectVehiclePhotoZip(
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const byNorm = new Map<string, VehicleChassisRow>();
   for (const v of vehicles) {
-    const key = normalizeChassis(v.chassis_number);
-    if (key) byNorm.set(key, v);
+    for (const alias of [v.chassis_number, v.stock_number, v.part_sku]) {
+      const key = normalizeChassis(alias || '');
+      if (key && !byNorm.has(key)) byNorm.set(key, v);
+    }
   }
 
   const groups = new Map<string, ZipFolderMatch>();
@@ -55,7 +69,7 @@ export async function inspectVehiclePhotoZip(
     const { folders, fileName } = folderSegments(path);
     if (!isImageFileName(fileName)) continue;
     if (folders.length === 0) {
-      skipped.push(`${fileName} (not in a chassis folder)`);
+      skipped.push(`${fileName} (not in a chassis or SKU folder)`);
       continue;
     }
 
@@ -76,7 +90,7 @@ export async function inspectVehiclePhotoZip(
       group = {
         folder: folderLabel,
         vehicleId: vehicle?.id || null,
-        chassis: vehicle?.chassis_number || null,
+        chassis: vehicle ? vehiclePhotoFolderKey(vehicle) || null : null,
         photos: [],
       };
       groups.set(groupKey, group);

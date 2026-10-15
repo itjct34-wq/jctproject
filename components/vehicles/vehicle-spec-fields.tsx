@@ -2,13 +2,17 @@
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MultiImageUpload, type GalleryImage } from '@/components/shared/multi-image-upload';
+import { STOCK_CATEGORIES, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
 import type { Vehicle } from '@/lib/types';
 
 export type VehicleSpecForm = {
+  stock_category: StockCategory;
   chassis_number: string;
   stock_number: string;
+  part_sku: string;
   make: string;
   model: string;
   colour: string;
@@ -34,26 +38,52 @@ type Props = {
 };
 
 export function VehicleSpecFields({ form, onChange, gallery, onGalleryChange }: Props) {
-  const folder = chassisStorageFolder(form.chassis_number);
+  const folder = chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number);
+  const parts = form.stock_category === 'parts';
   return (
     <>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
-          <Label className="text-[11px]">Chassis *</Label>
+          <Label className="text-[11px]">Category *</Label>
+          <Select
+            value={form.stock_category}
+            onValueChange={(v) => onChange({ stock_category: v as StockCategory })}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {STOCK_CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>{stockCategoryLabel(c)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label className="text-[11px]">{parts ? 'Part number / chassis *' : 'Chassis *'}</Label>
           <Input
             value={form.chassis_number}
             onChange={(e) => onChange({ chassis_number: e.target.value })}
-            placeholder="Chassis number"
-            required
+            placeholder={parts ? 'Part number or chassis' : 'Chassis number'}
+            required={!parts}
           />
         </div>
+        {parts ? (
+          <div className="space-y-1">
+            <Label className="text-[11px]">Part SKU</Label>
+            <Input
+              value={form.part_sku}
+              onChange={(e) => onChange({ part_sku: e.target.value })}
+              placeholder="SKU / part no."
+            />
+          </div>
+        ) : null}
         <div className="space-y-1">
           <Label className="text-[11px]">Stock no.</Label>
           <Input
             value={form.stock_number}
             onChange={(e) => onChange({ stock_number: e.target.value })}
-            placeholder="Stock"
+            placeholder="JCT-V-1001"
           />
+          <p className="text-[11px] text-muted-foreground">Assigned by ERP. Edit only if you need a different code.</p>
         </div>
         <div className="space-y-1">
           <Label className="text-[11px]">Make *</Label>
