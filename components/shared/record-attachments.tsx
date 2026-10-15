@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ExternalLink, Eye, FileText, Loader2, Paperclip, Upload } from 'lucide-react';
 
-export type AttachmentEntity = 'invoices' | 'quotations' | 'payments' | 'expenses' | 'documents';
+export type AttachmentEntity = 'invoices' | 'quotations' | 'payments' | 'expenses' | 'documents' | 'vehicles';
 
 type AttachmentRow = {
   id: string;
@@ -42,6 +42,7 @@ const UPLOAD_LABELS: Record<AttachmentEntity, string> = {
   documents: 'Upload document',
   invoices: 'Upload file',
   quotations: 'Upload file',
+  vehicles: 'Upload courier / shipping document',
 };
 
 function previewKind(contentType: string): 'image' | 'pdf' | null {
@@ -127,10 +128,13 @@ export function RecordAttachments({
   entityType,
   entityId,
   onCountChange,
+  allowUpload = true,
 }: {
   entityType: AttachmentEntity;
   entityId: string;
   onCountChange?: (count: number) => void;
+  /** When false, users can view/download only (e.g. sales viewing vehicle courier docs). */
+  allowUpload?: boolean;
 }) {
   const { profile } = useAuth();
   const [rows, setRows] = useState<AttachmentRow[]>([]);
@@ -225,7 +229,7 @@ export function RecordAttachments({
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Receipts, PDFs, and photos for this record. Click View to open.</p>
         </div>
-        {rows.length > 0 ? fileInput : null}
+        {allowUpload && rows.length > 0 ? fileInput : null}
       </div>
 
       {preview && (
@@ -253,7 +257,7 @@ export function RecordAttachments({
         <div className="rounded-lg border border-dashed border-border p-4 text-center">
           <p className="text-sm font-medium">No file attached yet</p>
           <p className="mt-1 text-xs text-muted-foreground">Upload a receipt or document here, then use View to open it.</p>
-          <div className="mt-3 flex justify-center">{fileInput}</div>
+          {allowUpload ? <div className="mt-3 flex justify-center">{fileInput}</div> : null}
         </div>
       ) : (
         <ul className="space-y-2">

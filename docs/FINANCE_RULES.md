@@ -15,11 +15,14 @@
 - Table columns on print: description (with decoded chassis/stock/make/model/colour/year/engine/transmission), quantity, unit price, line total, deposit ratio where applicable.
 - Vehicle link optional via **`vehicle_id`** on `invoice_items`.
 
-## Payments
+## Payments (T/T)
 
-- Recorded against customers and optionally linked to **`invoice_id`**.
-- Status transitions managed in `/payments` UI.
+- Recorded by **admin, manager, accounts** only (UI + RLS insert/update).
+- **Customer** required for tagging; **`sales_agent_id`** on `payments` is set automatically from `COALESCE(customers.assigned_to, customers.created_by)` (trigger, migration **`025`**).
+- Optional links: **`invoice_id`**, **`sale_id`**, **`vehicle_id`** (allocate to customer’s reserved vehicle).
+- When **`vehicle_id`** is set and status is `received` or `reconciled`, **`vehicles.payment_status`** recomputes to `partial_paid` or `paid` vs `listed_price`.
 - **Attachments** supported via `record_attachments` (receipts, TT copies).
+- **Sales agent / freelancer**: read-only list of payments where they are the tagged sales agent or own the customer; no create/edit/delete in UI.
 
 ## Expenses
 
@@ -44,4 +47,6 @@
 
 ## Allocations
 
-- Payment-to-invoice linkage is via **`invoice_id`** on payment rows; full double-entry ledger is not implemented as a separate journal table in current schema.
+- Payment-to-invoice linkage via **`invoice_id`** on payment rows.
+- Payment-to-vehicle linkage via **`vehicle_id`** on payment rows (reservation / partial pay workflow).
+- Full double-entry ledger is not implemented as a separate journal table in current schema.

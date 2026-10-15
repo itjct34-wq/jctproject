@@ -12,7 +12,7 @@ const VIEW_ROLES: Record<PermissionModule, RoleName[]> = {
   purchases: ['admin', 'operations', 'manager', 'auditor'],
   sales: ['admin', 'operations', 'manager', 'sales_agent', 'freelancer', 'auditor'],
   invoices: ['admin', 'manager', 'sales_agent', 'freelancer', 'accounts', 'auditor'],
-  payments: ['admin', 'manager', 'sales_agent', 'accounts', 'auditor'],
+  payments: ['admin', 'manager', 'sales_agent', 'freelancer', 'accounts', 'auditor'],
   expenses: ['admin', 'accounts', 'auditor'],
   shipments: ['admin', 'operations', 'manager', 'auditor'],
   documents: ['admin', 'operations', 'auditor'],

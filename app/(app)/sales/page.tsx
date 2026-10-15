@@ -87,7 +87,11 @@ export default function SalesPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const availableVehicles = useMemo(
-    () => vehicles.filter((v) => v.status === 'in_stock' || v.status === 'reserved'),
+    () =>
+      vehicles.filter((v) => {
+        const pay = v.payment_status ?? (v.status === 'in_stock' ? 'available' : v.status === 'reserved' ? 'reserved' : 'paid');
+        return pay === 'available' || pay === 'reserved';
+      }),
     [vehicles]
   );
 
@@ -186,7 +190,9 @@ export default function SalesPage() {
     await supabase
       .from('vehicles')
       .update({
-        status: 'reserved',
+        payment_status: 'reserved',
+        customer_id: form.customer_id,
+        reserved_by: profile.id,
         reserved_until: reservedUntilStr,
         notes: [
           vehicle?.notes || '',
