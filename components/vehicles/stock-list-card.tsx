@@ -1,15 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { VehicleDocChip } from '@/components/vehicles/vehicle-doc-chip';
+import {
+  VehicleRemittancePopover,
+  VehicleTtChip,
+  type VehicleRemittanceRef,
+} from '@/components/vehicles/vehicle-remittance-popover';
 import { resolveSourceCountry } from '@/lib/source-countries';
 import type { Vehicle } from '@/lib/types';
 import { CURRENCY_SYMBOLS, normalizeCurrency } from '@/lib/utils/currencies';
@@ -121,11 +129,16 @@ export type StockListCardProps = {
   invoice: { id: string; invoice_code: string } | null;
   paymentCount: number;
   allocatedUsd: number;
+  remittances?: VehicleRemittanceRef[];
+  /** Doc kinds present for this vehicle (e.g. bl, export_certificate). */
+  docKinds?: string[];
   onViewInfo: () => void;
   onEdit?: () => void;
+  onAssign?: () => void;
   onReserve?: () => void;
   onMakeAvailable?: () => void;
   onShipping?: () => void;
+  onCourier?: () => void;
   onDelete?: () => void;
   onMarkCommissionPaid?: () => void;
 };
@@ -140,11 +153,15 @@ export function StockListCard({
   invoice,
   paymentCount,
   allocatedUsd,
+  remittances = [],
+  docKinds = [],
   onViewInfo,
   onEdit,
+  onAssign,
   onReserve,
   onMakeAvailable,
   onShipping,
+  onCourier,
   onDelete,
   onMarkCommissionPaid,
 }: StockListCardProps) {
@@ -177,18 +194,54 @@ export function StockListCard({
   const soldCcy = v.listed_currency || 'USD';
   const markupPct = Math.round(BID_MARKUP_RATE * 100);
   const showMoney = pay !== 'available' || sold != null || Boolean(customerName);
-  const hasActions = Boolean(onEdit || onReserve || onMakeAvailable || onShipping || onDelete || onMarkCommissionPaid || invoice);
+  const hasActions = Boolean(
+    onEdit ||
+      onAssign ||
+      onReserve ||
+      onMakeAvailable ||
+      onShipping ||
+      onCourier ||
+      onDelete ||
+      onMarkCommissionPaid ||
+      invoice
+  );
+  const remitList = remittances.length ? remittances : [];
+  const showRemittance = remitList.length > 0 || paymentCount > 0;
+  const hasBl = docKinds.includes('bl');
+  const hasAbl = docKinds.includes('amend_bl');
+  const hasEc = docKinds.includes('export_certificate') || docKinds.includes('export_certificate_en');
+  const hasSd = docKinds.includes('surrender') || docKinds.includes('waybill');
+  const hasAuctionSheet = docKinds.includes('auction_sheet');
+  const hasDocChips = hasBl || hasAbl || hasEc || hasSd || invoice || remitList.length > 0;
+  const etd = isoDate(v.shipping_etd);
+  const eta = isoDate(v.shipping_eta);
+  const etdEtaLine = etd || eta ? `ETD ${etd || '—'} · ETA ${eta || '—'}` : '';
+  const containerLabel = (v.shipping_container_number || '').trim();
 
   return (
     <div
       className={cn(
-        'relative flex flex-wrap items-start gap-3 rounded-xl border px-3 py-3 shadow-sm sm:flex-nowrap sm:items-center sm:gap-4 sm:px-4',
+        'overflow-visible rounded-xl border px-3 py-3 shadow-sm sm:px-4',
         vehicleListRowClass(v),
         vehicleCommissionDueClass(v)
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-3 sm:flex-nowrap">
-        <div className="flex shrink-0 items-start gap-2 pt-1">
+      {/*
+        Below xl: stacked sections (no overlapping flex columns).
+        xl+: multi-column grid with minmax so money/actions never collapse under each other.
+      */}
+      <div
+        className={cn(
+          'grid w-full items-start gap-3 overflow-visible',
+          'grid-cols-1',
+          'md:grid-cols-[auto_minmax(12rem,1.2fr)_minmax(7.5rem,0.7fr)_minmax(8rem,0.8fr)]',
+          showMoney
+            ? 'xl:grid-cols-[auto_minmax(11rem,1.1fr)_minmax(7rem,0.65fr)_minmax(8rem,0.75fr)_minmax(14rem,1.2fr)_minmax(10.5rem,11.5rem)]'
+            : 'xl:grid-cols-[auto_minmax(11rem,1.1fr)_minmax(7rem,0.65fr)_minmax(8rem,0.75fr)_minmax(10.5rem,11.5rem)]'
+        )}
+      >
+        {/* Thumb + checkbox */}
+        <div className="flex shrink-0 items-start gap-2 pt-0.5">
           <Checkbox
             checked={checked}
             onCheckedChange={(value) => onCheckedChange(value === true)}
@@ -207,7 +260,8 @@ export function StockListCard({
           </div>
         </div>
 
-        <div className="min-w-0 flex-1 basis-[16rem]">
+        {/* Vehicle identity */}
+        <div className="min-w-0">
           <p className="text-[15px] font-bold leading-tight tracking-tight text-sky-800">{v.stock_number}</p>
           <p className="text-[13px] font-bold uppercase leading-snug text-slate-900">{title || '—'}</p>
           {v.model_grade ? <p className="text-[12px] leading-snug text-slate-700">{v.model_grade}</p> : null}
@@ -218,6 +272,16 @@ export function StockListCard({
             <span className="mt-1.5 inline-flex rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-white">
               {v.chassis_number}
             </span>
+          ) : null}
+          {hasAuctionSheet ? (
+            <div className="mt-1.5">
+              <VehicleDocChip
+                entityId={v.id}
+                label="Auction sheet"
+                docKinds={['auction_sheet']}
+                className="h-7 border border-sky-300 bg-white px-2.5 font-semibold normal-case tracking-normal text-sky-800 hover:bg-sky-50"
+              />
+            </div>
           ) : null}
           <div className="mt-1.5 flex flex-wrap gap-1">
             {cfNoFreight ? (
@@ -231,9 +295,13 @@ export function StockListCard({
               </span>
             ) : null}
           </div>
+          {containerLabel ? (
+            <p className="mt-1.5 text-[11px] font-semibold text-slate-600">Container {containerLabel}</p>
+          ) : null}
         </div>
 
-        <div className="min-w-[8.5rem] shrink-0 text-[12px] leading-5">
+        {/* Origin / pricing cues */}
+        <div className="min-w-0 text-[12px] leading-5">
           {place.city || place.country ? (
             <p className="font-semibold uppercase tracking-wide text-slate-800">
               {place.city ? `${place.city}${place.country ? ', ' : ''}` : ''}
@@ -268,7 +336,8 @@ export function StockListCard({
           ) : null}
         </div>
 
-        <div className="min-w-[9rem] shrink-0 text-[12px] leading-5">
+        {/* Customer / agent */}
+        <div className="min-w-0 text-[12px] leading-5">
           {customerName ? (
             <p>
               <span className="font-bold uppercase text-sky-800">{customerName}</span>
@@ -286,44 +355,52 @@ export function StockListCard({
           {v.source_supplier ? <p className="uppercase text-slate-500">{v.source_supplier}</p> : null}
         </div>
 
+        {/* Money boxes — wrap freely; never truncate balance % */}
         {showMoney ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="min-w-0 space-y-1.5 md:col-span-4 xl:col-span-1">
             <div className="flex flex-wrap gap-1.5">
-              <div className="min-w-[5.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
+              <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-sky-600">
                   Sold {incoterm ? <span className="text-lime-600">{incoterm}</span> : null}
                 </p>
-                <p className="text-[13px] font-bold leading-tight">{sold != null ? listMoney(sold, soldCcy) : '—'}</p>
+                <p className="text-[13px] font-bold leading-tight whitespace-nowrap">
+                  {sold != null ? listMoney(sold, soldCcy) : '—'}
+                </p>
               </div>
-              <div className="min-w-[5.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
+              <div className="min-w-[7.5rem] flex-1 basis-[7.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Balance</p>
-                <p className={cn('text-[13px] font-bold leading-tight', paidInFull ? 'text-emerald-700' : 'text-red-600')}>
+                <p
+                  className={cn(
+                    'text-[13px] font-bold leading-tight whitespace-nowrap',
+                    paidInFull ? 'text-emerald-700' : 'text-red-600'
+                  )}
+                >
                   {due != null ? listMoney(due, soldCcy) : '—'}
                 </p>
                 {paidInFull ? (
-                  <p className="flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700">
-                    <Check className="h-3 w-3" /> Paid in full
+                  <p className="flex items-center gap-0.5 whitespace-nowrap text-[10px] font-semibold text-emerald-700">
+                    <Check className="h-3 w-3 shrink-0" /> Paid in full
                   </p>
                 ) : duePct != null ? (
-                  <p className="text-[10px] font-semibold text-red-600">{duePct}% due</p>
+                  <p className="whitespace-nowrap text-[10px] font-semibold text-red-600">{duePct}% due</p>
                 ) : null}
               </div>
-              <div className="min-w-[5.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
+              <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">Profit</p>
-                <p className="text-[13px] font-bold leading-tight text-emerald-800">
+                <p className="text-[13px] font-bold leading-tight whitespace-nowrap text-emerald-800">
                   {profit != null ? listMoney(profit, soldCcy) : '—'}
                 </p>
                 {v.tt_rate != null ? (
-                  <p className="text-[10px] text-slate-500">@{Number(v.tt_rate)} TT</p>
+                  <p className="whitespace-nowrap text-[10px] text-slate-500">@{Number(v.tt_rate)} TT</p>
                 ) : null}
-                <p className="text-[10px] font-semibold text-fuchsia-700">JP {markupPct}%</p>
+                <p className="whitespace-nowrap text-[10px] font-semibold text-fuchsia-700">JP {markupPct}%</p>
                 {commAmt != null && commAmt > 0 ? (
-                  <p className="mt-0.5 text-[10px] font-semibold text-slate-700">
-                    Comm {listMoney(commAmt, 'PKR')}
+                  <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold text-slate-700">
+                    <span className="whitespace-nowrap">Comm {listMoney(commAmt, 'PKR')}</span>
                     {commStatus === 'paid' ? (
-                      <span className="ml-1 rounded-full bg-emerald-600 px-1 text-[9px] uppercase text-white">Paid</span>
+                      <span className="rounded-full bg-emerald-600 px-1 text-[9px] uppercase text-white">Paid</span>
                     ) : commStatus === 'due' ? (
-                      <span className="ml-1 rounded-full bg-fuchsia-100 px-1 text-[9px] uppercase text-fuchsia-900">Due</span>
+                      <span className="rounded-full bg-fuchsia-100 px-1 text-[9px] uppercase text-fuchsia-900">Due</span>
                     ) : null}
                   </p>
                 ) : null}
@@ -331,79 +408,193 @@ export function StockListCard({
             </div>
             {cfNoFreight ? (
               <p className="flex items-center gap-1 text-[11px] font-semibold text-red-700">
-                <AlertTriangle className="h-3.5 w-3.5" /> C&amp;F but NO Freight!
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> C&amp;F but NO Freight!
               </p>
             ) : null}
-            <div className="flex flex-wrap items-center gap-1">
-              {paymentCount > 0 ? (
-                <span className="text-[11px] text-slate-600">
-                  {paymentCount} remittance{paymentCount === 1 ? '' : 's'} · {listMoney(allocatedUsd, soldCcy)}
-                </span>
-              ) : null}
-              {Array.from({ length: Math.min(paymentCount, 5) }).map((_, i) => (
-                <span key={`tt-${i}`} className="inline-flex rounded bg-violet-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
-                  TT
-                </span>
-              ))}
-              {invoice ? (
-                <Link
-                  href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white hover:bg-red-700"
-                  title={invoice.invoice_code}
-                >
-                  <FileText className="h-3 w-3" /> INV
-                </Link>
-              ) : null}
-            </div>
+            {showRemittance && remitList.length ? (
+              <VehicleRemittancePopover
+                remittances={remitList}
+                allocatedLabel={listMoney(allocatedUsd, soldCcy)}
+              />
+            ) : null}
+            {(hasDocChips || etdEtaLine) ? (
+              <div className="space-y-1 pt-0.5">
+                {hasDocChips ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {hasBl ? (
+                      <VehicleDocChip
+                        entityId={v.id}
+                        label="BL"
+                        docKinds={['bl']}
+                        className="bg-sky-600 hover:bg-sky-700 focus-visible:ring-sky-600/40"
+                      />
+                    ) : null}
+                    {hasEc ? (
+                      <VehicleDocChip
+                        entityId={v.id}
+                        label="EC"
+                        docKinds={['export_certificate', 'export_certificate_en']}
+                        className="bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-600/40"
+                      />
+                    ) : null}
+                    {hasAbl ? (
+                      <VehicleDocChip
+                        entityId={v.id}
+                        label="ABL"
+                        docKinds={['amend_bl']}
+                        className="bg-sky-700 hover:bg-sky-800 focus-visible:ring-sky-700/40"
+                      />
+                    ) : null}
+                    {hasSd ? (
+                      <VehicleDocChip
+                        entityId={v.id}
+                        label="SD"
+                        docKinds={['surrender', 'waybill']}
+                        className="bg-indigo-600 hover:bg-indigo-700 focus-visible:ring-indigo-600/40"
+                      />
+                    ) : null}
+                    {remitList.length ? (
+                      // One TT chip per remittance (screenshot shows TT × N)
+                      remitList.slice(0, 5).map((r) => (
+                        <VehicleTtChip key={r.paymentId} remittances={[r]} />
+                      ))
+                    ) : null}
+                    {invoice ? (
+                      <VehicleDocChip
+                        entityType="invoices"
+                        entityId={invoice.id}
+                        label="INV"
+                        className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600/40"
+                        fallbackHref={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}
+                        emptyMessage={`No file on ${invoice.invoice_code}`}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                {etdEtaLine ? (
+                  <p className="text-[11px] font-medium text-slate-500">{etdEtaLine}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
-      </div>
 
-      <div className="ml-auto flex w-full shrink-0 flex-col items-stretch gap-1.5 sm:w-[11.5rem]">
-        <span
-          className={cn(
-            'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide',
-            PAYMENT_STATUS_PILL_STYLES[pay]
-          )}
-        >
-          {PAYMENT_STATUS_PILL_LABELS[pay]}
-        </span>
-        <p className="text-center text-[11px] font-semibold uppercase leading-tight text-slate-600">
-          {SHIPPING_STATUS_SHORT[ship]}
-          {freight ? ` · ${freight}` : ''}
-        </p>
-        {hasActions ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="sm" className="h-8 justify-between bg-white/80 text-xs" onClick={(e) => e.stopPropagation()}>
-                Actions <ChevronDown className="ml-1 h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit stock</DropdownMenuItem> : null}
-              {onReserve ? <DropdownMenuItem onSelect={onReserve}>Reserve</DropdownMenuItem> : null}
-              {onMakeAvailable ? (
-                <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
-              ) : null}
-              {onShipping ? <DropdownMenuItem onSelect={onShipping}>Booking / shipping</DropdownMenuItem> : null}
-              {onMarkCommissionPaid ? <DropdownMenuItem onSelect={onMarkCommissionPaid}>Mark commission paid</DropdownMenuItem> : null}
-              {invoice ? (
-                <DropdownMenuItem asChild>
-                  <Link href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}>Open invoice</Link>
-                </DropdownMenuItem>
-              ) : null}
-              {onDelete ? (
-                <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
-                  Delete
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-        <Button type="button" size="sm" className="h-8 bg-rose-600 text-xs font-semibold text-white hover:bg-rose-700" onClick={onViewInfo}>
-          View Info <ChevronRight className="ml-1 h-3.5 w-3.5" />
-        </Button>
+        {/* Right rail — status, Edit shipping, Actions, View Info */}
+        <div className="flex w-full min-w-0 flex-col items-stretch gap-2 md:col-span-4 xl:col-span-1 xl:w-auto xl:min-w-[10.5rem]">
+          <span
+            className={cn(
+              'inline-flex w-full items-center justify-center rounded-md px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide',
+              PAYMENT_STATUS_PILL_STYLES[pay]
+            )}
+          >
+            {PAYMENT_STATUS_PILL_LABELS[pay]}
+          </span>
+          <p className="text-center text-[11px] font-semibold uppercase leading-snug text-slate-600">
+            {SHIPPING_STATUS_SHORT[ship]}
+            {freight ? ` · ${freight}` : ''}
+          </p>
+          {onShipping ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShipping();
+              }}
+            >
+              Edit shipping
+            </Button>
+          ) : null}
+          {hasActions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full justify-between bg-white/80 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Actions <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                {(onEdit || onAssign || onViewInfo) ? (
+                  <>
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Stock
+                    </DropdownMenuLabel>
+                    {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit Stock Details</DropdownMenuItem> : null}
+                    {onAssign ? <DropdownMenuItem onSelect={onAssign}>Assign Stock</DropdownMenuItem> : null}
+                    <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onSelect={onViewInfo}>View Stock Details</DropdownMenuItem>
+                )}
+                {onReserve ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Sale &amp; Invoice
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onSelect={onReserve}>Reserve Vehicle</DropdownMenuItem>
+                  </>
+                ) : null}
+                {(onShipping || onCourier) ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Shipping
+                    </DropdownMenuLabel>
+                    {onCourier ? <DropdownMenuItem onSelect={onCourier}>Edit Courier Info</DropdownMenuItem> : null}
+                    {onShipping ? <DropdownMenuItem onSelect={onShipping}>Edit Shipping Info</DropdownMenuItem> : null}
+                  </>
+                ) : null}
+                {(onMarkCommissionPaid || invoice) ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Money
+                    </DropdownMenuLabel>
+                    {onMarkCommissionPaid ? (
+                      <DropdownMenuItem onSelect={onMarkCommissionPaid}>Mark commission paid</DropdownMenuItem>
+                    ) : null}
+                    {invoice ? (
+                      <DropdownMenuItem asChild>
+                        <Link href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}>Open invoice</Link>
+                      </DropdownMenuItem>
+                    ) : null}
+                  </>
+                ) : null}
+                {(onMakeAvailable || onDelete) ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Danger
+                    </DropdownMenuLabel>
+                    {onMakeAvailable ? (
+                      <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
+                    ) : null}
+                    {onDelete ? (
+                      <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
+                        Delete
+                      </DropdownMenuItem>
+                    ) : null}
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
+            onClick={onViewInfo}
+          >
+            View Info <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
+          </Button>
+        </div>
       </div>
     </div>
   );
