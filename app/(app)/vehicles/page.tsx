@@ -23,6 +23,8 @@ import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/ve
 import { FobFormulaFields } from '@/components/vehicles/fob-formula-fields';
 import { EditCourierDialog } from '@/components/vehicles/edit-courier-dialog';
 import { EditShippingDialog } from '@/components/vehicles/edit-shipping-dialog';
+import { AssignStockDialog } from '@/components/vehicles/assign-stock-dialog';
+import { SetBidRequesterDialog } from '@/components/vehicles/set-bid-requester-dialog';
 import { ReserveVehicleDialog } from '@/components/vehicles/reserve-vehicle-dialog';
 import { ShippingStepper } from '@/components/vehicles/shipping-stepper';
 import { VehicleViewInfoDialog } from '@/components/vehicles/vehicle-view-info-dialog';
@@ -155,6 +157,8 @@ function VehiclesPage() {
   const [form, setForm] = useState(emptyForm);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
   const [reserveOpen, setReserveOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [bidRequesterOpen, setBidRequesterOpen] = useState(false);
   const [shippingOpen, setShippingOpen] = useState(false);
   const [courierOpen, setCourierOpen] = useState(false);
   const [vehicleDocKinds, setVehicleDocKinds] = useState<Record<string, string[]>>({});
@@ -246,8 +250,10 @@ function VehiclesPage() {
     const agentIds = new Set<string>();
     for (const v of list) {
       if (v.reserved_by) agentIds.add(v.reserved_by);
+      if (v.assigned_agent_id) agentIds.add(v.assigned_agent_id);
+      if (v.bid_requester_id) agentIds.add(v.bid_requester_id);
       const sale = saleByVehicle.get(v.id);
-      if (!v.reserved_by && sale?.created_by) agentIds.add(sale.created_by);
+      if (!v.reserved_by && !v.assigned_agent_id && sale?.created_by) agentIds.add(sale.created_by);
       if (!v.customer_id && sale?.customer_id && !customerRows.some((c) => c.id === sale.customer_id)) {
         missingCustomerIds.push(sale.customer_id);
       }
@@ -371,10 +377,12 @@ function VehiclesPage() {
         matchesStatus = workflowStage(v) === statusFilter || v.status === statusFilter;
       }
       const matchesCategory = parseStockCategory(v.stock_category) === listCategory;
-      const agent = agentNames[v.reserved_by || saleFallback[v.id]?.agentId || ''] || '';
+      const agent =
+        agentNames[v.reserved_by || v.assigned_agent_id || saleFallback[v.id]?.agentId || ''] || '';
+      const bidRequester = agentNames[v.bid_requester_id || ''] || '';
       const customer = customers.find((c) => c.id === (v.customer_id || saleFallback[v.id]?.customerId))?.full_name || '';
       const invoiceCode = vehicleInvoices[v.id]?.invoice_code || '';
-      const matchesSearch = !q || [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model, agent, customer, invoiceCode].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
+      const matchesSearch = !q || [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model, agent, bidRequester, customer, invoiceCode].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
       return matchesStatus && matchesCategory && matchesSearch;
     });
   }, [vehicles, search, statusFilter, listCategory, agentNames, saleFallback, customers, vehicleInvoices, vehiclePays]);
@@ -617,7 +625,7 @@ function VehiclesPage() {
     id ? customers.find((c) => c.id === id)?.full_name || 'Customer' : '';
 
   const rowAgentName = (v: Vehicle) =>
-    agentNames[v.reserved_by || saleFallback[v.id]?.agentId || ''] || '';
+    agentNames[v.reserved_by || v.assigned_agent_id || saleFallback[v.id]?.agentId || ''] || '';
 
   const rowCustomerName = (v: Vehicle) =>
     customerLabel(v.customer_id || saleFallback[v.id]?.customerId);
@@ -626,6 +634,69 @@ function VehiclesPage() {
     const id = v.customer_id || saleFallback[v.id]?.customerId;
     const country = id ? customers.find((c) => c.id === id)?.country : null;
     return (country || '').trim();
+  };
+
+  const openAssign = (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
+    setAssignOpen(true);
+  };
+
+  const openBidRequester = (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
+    setBidRequesterOpen(true);
+  };
+
+  const handleBidRequesterSaved = ({
+    vehicle: updated,
+    requesterId,
+    requesterName,
+  }: {
+    vehicle: Vehicle;
+    requesterId: string | null;
+    requesterName: string;
+  }) => {
+    setVehicles((prev) => prev.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)));
+    setSelected((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
+    if (requesterId && requesterName) {
+      setAgentNames((prev) => (prev[requesterId] ? prev : { ...prev, [requesterId]: requesterName }));
+      toast.success(`Bid requester set to ${requesterName}`);
+    } else {
+      toast.success('Bid requester cleared');
+    }
+  };
+
+  const canSetBidRequester = canEditVehicle || canReserveStock;
+
+  const handleAssigned = ({
+    vehicle: updated,
+    agentId,
+    agentName,
+  }: {
+    vehicle: Vehicle;
+    agentId: string;
+    agentName: string;
+  }) => {
+    setVehicles((prev) => prev.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)));
+    setSelected((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
+    setAgentNames((prev) => (prev[agentId] ? prev : { ...prev, [agentId]: agentName }));
+
+    if (profile?.id && agentId === profile.id && canReserveStock) {
+      toast.success(`Assigned to you — open reserve for ${updated.stock_number}`);
+      setAssignOpen(false);
+      openReserve(updated);
+      return;
+    }
+
+    toast.success(`Assigned to ${agentName} — they can reserve from Cars`);
+    const params = new URLSearchParams();
+    if (listCategory !== 'car') params.set('category', listCategory);
+    params.set('q', updated.stock_number);
+    router.replace(`/vehicles?${params.toString()}`);
+    setSearch(updated.stock_number);
   };
 
   const openReserve = (vehicle?: Vehicle | null) => {
@@ -861,6 +932,9 @@ function VehiclesPage() {
                 customerName={rowCustomerName(v)}
                 customerCountry={rowCustomerCountry(v)}
                 agentName={rowAgentName(v)}
+                bidRequesterName={
+                  v.bid_requester_id ? agentNames[v.bid_requester_id] || 'Agent' : ''
+                }
                 invoice={vehicleInvoices[v.id] || null}
                 paymentCount={pays?.count || 0}
                 allocatedUsd={pays?.allocated || 0}
@@ -868,7 +942,8 @@ function VehiclesPage() {
                 docKinds={vehicleDocKinds[v.id] || []}
                 onViewInfo={() => setSelected(v)}
                 onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
-                onAssign={canEditVehicle && pay === 'available' ? () => openReserve(v) : undefined}
+                onAssign={canEditVehicle && pay === 'available' ? () => openAssign(v) : undefined}
+                onSetBidRequester={canSetBidRequester ? () => openBidRequester(v) : undefined}
                 onReserve={canReserveStock && pay === 'available' ? () => openReserve(v) : undefined}
                 onMakeAvailable={
                   canMakeAvailable && vehicleCanMakeAvailable(v)
@@ -906,7 +981,17 @@ function VehiclesPage() {
       </DialogContent></Dialog>
 
       <VehicleViewInfoDialog
-        open={!!selected && !editOpen && !deleteOpen && !reserveOpen && !shippingOpen && !courierOpen && !makeAvailableOpen}
+        open={
+          !!selected &&
+          !editOpen &&
+          !deleteOpen &&
+          !reserveOpen &&
+          !assignOpen &&
+          !bidRequesterOpen &&
+          !shippingOpen &&
+          !courierOpen &&
+          !makeAvailableOpen
+        }
         onOpenChange={(o) => !o && setSelected(null)}
         vehicle={selected}
         agentName={selected ? rowAgentName(selected) : ''}
@@ -931,6 +1016,21 @@ function VehiclesPage() {
         onDocsChanged={() => {
           void loadVehicles();
         }}
+      />
+
+      <AssignStockDialog
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        vehicle={selected}
+        currentUserId={profile?.id}
+        onAssigned={handleAssigned}
+      />
+
+      <SetBidRequesterDialog
+        open={bidRequesterOpen}
+        onOpenChange={setBidRequesterOpen}
+        vehicle={selected}
+        onSaved={handleBidRequesterSaved}
       />
 
       <ReserveVehicleDialog
