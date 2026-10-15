@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { BulkImportDialog } from '@/components/shared/bulk-import-dialog';
 import { CUSTOMER_CSV_HEADERS, CUSTOMER_CSV_SAMPLE } from '@/lib/utils/csv-import';
+import { customerContactErrorMessage, isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-provider';
 import { Upload } from 'lucide-react';
@@ -27,9 +28,13 @@ export function CustomersBulkImportButton({ onDone }: Props) {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const full_name = (r.full_name || '').trim();
-      if (!full_name) {
+      const email = (r.email || '').trim();
+      const phone = (r.phone || '').trim();
+      const address_line1 = (r.address_line1 || '').trim();
+      const missing = isCustomerConsigneeComplete({ full_name, email, phone, address_line1 });
+      if (missing) {
         failed++;
-        errors.push(`Row ${i + 2}: full_name is required`);
+        errors.push(`Row ${i + 2}: ${missing} (Consignee Name, Contact, Email, Address required)`);
         continue;
       }
       const customer_type = (r.customer_type || 'individual').trim().toLowerCase();
@@ -48,9 +53,10 @@ export function CustomersBulkImportButton({ onDone }: Props) {
         full_name,
         company_name: r.company_name?.trim() || null,
         customer_type,
-        email: r.email?.trim() || null,
-        phone: r.phone?.trim() || null,
+        email,
+        phone,
         whatsapp: r.whatsapp?.trim() || null,
+        address_line1,
         country: r.country?.trim() || null,
         city: r.city?.trim() || null,
         source: r.source?.trim() || 'import',
@@ -61,7 +67,7 @@ export function CustomersBulkImportButton({ onDone }: Props) {
       });
       if (error) {
         failed++;
-        errors.push(`Row ${i + 2}: ${error.message}`);
+        errors.push(`Row ${i + 2}: ${customerContactErrorMessage(error)}`);
       } else {
         ok++;
       }
@@ -87,7 +93,7 @@ export function CustomersBulkImportButton({ onDone }: Props) {
         headers={CUSTOMER_CSV_HEADERS}
         sampleRow={CUSTOMER_CSV_SAMPLE}
         templateFilename="jct-customers-template.csv"
-        hint="Upload a CSV or Excel file of CRM contacts. full_name is required."
+        hint="Upload a CSV or Excel file of CRM contacts. Consignee Name (full_name), Contact (phone), Email, and Address (address_line1) are required. Phone and email must be unique."
         onImport={handleImport}
       />
     </>

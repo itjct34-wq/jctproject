@@ -175,8 +175,39 @@ export function isPubliclyListed(vehicle: Pick<Vehicle, 'status' | 'payment_stat
   return vehicle.status === 'in_stock' || vehicle.status === 'reserved';
 }
 
-export function effectivePaymentStatus(vehicle: Vehicle): VehiclePaymentStatus {
+export function effectivePaymentStatus(
+  vehicle: Pick<Vehicle, 'payment_status' | 'status'>
+): VehiclePaymentStatus {
   return vehicle.payment_status ?? (vehicle.status === 'in_stock' ? 'available' : vehicle.status === 'reserved' ? 'reserved' : 'paid');
+}
+
+/** Display name for toast when a unit is already held. */
+export function reservationHolderLabel(
+  reservedBy: string | null | undefined,
+  agentNames?: Record<string, string>
+): string {
+  if (!reservedBy) return 'another agent';
+  const named = agentNames?.[reservedBy]?.trim();
+  return named || 'another agent';
+}
+
+/**
+ * One vehicle may only be reserved by one agent at a time.
+ * Returns a toast message when a new reserve action should be blocked; null when free to claim.
+ */
+export function reservationExclusivityMessage(
+  vehicle: Pick<Vehicle, 'payment_status' | 'reserved_by' | 'status'>,
+  actorId: string | null | undefined,
+  agentNames?: Record<string, string>
+): string | null {
+  const pay = effectivePaymentStatus(vehicle);
+  const holderId = vehicle.reserved_by ?? null;
+  const takenByPayment = pay === 'reserved' || pay === 'partial_paid' || pay === 'paid';
+  const takenByOther = Boolean(holderId && (!actorId || holderId !== actorId));
+  if (takenByPayment || takenByOther) {
+    return `Already reserved by ${reservationHolderLabel(holderId, agentNames)}`;
+  }
+  return null;
 }
 
 export function effectiveShippingStatus(vehicle: Vehicle): VehicleShippingStatus {

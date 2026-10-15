@@ -4,77 +4,77 @@
 
 @layer base {
   :root {
-    /* JCT ERP: navy #0F2744 + warm gold, lightly tinted page (print CSS stays below). */
-    --background: 210 28% 96%;
-    --foreground: 213 31% 16%;
+    /* JCT ERP: sharper navy + gold (print / public-site CSS stay scoped below). */
+    --background: 210 22% 97%;
+    --foreground: 213 42% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 213 31% 16%;
+    --card-foreground: 213 42% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 213 31% 16%;
-    --primary: 213 64% 16%;
-    --primary-foreground: 40 33% 97%;
-    --secondary: 210 24% 93%;
-    --secondary-foreground: 213 31% 16%;
-    --muted: 210 20% 93%;
-    --muted-foreground: 213 14% 38%;
-    --accent: 42 48% 94%;
-    --accent-foreground: 213 31% 16%;
-    --destructive: 0 72% 42%;
+    --popover-foreground: 213 42% 12%;
+    --primary: 213 70% 13%;
+    --primary-foreground: 42 40% 98%;
+    --secondary: 210 18% 94%;
+    --secondary-foreground: 213 42% 12%;
+    --muted: 210 16% 94%;
+    --muted-foreground: 213 18% 34%;
+    --accent: 42 58% 93%;
+    --accent-foreground: 213 42% 12%;
+    --destructive: 0 74% 40%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 55% 32%;
+    --success: 142 62% 28%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 42%;
+    --warning: 38 95% 38%;
     --warning-foreground: 0 0% 100%;
-    --info: 213 55% 38%;
+    --info: 213 62% 34%;
     --info-foreground: 0 0% 100%;
-    --border: 213 18% 86%;
-    --input: 213 16% 84%;
-    --ring: 42 54% 45%;
-    --gold: 42 54% 45%;
-    --gold-foreground: 213 31% 12%;
-    --chart-1: 213 64% 16%;
-    --chart-2: 42 54% 45%;
-    --chart-3: 213 45% 38%;
-    --chart-4: 38 92% 45%;
-    --chart-5: 142 55% 32%;
-    --chart-6: 213 12% 50%;
+    --border: 213 20% 84%;
+    --input: 213 18% 82%;
+    --ring: 42 72% 40%;
+    --gold: 42 72% 40%;
+    --gold-foreground: 213 42% 10%;
+    --chart-1: 213 70% 13%;
+    --chart-2: 42 72% 40%;
+    --chart-3: 213 50% 34%;
+    --chart-4: 38 95% 42%;
+    --chart-5: 142 62% 28%;
+    --chart-6: 213 14% 46%;
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 213 32% 8%;
-    --foreground: 40 20% 96%;
-    --card: 213 28% 11%;
-    --card-foreground: 40 20% 96%;
-    --popover: 213 28% 11%;
-    --popover-foreground: 40 20% 96%;
-    --primary: 42 58% 52%;
-    --primary-foreground: 213 32% 10%;
-    --secondary: 213 22% 16%;
-    --secondary-foreground: 40 20% 96%;
-    --muted: 213 22% 15%;
-    --muted-foreground: 210 12% 68%;
-    --accent: 213 24% 16%;
-    --accent-foreground: 42 70% 78%;
-    --destructive: 0 62% 45%;
+    --background: 213 36% 7%;
+    --foreground: 42 25% 96%;
+    --card: 213 32% 10%;
+    --card-foreground: 42 25% 96%;
+    --popover: 213 32% 10%;
+    --popover-foreground: 42 25% 96%;
+    --primary: 42 72% 52%;
+    --primary-foreground: 213 42% 8%;
+    --secondary: 213 24% 15%;
+    --secondary-foreground: 42 25% 96%;
+    --muted: 213 24% 14%;
+    --muted-foreground: 210 14% 70%;
+    --accent: 213 26% 15%;
+    --accent-foreground: 42 75% 78%;
+    --destructive: 0 65% 48%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 50% 42%;
+    --success: 142 55% 44%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 90% 50%;
+    --warning: 38 92% 52%;
     --warning-foreground: 0 0% 10%;
-    --info: 213 70% 62%;
-    --info-foreground: 213 32% 10%;
-    --border: 213 18% 20%;
-    --input: 213 18% 20%;
-    --ring: 42 58% 52%;
-    --gold: 42 58% 52%;
-    --gold-foreground: 213 32% 10%;
-    --chart-1: 42 58% 52%;
-    --chart-2: 213 70% 62%;
-    --chart-3: 142 50% 42%;
-    --chart-4: 38 90% 50%;
-    --chart-5: 210 20% 70%;
-    --chart-6: 213 12% 50%;
+    --info: 213 72% 64%;
+    --info-foreground: 213 36% 8%;
+    --border: 213 20% 20%;
+    --input: 213 20% 20%;
+    --ring: 42 72% 52%;
+    --gold: 42 72% 52%;
+    --gold-foreground: 213 42% 8%;
+    --chart-1: 42 72% 52%;
+    --chart-2: 213 72% 64%;
+    --chart-3: 142 55% 44%;
+    --chart-4: 38 92% 52%;
+    --chart-5: 210 18% 72%;
+    --chart-6: 213 14% 52%;
   }
 }
 
@@ -109,6 +109,38 @@
     background-color: hsl(var(--border));
     border-radius: 3px;
   }
+}
+
+/* ERP list chrome — scoped so public marketing / print stay untouched. */
+.erp-shell .erp-filter-bar {
+  @apply flex flex-col gap-3 md:flex-row md:items-center;
+}
+.erp-shell .erp-table-scroll {
+  @apply max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto scrollbar-thin;
+}
+.erp-shell .erp-data-table {
+  @apply w-full min-w-0 text-left text-sm;
+}
+.erp-shell .erp-data-table thead {
+  @apply sticky top-0 z-10 bg-primary text-primary-foreground;
+}
+.erp-shell .erp-data-table thead tr {
+  @apply text-[11px] uppercase tracking-wide;
+}
+.erp-shell .erp-data-table th {
+  @apply px-3 py-2.5 text-left font-semibold;
+}
+.erp-shell .erp-data-table tbody {
+  @apply divide-y divide-border;
+}
+.erp-shell .erp-data-table td {
+  @apply px-3 py-2.5 align-middle;
+}
+.erp-shell .erp-data-table tbody tr {
+  @apply hover:bg-muted/45;
+}
+.erp-shell .erp-stat-value {
+  @apply text-xl font-bold text-primary;
 }
 
 /* Public marketing pages share the JCT light navy/red shell. */

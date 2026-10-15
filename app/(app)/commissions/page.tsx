@@ -163,16 +163,17 @@ export default function CommissionsPage() {
           { label: 'Paid', value: paidCount },
           { label: 'Due PKR', value: formatMoney(duePkr, 'PKR') },
         ].map((s) => (
-          <Card key={s.label} className="border-border/60">
+          <Card key={s.label}>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold text-primary">{s.value}</p>
+              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+              <p className="erp-stat-value mt-0.5">{s.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card className="border-border/60">
-        <CardContent className="flex flex-col gap-3 p-4 md:flex-row">
+      <Card>
+        <CardContent className="p-4">
+          <div className="erp-filter-bar">
           <Select value={agentFilter} onValueChange={setAgentFilter}>
             <SelectTrigger className="w-full md:w-52">
               <SelectValue placeholder="Agent" />
@@ -209,68 +210,73 @@ export default function CommissionsPage() {
               <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
+          </div>
         </CardContent>
       </Card>
-      <Card className="overflow-hidden border-border/60">
+      <Card className="overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading commissions...
           </div>
         ) : grouped.length === 0 ? (
-          <div className="p-14 text-center text-sm text-muted-foreground">No commission rows match these filters.</div>
+          <div className="p-12 text-center text-sm text-muted-foreground">No commission rows match these filters.</div>
         ) : (
           grouped.map(([agentId, items]) => {
             const agent = profileById.get(agentId);
             const office = agent?.office_id ? offices.find((o) => o.id === agent.office_id) : null;
             return (
-              <div key={agentId} className="border-b border-border/70 last:border-0">
-                <div className="bg-muted/40 px-4 py-2 text-sm font-semibold">
+              <div key={agentId} className="border-b border-border last:border-0">
+                <div className="border-l-4 border-gold bg-muted/50 px-4 py-2.5 text-sm font-semibold text-primary">
                   {personName(agent)}
                   {office ? <span className="ml-2 font-normal text-muted-foreground">· {office.name}</span> : null}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px] text-left text-sm">
-                    <thead className="bg-primary text-primary-foreground">
-                      <tr className="text-[11px] uppercase tracking-wide">
-                        <th className="px-3 py-2 font-semibold">Stock</th>
-                        <th className="px-3 py-2 font-semibold">Customer</th>
-                        <th className="px-3 py-2 font-semibold">Agent</th>
-                        <th className="px-3 py-2 font-semibold">Commission PKR</th>
-                        <th className="px-3 py-2 font-semibold">Sold</th>
-                        <th className="px-3 py-2 font-semibold">Profit</th>
-                        <th className="px-3 py-2 font-semibold">Status</th>
-                        {canPay ? <th className="px-3 py-2 font-semibold">Action</th> : null}
+                <div className="erp-table-scroll">
+                  <table className="erp-data-table min-w-[900px]">
+                    <thead>
+                      <tr>
+                        <th>Stock</th>
+                        <th>Customer</th>
+                        <th>Agent</th>
+                        <th>Commission PKR</th>
+                        <th>Sold</th>
+                        <th>Profit</th>
+                        <th>Status</th>
+                        {canPay ? <th>Action</th> : null}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/70">
+                    <tbody>
                       {items.map((v) => {
                         const status = effectiveCommissionStatus(v);
                         const profit = soldProfitUsd(v);
                         const currency = v.listed_currency || 'USD';
                         return (
                           <tr key={v.id}>
-                            <td className="px-3 py-2.5">
+                            <td>
                               <p className="font-medium">{v.stock_number}</p>
                               <p className="text-xs text-muted-foreground">
                                 {v.make} {v.model}
                               </p>
                             </td>
-                            <td className="px-3 py-2.5">{v.customers?.full_name || '—'}</td>
-                            <td className="px-3 py-2.5">{personName(agent)}</td>
-                            <td className="px-3 py-2.5 font-medium">{formatMoney(Number(v.commission_pkr) || 0, 'PKR')}</td>
-                            <td className="px-3 py-2.5">{v.sold_price != null ? formatMoney(Number(v.sold_price), currency) : '—'}</td>
-                            <td className="px-3 py-2.5">{profit != null ? formatMoney(profit, currency) : '—'}</td>
-                            <td className="px-3 py-2.5">
+                            <td>{v.customers?.full_name || '—'}</td>
+                            <td>{personName(agent)}</td>
+                            <td className="font-medium">{formatMoney(Number(v.commission_pkr) || 0, 'PKR')}</td>
+                            <td>{v.sold_price != null ? formatMoney(Number(v.sold_price), currency) : '—'}</td>
+                            <td>{profit != null ? formatMoney(profit, currency) : '—'}</td>
+                            <td>
                               <Badge
                                 variant="outline"
-                                className={status === 'paid' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800'}
+                                className={
+                                  status === 'paid'
+                                    ? 'border-success/40 bg-success/15 text-success'
+                                    : 'border-warning/45 bg-warning/15 text-warning'
+                                }
                               >
                                 {COMMISSION_STATUS_LABELS[status]}
                               </Badge>
                             </td>
                             {canPay ? (
-                              <td className="px-3 py-2.5">
+                              <td>
                                 {status === 'due' ? (
                                   <Button size="sm" disabled={payingId === v.id} onClick={() => void payCommission(v.id)}>
                                     {payingId === v.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pay commission'}

@@ -124,6 +124,7 @@ export type StockListCardProps = {
   onViewInfo: () => void;
   onEdit?: () => void;
   onReserve?: () => void;
+  onMakeAvailable?: () => void;
   onShipping?: () => void;
   onDelete?: () => void;
   onMarkCommissionPaid?: () => void;
@@ -142,6 +143,7 @@ export function StockListCard({
   onViewInfo,
   onEdit,
   onReserve,
+  onMakeAvailable,
   onShipping,
   onDelete,
   onMarkCommissionPaid,
@@ -175,7 +177,7 @@ export function StockListCard({
   const soldCcy = v.listed_currency || 'USD';
   const markupPct = Math.round(BID_MARKUP_RATE * 100);
   const showMoney = pay !== 'available' || sold != null || Boolean(customerName);
-  const hasActions = Boolean(onEdit || onReserve || onShipping || onDelete || onMarkCommissionPaid || invoice);
+  const hasActions = Boolean(onEdit || onReserve || onMakeAvailable || onShipping || onDelete || onMarkCommissionPaid || invoice);
 
   return (
     <div
@@ -381,6 +383,9 @@ export function StockListCard({
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit stock</DropdownMenuItem> : null}
               {onReserve ? <DropdownMenuItem onSelect={onReserve}>Reserve</DropdownMenuItem> : null}
+              {onMakeAvailable ? (
+                <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
+              ) : null}
               {onShipping ? <DropdownMenuItem onSelect={onShipping}>Booking / shipping</DropdownMenuItem> : null}
               {onMarkCommissionPaid ? <DropdownMenuItem onSelect={onMarkCommissionPaid}>Mark commission paid</DropdownMenuItem> : null}
               {invoice ? (

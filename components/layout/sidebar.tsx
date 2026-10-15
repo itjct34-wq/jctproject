@@ -61,13 +61,13 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   return (
     <aside
       className={cn(
-        'flex flex-col bg-card border-r border-border h-[100dvh] sticky top-0 transition-all duration-200 shadow-[4px_0_24px_rgba(15,39,68,0.04)]',
+        'sticky top-0 flex h-[100dvh] flex-col border-r border-border bg-card shadow-[4px_0_20px_rgba(11,31,51,0.05)] transition-all duration-200',
         mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-64'
       )}
     >
       <div
         className={cn(
-          'flex items-center gap-2 border-b-2 border-gold/40 shrink-0 bg-white',
+          'flex shrink-0 items-center gap-2 border-b-2 border-gold/50 bg-white',
           collapsed && !mobile ? 'h-[4.5rem] justify-center px-1.5' : 'min-h-[4.5rem] px-2.5 py-2'
         )}
       >

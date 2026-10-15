@@ -61,6 +61,40 @@ async function createSignedUrl(objectPath: string) {
   return data.signedUrl;
 }
 
+export type AttachmentListItem = {
+  id: string;
+  file_name: string;
+  object_path: string;
+  content_type: string;
+  created_at: string;
+};
+
+/** List attachments for a record (newest first). Toasts and returns [] on error. */
+export async function listRecordAttachments(
+  entityType: AttachmentEntity,
+  entityId: string,
+): Promise<AttachmentListItem[]> {
+  const { data, error } = await supabase
+    .from('record_attachments')
+    .select('id, file_name, object_path, content_type, created_at')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    toast.error('Could not load attachments: ' + error.message);
+    return [];
+  }
+  return (data || []) as AttachmentListItem[];
+}
+
+/** Open an attachment via short-lived signed URL in a new tab (same as View → Open). */
+export async function openRecordAttachmentInNewTab(objectPath: string): Promise<boolean> {
+  const url = await createSignedUrl(objectPath);
+  if (!url) return false;
+  window.open(url, '_blank', 'noopener,noreferrer');
+  return true;
+}
+
 /** Upload a file to the private bucket and link it to a record. Returns true on success (toasts on failure). */
 export async function uploadRecordAttachment(
   entityType: AttachmentEntity,

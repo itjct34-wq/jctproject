@@ -18,10 +18,17 @@ import { supabase } from '@/lib/supabase/client';
 import type { Sale, Customer, Vehicle } from '@/lib/types';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { calcVehicleCost, formatPricingSummary, type PriceTerm } from '@/lib/utils/vehicle-pricing';
-import { freightModeFromShipmentType } from '@/lib/vehicle-lifecycle';
+import { effectivePaymentStatus, freightModeFromShipmentType, reservationExclusivityMessage } from '@/lib/vehicle-lifecycle';
 import { createReservationInvoice } from '@/lib/utils/create-reservation-invoice';
 import { CarFront, ChevronRight, Loader2, Pencil, Plus, Search, Tag, Trash2, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
+
+type ProfileNameRow = { id: string; full_name: string | null; display_name: string | null; email: string | null };
+
+function profileDisplayName(p: ProfileNameRow | undefined) {
+  if (!p) return '';
+  return p.full_name?.trim() || p.display_name?.trim() || p.email || '';
+}
 
 const statusStyles: Record<Sale['status'], string> = {
   reserved: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -81,7 +88,7 @@ export default function SalesPage() {
     const [sRes, cRes, vRes] = await Promise.all([
       supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(250),
       supabase.from('customers').select('id, full_name, customer_code, email, phone, country, city').order('full_name').limit(250),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, status, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url').order('created_at', { ascending: false }).limit(250),
+      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, status, payment_status, reserved_by, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url').order('created_at', { ascending: false }).limit(250),
     ]);
     if (sRes.error) toast.error(`Unable to load sales: ${sRes.error.message}`);
     else setSales((sRes.data || []) as Sale[]);
@@ -94,10 +101,7 @@ export default function SalesPage() {
 
   const availableVehicles = useMemo(
     () =>
-      vehicles.filter((v) => {
-        const pay = v.payment_status ?? (v.status === 'in_stock' ? 'available' : v.status === 'reserved' ? 'reserved' : 'paid');
-        return pay === 'available' || pay === 'reserved';
-      }),
+      vehicles.filter((v) => effectivePaymentStatus(v) === 'available' && !v.reserved_by),
     [vehicles]
   );
 
@@ -153,11 +157,77 @@ export default function SalesPage() {
     if (!profile || !form.customer_id || !form.vehicle_id) return;
     setSubmitting(true);
 
+    const { data: fresh, error: freshErr } = await supabase
+      .from('vehicles')
+      .select('id, status, payment_status, reserved_by, notes, stock_number, make, model, chassis_number, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url, fob_usd')
+      .eq('id', form.vehicle_id)
+      .maybeSingle();
+    if (freshErr || !fresh) {
+      setSubmitting(false);
+      toast.error(freshErr?.message || 'Vehicle not found');
+      return;
+    }
+    const live = fresh as Vehicle;
+    const agentNames: Record<string, string> = {};
+    if (live.reserved_by) {
+      const { data: holder } = await supabase
+        .from('profiles')
+        .select('id, full_name, display_name, email')
+        .eq('id', live.reserved_by)
+        .maybeSingle();
+      if (holder) agentNames[holder.id] = profileDisplayName(holder as ProfileNameRow);
+    }
+    const conflict = reservationExclusivityMessage(live, profile.id, agentNames);
+    if (conflict) {
+      setSubmitting(false);
+      toast.error(conflict);
+      await loadData();
+      return;
+    }
+
     const salePrice = Number(form.sale_price) || 0;
     const days = Math.max(1, Number(form.reservation_days) || 7);
     const reservedUntil = new Date();
     reservedUntil.setDate(reservedUntil.getDate() + days);
     const reservedUntilStr = reservedUntil.toISOString().slice(0, 10);
+
+    const { data: claimed, error: claimErr } = await supabase
+      .from('vehicles')
+      .update({
+        payment_status: 'reserved',
+        customer_id: form.customer_id,
+        reserved_by: profile.id,
+        reserved_until: reservedUntilStr,
+        sold_price: salePrice || null,
+        incoterm: form.price_term === 'CNF' ? 'C&F' : form.price_term,
+        freight_mode: freightModeFromShipmentType(form.shipment_type),
+        commission_pkr: form.commission_pkr === '' ? null : Number(form.commission_pkr) || 0,
+        notes: [
+          live.notes || '',
+          `Reserved for ${customerName(form.customer_id)} by ${profile.full_name || profile.email} until ${reservedUntilStr}`,
+        ].filter(Boolean).join('\n'),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', form.vehicle_id)
+      .eq('payment_status', 'available')
+      .is('reserved_by', null)
+      .select('id')
+      .maybeSingle();
+
+    if (claimErr) {
+      setSubmitting(false);
+      const msg = /already reserved by/i.test(claimErr.message)
+        ? claimErr.message.replace(/^.*already reserved by/i, 'Already reserved by')
+        : claimErr.message;
+      toast.error(msg);
+      return;
+    }
+    if (!claimed) {
+      setSubmitting(false);
+      toast.error('Already reserved by another agent');
+      await loadData();
+      return;
+    }
 
     const { data: saleData, error: saleErr } = await supabase
       .from('sales')
@@ -186,49 +256,27 @@ export default function SalesPage() {
 
     if (saleErr || !saleData) {
       setSubmitting(false);
-      toast.error(`Could not create reservation: ${saleErr?.message || 'unknown error'}`);
+      toast.error(`Vehicle held but sale record failed: ${saleErr?.message || 'unknown error'}`);
+      await loadData();
       return;
     }
 
     const sale = saleData as Sale;
 
-    const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
-    await supabase
-      .from('vehicles')
-      .update({
-        payment_status: 'reserved',
-        customer_id: form.customer_id,
-        reserved_by: profile.id,
-        reserved_until: reservedUntilStr,
-        sold_price: salePrice || null,
-        incoterm: form.price_term === 'CNF' ? 'C&F' : form.price_term,
-        freight_mode: freightModeFromShipmentType(form.shipment_type),
-        commission_pkr: form.commission_pkr === '' ? null : Number(form.commission_pkr) || 0,
-        notes: [
-          vehicle?.notes || '',
-          `Reserved for ${customerName(form.customer_id)} by ${profile.full_name || profile.email} until ${reservedUntilStr}`,
-        ].filter(Boolean).join('\n'),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', form.vehicle_id);
-
-    if (vehicle) {
-      await supabase.from('vehicle_status_history').insert({
-        vehicle_id: form.vehicle_id,
-        from_status: vehicle.status,
-        to_status: 'reserved',
-        note: `Sale ${sale.sale_code} · ${form.price_term} · agent ${profile.full_name || profile.email}`,
-        changed_by: profile.id,
-      });
-    }
+    await supabase.from('vehicle_status_history').insert({
+      vehicle_id: form.vehicle_id,
+      from_status: live.status,
+      to_status: 'reserved',
+      note: `Sale ${sale.sale_code} · ${form.price_term} · agent ${profile.full_name || profile.email}`,
+      changed_by: profile.id,
+    });
 
     if (form.create_invoice) {
-      const vehicleForInvoice = vehicles.find((x) => x.id === form.vehicle_id) || null;
       const invResult = await createReservationInvoice({
         customerId: form.customer_id,
         saleId: sale.id,
         vehicleId: form.vehicle_id,
-        vehicle: vehicleForInvoice,
+        vehicle: live,
         salePrice,
         currency: form.currency || 'USD',
         priceTerm: form.price_term,

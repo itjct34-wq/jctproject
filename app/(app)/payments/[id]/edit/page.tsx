@@ -8,11 +8,12 @@ import { RemittanceForm } from '@/components/payments/remittance-form';
 import { usePermissions } from '@/hooks/use-permissions';
 import { supabase } from '@/lib/supabase/client';
 import type { Payment } from '@/lib/types';
+import { isUnknownRemittance } from '@/lib/remittance';
 import { toast } from 'sonner';
 
 export default function EditRemittancePage() {
   const params = useParams<{ id: string }>();
-  const { can } = usePermissions();
+  const { can, isElevatedStaff } = usePermissions();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +35,8 @@ export default function EditRemittancePage() {
     };
   }, [params.id]);
 
-  if (!can('payments', 'edit')) {
+  const canEdit = can('payments', 'edit') || isElevatedStaff;
+  if (!canEdit) {
     return <p className="p-8 text-sm text-muted-foreground">You do not have permission to edit remittances.</p>;
   }
   if (loading) {
@@ -48,10 +50,11 @@ export default function EditRemittancePage() {
   if (!payment) {
     return <p className="p-8 text-sm text-muted-foreground">Remittance not found.</p>;
   }
+  const unknown = isUnknownRemittance(payment);
   return (
     <div>
-      <RemittanceCrumb current="Edit" />
-      <RemittanceForm payment={payment} />
+      <RemittanceCrumb current={unknown ? 'Edit Unknown TT' : 'Edit'} />
+      <RemittanceForm payment={payment} unknown={unknown} />
     </div>
   );
 }
