@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { StockListCard } from '@/components/vehicles/stock-list-card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,8 +49,6 @@ import {
   SHIPPING_STATUSES,
   soldProfitUsd,
   suggestCommissionPkr,
-  vehicleCommissionDueClass,
-  vehicleListRowClass,
   WORKFLOW_STAGE_LABELS,
   workflowStage,
   type VehicleFreightMode,
@@ -57,13 +56,14 @@ import {
   type VehiclePaymentStatus,
   type VehicleShippingStatus,
 } from '@/lib/vehicle-lifecycle';
-import { cn } from '@/lib/utils';
-import { CarFront, ChevronRight, FileText, Loader2, Pencil, Plus, Search, Ship, Tag, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Plus, Search, Ship, Tag, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
 type VehicleInvoiceRef = { id: string; invoice_code: string };
 type ProfileNameRow = { id: string; full_name: string | null; display_name: string | null; email: string | null };
+type CustomerListRow = Pick<Customer, 'id' | 'full_name' | 'customer_code' | 'country'>;
+type VehiclePayAgg = { count: number; allocated: number };
 
 function profileDisplayName(p: ProfileNameRow | undefined) {
   if (!p) return '';
@@ -123,7 +123,9 @@ function VehiclesPage() {
   const canRecordPayment = can('payments', 'create');
   const canMarkCommissionPaid = isAdmin() || hasRole('manager') || hasRole('accounts');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customers, setCustomers] = useState<Pick<Customer, 'id' | 'full_name' | 'customer_code'>[]>([]);
+  const [customers, setCustomers] = useState<CustomerListRow[]>([]);
+  const [vehiclePays, setVehiclePays] = useState<Record<string, VehiclePayAgg>>({});
+  const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
   const [agentNames, setAgentNames] = useState<Record<string, string>>({});
   const [saleFallback, setSaleFallback] = useState<Record<string, { agentId: string; customerId: string }>>({});
   const [vehicleInvoices, setVehicleInvoices] = useState<Record<string, VehicleInvoiceRef>>({});
@@ -156,14 +158,14 @@ function VehiclesPage() {
     await supabase.rpc('expire_reserved_vehicles');
     const [vRes, cRes] = await Promise.all([
       supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250),
-      supabase.from('customers').select('id, full_name, customer_code').order('full_name').limit(250),
+      supabase.from('customers').select('id, full_name, customer_code, country').order('full_name').limit(250),
     ]);
     if (vRes.error) toast.error(`Unable to load inventory: ${vRes.error.message}`);
     const list = (vRes.data || []) as Vehicle[];
     setVehicles(list);
     setSelected((prev) => (prev ? list.find((row) => row.id === prev.id) ?? prev : null));
 
-    let customerRows = (cRes.data || []) as Pick<Customer, 'id' | 'full_name' | 'customer_code'>[];
+    let customerRows = (cRes.data || []) as CustomerListRow[];
     const vehicleIds = list.map((v) => v.id);
     const listedCustomerIds = new Set(customerRows.map((c) => c.id));
     const missingCustomerIds = [
@@ -176,8 +178,8 @@ function VehiclesPage() {
 
     const [missCustRes, salesRes, itemRes] = await Promise.all([
       missingCustomerIds.length
-        ? supabase.from('customers').select('id, full_name, customer_code').in('id', missingCustomerIds)
-        : Promise.resolve({ data: [] as Pick<Customer, 'id' | 'full_name' | 'customer_code'>[] }),
+        ? supabase.from('customers').select('id, full_name, customer_code, country').in('id', missingCustomerIds)
+        : Promise.resolve({ data: [] as CustomerListRow[] }),
       vehicleIds.length
         ? supabase.from('sales').select('vehicle_id, customer_id, created_by, created_at').in('vehicle_id', vehicleIds).neq('status', 'cancelled')
         : Promise.resolve({ data: [] as Array<{ vehicle_id: string; customer_id: string; created_by: string; created_at: string }> }),
@@ -208,7 +210,7 @@ function VehiclesPage() {
       }
     }
     if (missingCustomerIds.length) {
-      const { data: moreCust } = await supabase.from('customers').select('id, full_name, customer_code').in('id', missingCustomerIds);
+      const { data: moreCust } = await supabase.from('customers').select('id, full_name, customer_code, country').in('id', missingCustomerIds);
       if (moreCust?.length) {
         customerRows = [...customerRows, ...moreCust];
         setCustomers(customerRows);
@@ -241,6 +243,41 @@ function VehiclesPage() {
       }
     }
     setVehicleInvoices(invoiceMap);
+
+    const payMap: Record<string, VehiclePayAgg> = {};
+    if (vehicleIds.length) {
+      const { data: allocRows } = await supabase
+        .from('payment_allocations')
+        .select('vehicle_id, allocate_amount, payments(status)')
+        .in('vehicle_id', vehicleIds);
+      if (allocRows?.length) {
+        for (const a of allocRows) {
+          const status = (a.payments as { status?: string } | null)?.status;
+          if (!a.vehicle_id || status === 'rejected') continue;
+          const row = payMap[a.vehicle_id] || { count: 0, allocated: 0 };
+          row.count += 1;
+          if (!status || status === 'received' || status === 'reconciled' || status === 'pending') {
+            row.allocated += Number(a.allocate_amount) || 0;
+          }
+          payMap[a.vehicle_id] = row;
+        }
+      } else {
+        const { data: payRows } = await supabase
+          .from('payments')
+          .select('id, vehicle_id, amount, currency, status')
+          .in('vehicle_id', vehicleIds);
+        for (const p of payRows || []) {
+          if (!p.vehicle_id || p.status === 'rejected') continue;
+          const row = payMap[p.vehicle_id] || { count: 0, allocated: 0 };
+          row.count += 1;
+          if (p.status === 'received' || p.status === 'reconciled' || p.status === 'pending') {
+            row.allocated += Number(p.amount) || 0;
+          }
+          payMap[p.vehicle_id] = row;
+        }
+      }
+    }
+    setVehiclePays(payMap);
     setLoading(false);
   }, []);
 
@@ -253,6 +290,22 @@ function VehiclesPage() {
   }, []);
 
   const loadVehiclePayments = useCallback(async (vehicleId: string) => {
+    const { data: allocs } = await supabase
+      .from('payment_allocations')
+      .select('allocate_amount, payments(*)')
+      .eq('vehicle_id', vehicleId);
+    if (allocs?.length) {
+      const mapped = allocs
+        .map((row) => {
+          const p = row.payments as Payment | Payment[] | null;
+          const pay = Array.isArray(p) ? p[0] : p;
+          if (!pay) return null;
+          return { ...pay, amount: Number(row.allocate_amount) || pay.amount };
+        })
+        .filter(Boolean) as Payment[];
+      setVehiclePayments(mapped);
+      return;
+    }
     const { data } = await supabase.from('payments').select('*').eq('vehicle_id', vehicleId).order('payment_date', { ascending: false });
     setVehiclePayments((data || []) as Payment[]);
   }, []);
@@ -323,11 +376,13 @@ function VehiclesPage() {
     setCreateOpen(true);
   };
 
-  const openEdit = async () => {
-    if (!selected) return;
-    const imgs = await loadVehicleImages(selected.id);
-    setGallery(imgs.length ? imgs : (selected.primary_image_url ? [{ image_url: selected.primary_image_url, sort_order: 0, is_primary: true }] : []));
-    fillFormFromVehicle(selected);
+  const openEdit = async (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
+    const imgs = await loadVehicleImages(target.id);
+    setGallery(imgs.length ? imgs : (target.primary_image_url ? [{ image_url: target.primary_image_url, sort_order: 0, is_primary: true }] : []));
+    fillFormFromVehicle(target);
     setEditOpen(true);
   };
 
@@ -519,19 +574,27 @@ function VehiclesPage() {
   const rowCustomerName = (v: Vehicle) =>
     customerLabel(v.customer_id || saleFallback[v.id]?.customerId);
 
+  const rowCustomerCountry = (v: Vehicle) => {
+    const id = v.customer_id || saleFallback[v.id]?.customerId;
+    const country = id ? customers.find((c) => c.id === id)?.country : null;
+    return (country || '').trim();
+  };
+
   const rowCurrency = (v: Vehicle) => v.listed_currency || 'USD';
 
   const freightLabel = (v: Vehicle) =>
     v.freight_mode === 'roro' || v.freight_mode === 'container' ? FREIGHT_MODE_LABELS[v.freight_mode] : '';
 
-  const openReserve = () => {
-    if (!selected) return;
-    setReserveCustomerId(selected.customer_id || '');
+  const openReserve = (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
+    setReserveCustomerId(target.customer_id || '');
     setReserveDays('7');
-    setReserveSoldPrice(selected.sold_price != null ? String(selected.sold_price) : (selected.fob_usd != null ? String(selected.fob_usd) : selected.listed_price != null ? String(selected.listed_price) : ''));
-    setReserveIncoterm((selected.incoterm as VehicleIncoterm) || 'FOB');
-    setReserveFreightMode(selected.freight_mode === 'roro' || selected.freight_mode === 'container' ? selected.freight_mode : '');
-    setReserveCommissionPkr(selected.commission_pkr != null ? String(selected.commission_pkr) : '');
+    setReserveSoldPrice(target.sold_price != null ? String(target.sold_price) : (target.fob_usd != null ? String(target.fob_usd) : target.listed_price != null ? String(target.listed_price) : ''));
+    setReserveIncoterm((target.incoterm as VehicleIncoterm) || 'FOB');
+    setReserveFreightMode(target.freight_mode === 'roro' || target.freight_mode === 'container' ? target.freight_mode : '');
+    setReserveCommissionPkr(target.commission_pkr != null ? String(target.commission_pkr) : '');
     setReserveOpen(true);
   };
 
@@ -575,17 +638,19 @@ function VehiclesPage() {
     await loadVehicles();
   };
 
-  const openShippingEdit = () => {
-    if (!selected) return;
+  const openShippingEdit = (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    setSelected(target);
     setShippingForm({
-      shipping_port_of_loading: selected.shipping_port_of_loading || '',
-      shipping_port_of_discharge: selected.shipping_port_of_discharge || '',
-      shipping_vessel_name: selected.shipping_vessel_name || '',
-      shipping_bl_number: selected.shipping_bl_number || '',
-      shipping_line: selected.shipping_line || '',
-      shipping_etd: selected.shipping_etd || '',
-      shipping_eta: selected.shipping_eta || '',
-      shipping_notes: selected.shipping_notes || '',
+      shipping_port_of_loading: target.shipping_port_of_loading || '',
+      shipping_port_of_discharge: target.shipping_port_of_discharge || '',
+      shipping_vessel_name: target.shipping_vessel_name || '',
+      shipping_bl_number: target.shipping_bl_number || '',
+      shipping_line: target.shipping_line || '',
+      shipping_etd: target.shipping_etd || '',
+      shipping_eta: target.shipping_eta || '',
+      shipping_notes: target.shipping_notes || '',
     });
     setShippingOpen(true);
   };
@@ -646,7 +711,11 @@ function VehiclesPage() {
       customer_id: selected.customer_id || null,
       vehicle_id: selected.id,
       payment_date: payDate || new Date().toISOString().split('T')[0],
+      remit_date: payDate || new Date().toISOString().split('T')[0],
+      received_date: payDate || new Date().toISOString().split('T')[0],
       amount,
+      remit_amount: amount,
+      instructed_amount: amount,
       currency: 'USD',
       exchange_rate: 1,
       amount_jpy: amount,
@@ -924,90 +993,49 @@ function VehiclesPage() {
           </SelectContent></Select>
       </CardContent></Card>
 
-      <Card className="overflow-hidden border-border/60">
-        {loading ? <div className="p-14 flex justify-center"><Loader2 className="animate-spin h-4 w-4" /></div>
-          : filtered.length === 0 ? (
-            <div className="p-14 text-center text-muted-foreground">
-              <p>No {listCopy.title.toLowerCase()} in this list yet.</p>
-              {isSellingFocused ? (
-                <p className="mt-2 text-sm">You see available stock plus vehicles you reserved. Other agents&apos; reserved units stay hidden.</p>
-              ) : null}
-            </div>
-          )
-          : <div className="divide-y divide-black/5">{filtered.map((v) => {
+      {loading ? (
+        <Card className="border-border/60"><div className="p-14 flex justify-center"><Loader2 className="animate-spin h-4 w-4" /></div></Card>
+      ) : filtered.length === 0 ? (
+        <Card className="border-border/60">
+          <div className="p-14 text-center text-muted-foreground">
+            <p>No {listCopy.title.toLowerCase()} in this list yet.</p>
+            {isSellingFocused ? (
+              <p className="mt-2 text-sm">You see available stock plus vehicles you reserved. Other agents&apos; reserved units stay hidden.</p>
+            ) : null}
+          </div>
+        </Card>
+      ) : (
+        <div className="space-y-2.5">
+          {filtered.map((v) => {
             const pay = effectivePaymentStatus(v);
-            const stage = workflowStage(v);
-            const agent = rowAgentName(v);
-            const customer = rowCustomerName(v);
-            const invoice = vehicleInvoices[v.id];
-            const currency = rowCurrency(v);
-            const profit = soldProfitUsd(v);
-            const mode = freightLabel(v);
-            const reserved = pay !== 'available' || Boolean(v.customer_id || agent || customer);
-            const commAmt = commissionAmountPkr(v);
-            const commStatus = effectiveCommissionStatus(v);
-            const meta: string[] = [];
-            if (agent) meta.push(`Agent ${agent}`);
-            if (customer) meta.push(customer);
-            if (invoice) meta.push(invoice.invoice_code);
-            if (v.sold_price != null) meta.push(`Sold ${formatMoney(Number(v.sold_price), currency)}`);
-            else if (reserved) meta.push('Sold —');
-            if (v.incoterm) meta.push(v.incoterm);
-            else if (reserved) meta.push('Term —');
-            if (mode) meta.push(mode);
-            else if (reserved) meta.push('Freight —');
-            if (profit != null) meta.push(`Profit ${formatMoney(profit, currency)}`);
-            if (commAmt != null && commAmt > 0) meta.push(`Commission ${formatMoney(commAmt, 'PKR')}`);
+            const pays = vehiclePays[v.id];
             return (
-            <div key={v.id} className={cn('relative flex items-stretch gap-2 overflow-hidden px-3 py-3 sm:px-4', vehicleListRowClass(v), vehicleCommissionDueClass(v))}>
-              {commStatus === 'due' ? (
-                <span aria-hidden className="pointer-events-none absolute right-0 top-0 border-l-[16px] border-t-[16px] border-l-transparent border-t-fuchsia-500" />
-              ) : null}
-              <button type="button" className="flex min-w-0 flex-1 items-start gap-3 text-left" onClick={() => setSelected(v)}>
-                <div className="mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/70 flex items-center justify-center ring-1 ring-black/5">
-                  {v.primary_image_url ? <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" /> : <CarFront className="h-5 w-5 text-primary" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">{v.make} {v.model}</p>
-                  <p className="text-xs text-foreground/70">{v.stock_number}{v.model_year ? ` · ${v.model_year}` : ''}</p>
-                  {meta.length > 0 ? (
-                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] leading-snug text-foreground/80">
-                      <span>{meta.join(' · ')}</span>
-                      {commAmt != null && commAmt > 0 && commStatus === 'paid' ? (
-                        <span className="inline-flex rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Commission paid</span>
-                      ) : null}
-                      {commAmt != null && commAmt > 0 && commStatus === 'due' ? (
-                        <span className="inline-flex rounded-full bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-900 ring-1 ring-fuchsia-300">Due</span>
-                      ) : null}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="hidden min-w-[7.5rem] shrink-0 text-right sm:block">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground/60">FOB</p>
-                  <p className="text-sm font-semibold">{fobLabel(v)}</p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <Badge variant="outline" className={PAYMENT_STATUS_STYLES[pay]}>{PAYMENT_STATUS_LABELS[pay]}</Badge>
-                  <Badge variant="outline" className={SHIPPING_STATUS_STYLES[effectiveShippingStatus(v)]}>{WORKFLOW_STAGE_LABELS[stage]}</Badge>
-                </div>
-              </button>
-              <div className="flex shrink-0 flex-col items-end justify-center gap-1">
-                {invoice ? (
-                  <Link
-                    href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-800 hover:bg-white"
-                  >
-                    <FileText className="h-3 w-3" />
-                    {invoice.invoice_code}
-                  </Link>
-                ) : null}
-                <ChevronRight className="h-4 w-4 text-foreground/50" />
-              </div>
-            </div>
+              <StockListCard
+                key={v.id}
+                vehicle={v}
+                checked={Boolean(checkedIds[v.id])}
+                onCheckedChange={(on) => setCheckedIds((prev) => ({ ...prev, [v.id]: on }))}
+                customerName={rowCustomerName(v)}
+                customerCountry={rowCustomerCountry(v)}
+                agentName={rowAgentName(v)}
+                invoice={vehicleInvoices[v.id] || null}
+                paymentCount={pays?.count || 0}
+                allocatedUsd={pays?.allocated || 0}
+                onViewInfo={() => setSelected(v)}
+                onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
+                onReserve={canReserveStock && pay === 'available' ? () => openReserve(v) : undefined}
+                onShipping={canEditShipping ? () => openShippingEdit(v) : undefined}
+                onDelete={canDeleteVehicle ? () => { setSelected(v); setDeleteOpen(true); } : undefined}
+                onMarkCommissionPaid={
+                  canMarkCommissionPaid && effectiveCommissionStatus(v) === 'due'
+                    ? () => { void markCommissionPaid(v.id); }
+                    : undefined
+                }
+              />
             );
-          })}</div>}
-      </Card>
+          })}
+        </div>
+      )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen>
         <DialogHeader><DialogTitle>Add {stockCategoryLabel(listCategory).toLowerCase()}</DialogTitle></DialogHeader>
@@ -1069,13 +1097,13 @@ function VehiclesPage() {
           ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             {canReserveStock && effectivePaymentStatus(selected) === 'available' && (
-              <Button size="sm" onClick={openReserve}><Tag className="h-3.5 w-3.5 mr-1" />Reserve</Button>
+              <Button size="sm" onClick={() => openReserve()}><Tag className="h-3.5 w-3.5 mr-1" />Reserve</Button>
             )}
             {canEditVehicle && (
-              <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit stock</Button>
+              <Button size="sm" variant="outline" onClick={() => { void openEdit(); }}><Pencil className="h-3.5 w-3.5 mr-1" />Edit stock</Button>
             )}
             {canEditShipping && (
-              <Button size="sm" variant="outline" onClick={openShippingEdit}><Ship className="h-3.5 w-3.5 mr-1" />Booking</Button>
+              <Button size="sm" variant="outline" onClick={() => openShippingEdit()}><Ship className="h-3.5 w-3.5 mr-1" />Booking</Button>
             )}
             {canDeleteVehicle && (
               <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>

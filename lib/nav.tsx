@@ -20,6 +20,8 @@ import {
   Settings,
   ScrollText,
   BadgeCheck,
+  BadgeDollarSign,
+  BookOpen,
   Newspaper,
   MapPin,
   SlidersHorizontal,
@@ -105,8 +107,10 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Invoices', href: '/invoices', icon: Receipt, module: 'invoices' },
       { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices' },
-      { label: 'Payments / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
+      { label: 'Remittances / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
+      { label: 'Commissions', href: '/commissions', icon: BadgeDollarSign, module: 'payments' },
       { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses' },
+      { label: 'Agent ledger', href: '/ledger', icon: BookOpen, module: 'payments' },
     ],
   },
   {
