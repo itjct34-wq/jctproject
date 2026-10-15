@@ -204,15 +204,8 @@ export async function importVehicleSpreadsheetRows(
     }
 
     if (images.length > 0) {
-      await supabase.from('vehicle_images').delete().eq('vehicle_id', vehicleId);
-      await supabase.from('vehicle_images').insert(
-        images.map((image_url, idx) => ({
-          vehicle_id: vehicleId,
-          image_url,
-          sort_order: idx,
-          is_primary: idx === 0,
-        }))
-      );
+      const { appendVehicleImageUrls } = await import('@/lib/utils/append-vehicle-images');
+      await appendVehicleImageUrls(supabase, vehicleId, images);
     }
     if (!existingId && vehicleId) createdIds.push(vehicleId);
     ok++;

@@ -10,6 +10,27 @@
 
 export const FIXED_EXPENSE_JPY = 45_000;
 export const DEFAULT_MARKUP_RATE = 0.1; // 10%
+export const DEFAULT_TT_RATE = 155; // JPY per 1 USD
+export const BID_MARKUP_RATE = 0.1;
+
+export type FobFromBid = {
+  bidJpy: number;
+  markupJpy: number;
+  expenseJpy: number;
+  fobJpy: number;
+  ttRate: number;
+  fobUsd: number;
+};
+
+/** Live trading FOB: bid + 10% + expense_jpy, then ÷ TT (JPY per 1 USD). */
+export function calcFobFromBid(bidJpy: number, expenseJpy = FIXED_EXPENSE_JPY, ttRate = DEFAULT_TT_RATE): FobFromBid {
+  const bid = Math.max(0, Number(bidJpy) || 0);
+  const expense = Math.max(0, Number(expenseJpy) || 0);
+  const tt = Math.max(0.0001, Number(ttRate) || DEFAULT_TT_RATE);
+  const markupJpy = bid * BID_MARKUP_RATE;
+  const fobJpy = bid + markupJpy + expense;
+  return { bidJpy: bid, markupJpy, expenseJpy: expense, fobJpy, ttRate: tt, fobUsd: fobJpy / tt };
+}
 
 export type PriceTerm = 'FOB' | 'C&F' | 'CIF' | 'CNF';
 

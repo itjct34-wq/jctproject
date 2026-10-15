@@ -19,6 +19,7 @@ type AttachmentRow = {
   size_bytes: number;
   uploaded_by: string;
   created_at: string;
+  doc_kind?: string | null;
 };
 
 type PreviewState = { url: string; fileName: string; kind: 'image' | 'pdf' };
@@ -61,7 +62,13 @@ async function createSignedUrl(objectPath: string) {
 }
 
 /** Upload a file to the private bucket and link it to a record. Returns true on success (toasts on failure). */
-export async function uploadRecordAttachment(entityType: AttachmentEntity, entityId: string, file: File, userId: string): Promise<boolean> {
+export async function uploadRecordAttachment(
+  entityType: AttachmentEntity,
+  entityId: string,
+  file: File,
+  userId: string,
+  opts?: { docKind?: string }
+): Promise<boolean> {
   if (file.size > MAX_FILE_BYTES) { toast.error('Maximum attachment size is 20 MB.'); return false; }
   if (!ALLOWED_TYPES.includes(file.type)) { toast.error('File type not allowed. Use PDF, image, text, CSV, Word or Excel.'); return false; }
   const objectPath = `${entityType}/${entityId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
@@ -70,6 +77,7 @@ export async function uploadRecordAttachment(entityType: AttachmentEntity, entit
   const { error: rowError } = await supabase.from('record_attachments').insert({
     entity_type: entityType, entity_id: entityId, file_name: file.name, object_path: objectPath,
     content_type: file.type || 'application/octet-stream', size_bytes: file.size, uploaded_by: userId,
+    ...(opts?.docKind ? { doc_kind: opts.docKind } : {}),
   });
   if (rowError) {
     await supabase.storage.from('record-attachments').remove([objectPath]);
@@ -129,12 +137,14 @@ export function RecordAttachments({
   entityId,
   onCountChange,
   allowUpload = true,
+  embedded = false,
 }: {
   entityType: AttachmentEntity;
   entityId: string;
   onCountChange?: (count: number) => void;
   /** When false, users can view/download only (e.g. sales viewing vehicle courier docs). */
   allowUpload?: boolean;
+  embedded?: boolean;
 }) {
   const { profile } = useAuth();
   const [rows, setRows] = useState<AttachmentRow[]>([]);
@@ -150,7 +160,7 @@ export function RecordAttachments({
     setLoading(true);
     const { data, error } = await supabase
       .from('record_attachments')
-      .select('id, entity_type, entity_id, file_name, object_path, content_type, size_bytes, uploaded_by, created_at')
+      .select('id, entity_type, entity_id, file_name, object_path, content_type, size_bytes, uploaded_by, created_at, doc_kind')
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: false });
@@ -215,7 +225,7 @@ export function RecordAttachments({
   );
 
   return (
-    <section className="mt-4 space-y-3 rounded-xl border border-border p-4">
+    <section className={embedded ? 'mt-2 space-y-3' : 'mt-4 space-y-3 rounded-xl border border-border p-4'}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -266,7 +276,7 @@ export function RecordAttachments({
               <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{row.file_name}</p>
-                <p className="text-xs text-muted-foreground">{(row.size_bytes / 1024).toFixed(0)} KB · {new Date(row.created_at).toLocaleDateString()}</p>
+                <p className="text-xs text-muted-foreground">{row.doc_kind ? `${row.doc_kind} · ` : ''}{(row.size_bytes / 1024).toFixed(0)} KB · {new Date(row.created_at).toLocaleDateString()}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button type="button" size="sm" disabled={openingId === row.id} onClick={() => void viewFile(row)}>

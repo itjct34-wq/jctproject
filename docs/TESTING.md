@@ -9,7 +9,8 @@ The repository **does not include an automated test suite** (no Jest/Vitest/Play
 | Gate | Command | Purpose |
 |------|---------|---------|
 | TypeScript | `npm run typecheck` | Static type correctness |
-| ESLint | `npm run lint` | Next.js ESLint rules |
+| ESLint | `npm run lint` | Next.js ESLint rules (also GitHub Actions CI) |
+| GitHub Actions | `.github/workflows/ci.yml` | `npm ci`, lint, typecheck, build on PR and push |
 | Manual ERP | — | Role-based smoke tests per module after schema changes |
 | Manual public | — | Catalog routes, verify URLs, inquiry submit |
 

@@ -303,6 +303,11 @@ export interface Vehicle {
   source_supplier: string | null;
   purchase_price: number | null;
   purchase_currency: string;
+  expense_jpy?: number | null;
+  tt_rate?: number | null;
+  fob_usd?: number | null;
+  sold_price?: number | null;
+  incoterm?: 'FOB' | 'C&F' | 'CIF' | null;
   listed_price: number | null;
   listed_currency: string;
   status: 'in_stock' | 'reserved' | 'sold' | 'in_transit' | 'exported' | 'on_hold' | 'archived';

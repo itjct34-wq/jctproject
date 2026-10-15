@@ -3,7 +3,7 @@
 ## Authentication
 
 - **ERP users**: Supabase Auth email/password (`signInWithPassword` in `lib/auth-provider.tsx`).
-- **Sessions**: Persisted in browser via Supabase client; `AppShell` redirects unauthenticated users to `/login?redirect=...`.
+- **Sessions**: Persisted in browser via Supabase client plus `jct-sb-access-token` cookie; `middleware.ts` redirects unauthenticated ERP routes to `/login`. `AppShell` is a second client-side check.
 - **User provisioning**: Admins create users through `POST /api/admin/invite-user` with a **minimum 8-character password**; email is auto-confirmed server-side. Password updates use `POST /api/admin/update-user` (optional password field). Plaintext passwords must never be logged or stored outside Auth.
 
 ## Authorization
@@ -19,6 +19,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | Public (browser) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public (browser); must respect RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server only** — API routes, admin user creation |
+| `AGENT_TOTP_SECRET` | **Server only** — fallback for agent HMAC codes |
 
 Do not commit `.env.local` or paste live JWTs into documentation. Build-time placeholders in `lib/supabase/env.ts` exist only so `next build` can prerender without real env.
 

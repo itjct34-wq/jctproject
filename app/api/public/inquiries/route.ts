@@ -65,6 +65,23 @@ export async function POST(request:NextRequest){
    message:data.message,status:'new',source:'website'
   }).select('inquiry_code').single();
   if(error)return NextResponse.json({error:'Could not save inquiry. Please try again.'},{status:500});
+  const {data:staffRoles}=await db.from('roles').select('id').in('name',['super_admin','admin','manager','sales_agent']);
+  const roleIds=(staffRoles||[]).map((r)=>r.id);
+  if(roleIds.length){
+    const {data:urs}=await db.from('user_roles').select('user_id').in('role_id',roleIds).eq('is_active',true);
+    const userIds=[...new Set((urs||[]).map((u)=>u.user_id).filter(Boolean))];
+    if(userIds.length){
+      await db.from('notifications').insert(userIds.slice(0,40).map((user_id)=>({
+        user_id,
+        title:'New website inquiry',
+        message:`${data.full_name} (${created.inquiry_code})`,
+        type:'info',
+        related_module:'inquiries',
+        related_id:null,
+        is_read:false
+      })));
+    }
+  }
   return NextResponse.json({success:true,inquiry_code:created.inquiry_code},{status:201,headers:{'Cache-Control':'no-store'}});
  }catch{return NextResponse.json({error:'Inquiry service temporarily unavailable.'},{status:500});}
 }

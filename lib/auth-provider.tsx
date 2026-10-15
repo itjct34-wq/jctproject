@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
+import { persistSessionCookies } from '@/lib/auth/session-cookie';
 import type { Profile, Role, RoleName } from '@/lib/types';
 
 interface AuthContextValue {
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (!mounted) return;
+      persistSessionCookies(initialSession);
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
 
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       (async () => {
         if (!mounted) return;
+        persistSessionCookies(newSession);
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
@@ -148,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    persistSessionCookies(null);
     setProfile(null);
     setRoles([]);
     setUser(null);

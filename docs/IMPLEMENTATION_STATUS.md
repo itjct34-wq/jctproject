@@ -1,6 +1,6 @@
 # Implementation Status
 
-Snapshot aligned with codebase on branch **`feat/home-page-redesign`**. No fabricated test metrics.
+Snapshot aligned with codebase on branch **`feat/vehicle-commercial-workflow`**. No fabricated test metrics.
 
 ## Public export site
 
@@ -37,11 +37,12 @@ Snapshot aligned with codebase on branch **`feat/home-page-redesign`**. No fabri
 | Migrations 001–018 | Assumed on prod | RBAC through invoice agent name |
 | Migrations 019–023 | Required for latest public features | See [DATABASE.md](DATABASE.md); apply on JCT Supabase if missing |
 | Migration **027** | Applied on JCT project | `bulk_import_batches` sheet/ZIP history |
+| Migrations **028–030** | Required | FOB workflow, sales own-records RLS, TOTP/reservation expiry |
 
 ## Remaining / follow-up
 
 - Automated tests not started ([TESTING.md](TESTING.md)).
-- Home page redesign completion and visual QA on **`feat/home-page-redesign`**.
+- Next.js 14/15 upgrade, Playwright, Sentry, WhatsApp, admin SMS MFA (deferred).
 - Confirm Vercel env has service role for all admin/public API routes in production.
 - Optional: unify Netlify vs Vercel to single host if Netlify is retired.
 

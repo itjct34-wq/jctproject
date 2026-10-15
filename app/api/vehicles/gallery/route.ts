@@ -31,13 +31,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No image files were sent' }, { status: 400 });
   }
 
+  const { data: existing } = await admin
+    .from('vehicle_images')
+    .select('id, sort_order, is_primary')
+    .eq('vehicle_id', vehicleId);
+  const existingCount = existing?.length || 0;
   const folder = chassisStorageFolder(
     vehicle.chassis_number || vehicle.part_sku || vehicle.stock_number || vehicleId
   );
   const rows: { vehicle_id: string; image_url: string; sort_order: number; is_primary: boolean }[] = [];
   const errors: string[] = [];
+  const room = Math.max(0, MAX_PHOTOS_PER_VEHICLE - existingCount);
+  if (room === 0) {
+    return NextResponse.json({ error: 'Photo limit reached for this vehicle' }, { status: 400 });
+  }
 
-  for (const file of files.slice(0, MAX_PHOTOS_PER_VEHICLE)) {
+  for (const file of files.slice(0, room)) {
     if (!isImageFileName(file.name)) {
       errors.push(`${file.name}: not a jpg/png/webp/gif`);
       continue;
@@ -47,7 +56,7 @@ export async function POST(request: NextRequest) {
       continue;
     }
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const path = `${folder}/${String(rows.length + 1).padStart(3, '0')}.${ext}`;
+    const path = `${folder}/${String(existingCount + rows.length + 1).padStart(3, '0')}-${Date.now()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
     const { error: upErr } = await admin.storage.from('vehicle-images').upload(path, buffer, {
       upsert: true,
@@ -61,8 +70,8 @@ export async function POST(request: NextRequest) {
     rows.push({
       vehicle_id: vehicleId,
       image_url: pub.publicUrl,
-      sort_order: rows.length,
-      is_primary: rows.length === 0,
+      sort_order: existingCount + rows.length,
+      is_primary: existingCount === 0 && rows.length === 0,
     });
   }
 
@@ -73,7 +82,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await admin.from('vehicle_images').delete().eq('vehicle_id', vehicleId);
   const { data: inserted, error: insErr } = await admin
     .from('vehicle_images')
     .insert(rows)
@@ -81,10 +89,12 @@ export async function POST(request: NextRequest) {
   if (insErr) {
     return NextResponse.json({ error: insErr.message, errors }, { status: 400 });
   }
-  await admin.from('vehicles').update({
-    primary_image_url: rows[0].image_url,
-    updated_at: new Date().toISOString(),
-  }).eq('id', vehicleId);
+  if (existingCount === 0 || !vehicle.primary_image_url) {
+    await admin.from('vehicles').update({
+      primary_image_url: rows[0].image_url,
+      updated_at: new Date().toISOString(),
+    }).eq('id', vehicleId);
+  }
 
   const imageIds = (inserted || []).map((row) => row.id as string);
   const storagePaths = rows

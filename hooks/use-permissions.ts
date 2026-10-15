@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useAuth } from '@/lib/auth-provider';
+import { usesSalesFocusedNav } from '@/lib/nav';
 import type { PermissionModule, PermissionAction, RoleName } from '@/lib/types';
 
 const VIEW_ROLES: Record<PermissionModule, RoleName[]> = {
@@ -93,5 +94,7 @@ export function usePermissions() {
     }
   };
 
-  return { hasRole, isSuperAdmin, isAdmin, can, canView, roleNames };
+  const isSellingFocused = usesSalesFocusedNav(roleNames);
+
+  return { hasRole, isSuperAdmin, isAdmin, can, canView, roleNames, isSellingFocused };
 }

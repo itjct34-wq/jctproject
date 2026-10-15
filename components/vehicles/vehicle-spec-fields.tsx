@@ -33,11 +33,12 @@ export function mapTransmissionToDb(raw: string): Vehicle['transmission'] | null
 type Props = {
   form: VehicleSpecForm;
   onChange: (patch: Partial<VehicleSpecForm>) => void;
-  gallery: GalleryImage[];
-  onGalleryChange: (images: GalleryImage[]) => void;
+  gallery?: GalleryImage[];
+  onGalleryChange?: (images: GalleryImage[]) => void;
+  showPhotos?: boolean;
 };
 
-export function VehicleSpecFields({ form, onChange, gallery, onGalleryChange }: Props) {
+export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChange, showPhotos = true }: Props) {
   const folder = chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number);
   const parts = form.stock_category === 'parts';
   return (
@@ -136,12 +137,14 @@ export function VehicleSpecFields({ form, onChange, gallery, onGalleryChange }: 
           />
         </div>
       </div>
-      <MultiImageUpload
-        folder={folder}
-        images={gallery}
-        onChange={onGalleryChange}
-        label="Photos"
-      />
+      {showPhotos && onGalleryChange ? (
+        <MultiImageUpload
+          folder={folder}
+          images={gallery}
+          onChange={onGalleryChange}
+          label="Photos"
+        />
+      ) : null}
     </>
   );
 }

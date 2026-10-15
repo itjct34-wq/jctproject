@@ -81,7 +81,7 @@ function emptyQuoteLine(): LineDraft {
 
 export default function QuotationsPage() {
   const { profile } = useAuth();
-  const { can } = usePermissions();
+  const { can, isSellingFocused } = usePermissions();
   const canDeleteQuotation = can('sales', 'delete');
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -104,18 +104,20 @@ export default function QuotationsPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [qRes, cRes, vRes] = await Promise.all([
-      supabase.from('quotations').select('*').order('created_at', { ascending: false }),
+      supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(250),
       supabase
         .from('customers')
         .select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2')
-        .order('full_name'),
+        .order('full_name')
+        .limit(250),
       supabase
         .from('vehicles')
         .select(
           'id, stock_number, make, model, chassis_number, model_year, color, mileage_km, listed_price, listed_currency, status, transmission'
         )
         .in('status', ['in_stock', 'reserved'])
-        .order('updated_at', { ascending: false }),
+        .order('updated_at', { ascending: false })
+        .limit(250),
     ]);
     if (qRes.error) toast.error(`Unable to load quotations: ${qRes.error.message}`);
     else setQuotations((qRes.data || []) as Quotation[]);
@@ -590,7 +592,7 @@ export default function QuotationsPage() {
           <div className="flex flex-col items-center justify-center p-14 text-center">
             <FileText className="mb-3 h-10 w-10 text-muted-foreground/50" />
             <h3 className="font-semibold">No quotations found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Create a quotation for your customer.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{isSellingFocused ? 'You only see quotations you created or that belong to your customers.' : 'Create a quotation for your customer.'}</p>
           </div>
         ) : (
           <div className="divide-y divide-border/70">
