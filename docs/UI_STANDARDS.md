@@ -2,8 +2,9 @@
 
 ## Visual tone
 
-- **ERP**: Muted workspace (`bg-muted/20`), card borders, compact tables, shadcn/Radix components under `components/ui/`.
+- **ERP**: Navy primary (`#0F2744` / `--primary`), warm gold accent (`--gold`), tinted page background (not dead white), rounded cards with soft navy shadow. Sidebar active item is solid navy; page titles use a gold underline. Tokens live in `app/globals.css`; `gold` is a Tailwind color.
 - **Public site**: JCT brand tokens (`--jct-navy`, `--jct-vermilion`, etc.) on home and catalog; `HomeShell` / `PublicShell` wrappers.
+- **Print**: Do not restyle `invoice-print-root` / `OfficialTradeDocument` — A4 conservative navy/red tables stay as-is.
 - Official logo from **`JCT_OFFICIAL.logo`** on ERP loading state and print documents.
 
 ## Layout

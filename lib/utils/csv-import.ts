@@ -37,6 +37,13 @@ const HEADER_ALIASES: Record<string, string> = {
   part_no: 'part_sku',
   sku: 'part_sku',
   part: 'part_sku',
+  colour: 'color',
+  col: 'color',
+  port: 'location',
+  load_port: 'location',
+  pol: 'location',
+  fob_price: 'listed_price',
+  price: 'listed_price',
 };
 
 function applyHeaderAlias(header: string): string {
@@ -138,6 +145,97 @@ export async function parseSpreadsheetFile(
   return parseCSV(await file.text());
 }
 
+export type EasySheetKind = 'car' | 'machinery' | 'parts' | 'auctions';
+
+function styleHeaderRow(row: { height: number; eachCell: (cb: (cell: { font: unknown; fill: unknown; alignment: unknown; border: unknown }) => void) => void }) {
+  row.height = 28;
+  row.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F2744' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF0F2744' } },
+      bottom: { style: 'thin', color: { argb: 'FF0F2744' } },
+    };
+  });
+}
+
+export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Japan Circular Trading';
+  const kindLabel = kind === 'auctions' ? 'Auction stock' : kind === 'machinery' ? 'Machinery' : kind === 'parts' ? 'Parts' : 'Cars';
+  const guide = wb.addWorksheet('How to fill', { views: [{ showGridLines: false }] });
+  guide.getColumn(1).width = 92;
+  guide.mergeCells('A1:A1');
+  guide.getCell('A1').value = `Easy ${kindLabel} sheet — no photo URLs`;
+  guide.getCell('A1').font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FF0F2744' } };
+  const notes =
+    kind === 'auctions'
+      ? [
+          '1. In the ERP, pick this as Auction stock, then source country and port.',
+          '2. Fill chassis, make, model, year, auction date, lot number, start price.',
+          '3. Do not paste image URLs. Photos are optional after import.',
+          '4. Delete the sample rows before you save.',
+        ]
+      : [
+          `1. In Bulk upload, choose ${kindLabel}, then source country and load port. Those apply to every row.`,
+          '2. Fill chassis, make, model, colour, year, km, transmission, fuel, price.',
+          '3. Do not paste image URLs. After import, upload one ZIP: a folder per chassis with jpg/png photos.',
+          '4. Folder name = chassis (hyphens optional). Example: K13-1231234/001.jpg',
+          '5. Leave stock_number blank to auto-number. Delete the sample rows before you save.',
+        ];
+  notes.forEach((line, i) => {
+    const cell = guide.getCell(i + 3, 1);
+    cell.value = line;
+    cell.font = { name: 'Calibri', size: 12, color: { argb: 'FF334155' } };
+    cell.alignment = { wrapText: true, vertical: 'middle' };
+    guide.getRow(i + 3).height = 22;
+  });
+
+  const sheet = wb.addWorksheet(kindLabel, {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  const headers = kind === 'auctions' ? [...AUCTION_CSV_HEADERS] : [...VEHICLE_CSV_HEADERS];
+  const samples = kind === 'auctions' ? [AUCTION_CSV_SAMPLE] : VEHICLE_CSV_SAMPLES;
+  const headerRow = sheet.addRow(headers);
+  styleHeaderRow(headerRow);
+  const colWidths = kind === 'auctions'
+    ? [18, 14, 16, 12, 14, 14, 14, 12, 12, 28]
+    : [18, 14, 16, 16, 12, 12, 14, 12, 14, 12, 16, 28];
+  headers.forEach((_, i) => {
+    sheet.getColumn(i + 1).width = colWidths[i] || 14;
+  });
+  samples.forEach((sample, idx) => {
+    const row = sheet.addRow(sample);
+    row.height = 22;
+    row.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11, color: { argb: 'FF0F172A' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: idx % 2 === 0 ? 'FFF8FAFC' : 'FFFFFFFF' },
+      };
+      cell.alignment = { vertical: 'middle' };
+    });
+  });
+  sheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: headers.length },
+  };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jct-easy-${kind}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function downloadCSVTemplate(
   filename: string,
   headers: string[],
@@ -176,54 +274,48 @@ export function splitImageUrls(row: Record<string, string>): string[] {
     .filter((u) => /^https?:\/\//i.test(u));
 }
 
+/** Easy staff sheet — country/port come from the wizard; photos come from the ZIP. */
 export const VEHICLE_CSV_HEADERS = [
-  'source_country',
-  'source_country_code',
-  'stock_category',
   'chassis_number',
-  'part_sku',
-  'stock_number',
   'make',
   'model',
-  'model_grade',
-  'model_year',
-  'registration_year',
   'color',
+  'model_year',
   'mileage_km',
   'transmission',
   'fuel_type',
-  'source_supplier',
-  'purchase_price',
-  'purchase_currency',
   'listed_price',
   'listed_currency',
-  'location',
-  'arrival_date',
-  'status',
+  'stock_number',
   'notes',
-  'primary_image_url',
-  'image_urls',
-]; // image URL columns are optional — bulk photos are usually a separate chassis-folder ZIP
+];
 
 export const VEHICLE_CSV_SAMPLES: string[][] = [
   [
-    'Japan', 'JP', 'car', 'ABC123456789', '', '', 'Toyota', 'Prius', 'S', '2019', '2019', 'White', '45000',
-    'automatic', 'hybrid', 'USS Tokyo', '800000', 'JPY', '6500', 'USD',
-    'Nagoya Yard', '2026-01-15', 'in_stock', 'Clean title',
-    'https://example.com/prius.jpg', 'https://example.com/prius-2.jpg',
+    'K13-1231234', 'Nissan', 'March', 'Yellow-Green', '2016', '91000',
+    'automatic', 'petrol', '4900', 'USD', '', '',
   ],
   [
-    'United Arab Emirates', 'AE', 'machinery', 'NZE141000001', '', '', 'Toyota', 'Axio', 'X', '2018', '2018', 'Silver', '62000',
-    'cvt', 'petrol', 'Dubai yard', '9000', 'AED', '7200', 'USD',
-    'Dubai', '2026-02-01', 'in_stock', '',
-    'https://example.com/axio.jpg', '',
+    'NZE141000001', 'Toyota', 'Axio', 'Silver', '2018', '62000',
+    'cvt', 'petrol', '7200', 'USD', '', '',
   ],
-  [
-    'United Kingdom', 'GB', 'parts', 'NCP81Z000002', 'NCP81-FILTER', 'JCT-P-2001', 'Honda', 'Fit', 'RS', '2017', '2017', 'Blue', '51000',
-    'automatic', 'petrol', 'UK stock', '4500', 'GBP', '5800', 'USD',
-    'Felixstowe', '2026-03-01', 'in_stock', '',
-    '', '',
-  ],
+];
+
+/** @deprecated kept for old wide templates — still parsed if present */
+export const VEHICLE_CSV_LEGACY_HEADERS = [
+  'source_country',
+  'source_country_code',
+  'part_sku',
+  'model_grade',
+  'registration_year',
+  'source_supplier',
+  'purchase_price',
+  'purchase_currency',
+  'location',
+  'arrival_date',
+  'status',
+  'primary_image_url',
+  'image_urls',
 ];
 
 /** @deprecated use VEHICLE_CSV_SAMPLES */

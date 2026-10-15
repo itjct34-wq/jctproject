@@ -2,12 +2,33 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { getNavGroupsForRoles } from '@/lib/nav';
 import { JCT_OFFICIAL } from '@/lib/jct-official';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+function isNavItemActive(
+  pathname: string,
+  searchParams: { get: (key: string) => string | null },
+  href: string
+) {
+  const [path, query] = href.split('?');
+  if (pathname !== path && !pathname.startsWith(`${path}/`)) return false;
+  if (!query) {
+    if (path === '/vehicles') {
+      const category = searchParams.get('category');
+      return !category || category === 'car';
+    }
+    return pathname === path || pathname.startsWith(`${path}/`);
+  }
+  const wanted = new URLSearchParams(query);
+  for (const [key, value] of wanted.entries()) {
+    if (searchParams.get(key) !== value) return false;
+  }
+  return true;
+}
 
 interface SidebarProps {
   collapsed: boolean;
@@ -20,6 +41,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { canView, roleNames } = usePermissions();
   const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -35,9 +57,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
           next[g.label] = true;
           changed = true;
         }
-        const onRoute = g.items.some(
-          (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-        );
+        const onRoute = g.items.some((item) => isNavItemActive(pathname, searchParams, item.href));
         if (onRoute && !next[g.label]) {
           next[g.label] = true;
           changed = true;
@@ -45,7 +65,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
       });
       return changed ? next : prev;
     });
-  }, [pathname, navGroups]);
+  }, [pathname, searchParams, navGroups]);
 
   const toggleGroup = (label: string) => {
     setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -54,13 +74,13 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   return (
     <aside
       className={cn(
-        'flex flex-col bg-card border-r border-border h-[100dvh] sticky top-0 transition-all duration-200',
+        'flex flex-col bg-card border-r border-border h-[100dvh] sticky top-0 transition-all duration-200 shadow-[4px_0_24px_rgba(15,39,68,0.04)]',
         mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-64'
       )}
     >
       <div
         className={cn(
-          'flex items-center gap-2 border-b border-border shrink-0 bg-white',
+          'flex items-center gap-2 border-b-2 border-gold/40 shrink-0 bg-white',
           collapsed && !mobile ? 'h-[4.5rem] justify-center px-1.5' : 'min-h-[4.5rem] px-2.5 py-2'
         )}
       >
@@ -74,7 +94,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
         />
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground truncate">ERP</p>
+            <p className="text-sm font-semibold text-primary truncate">ERP</p>
             <p className="text-[11px] text-muted-foreground truncate">Operations</p>
           </div>
         )}
@@ -112,7 +132,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                   onClick={() => toggleGroup(group.label)}
                   aria-expanded={isExpanded}
                   className={cn(
-                    'flex items-center justify-between w-full px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors',
+                    'flex items-center justify-between w-full px-3 text-[11px] font-semibold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors',
                     mobile ? 'py-2.5' : 'py-1.5'
                   )}
                 >
@@ -129,7 +149,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
               {(isExpanded || collapsed) && (
                 <div className="space-y-0.5 px-2">
                   {visibleItems.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    const isActive = isNavItemActive(pathname, searchParams, item.href);
                     const Icon = item.icon;
 
                     return (
@@ -140,18 +160,18 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                         aria-current={isActive ? 'page' : undefined}
                         title={collapsed ? item.label : undefined}
                         className={cn(
-                          'flex items-center gap-3 rounded-md px-2.5 text-sm transition-colors',
+                          'flex items-center gap-3 rounded-lg px-2.5 text-sm transition-colors',
                           mobile ? 'py-3' : 'py-2',
                           collapsed && 'justify-center',
                           isActive
-                            ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
-                            : 'text-muted-foreground hover:bg-accent hover:text-foreground border-l-2 border-transparent'
+                            ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+                            : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
                         )}
                       >
                         <Icon className="w-4 h-4 shrink-0" />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                         {isActive && !collapsed && (
-                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold" />
                         )}
                       </Link>
                     );

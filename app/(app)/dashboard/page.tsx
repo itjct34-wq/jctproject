@@ -18,7 +18,7 @@ import { sumByCurrency } from '@/lib/utils/format';
 import { supabase } from '@/lib/supabase/client';
 import {
   Users, Car, Gavel, Receipt, CreditCard, Ship, CheckSquare, Bell,
-  TrendingUp, DollarSign, Clock, Activity, Building2, MapPin,
+  TrendingUp, DollarSign, Clock, Activity, Building2, MapPin, Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -142,12 +142,12 @@ function OperationsDashboardPage() {
   const currentDate = format(new Date(), 'EEEE, MMMM d, yyyy');
 
   const kpis = [
-    { label: 'Customers', value: String(data.totalCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-blue-50 text-blue-600' },
-    { label: 'Vehicles in stock', value: String(data.availableVehicles), sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Pending auctions', value: String(data.pendingAuctions), sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'bg-amber-50 text-amber-600' },
-    { label: 'Active shipments', value: String(data.activeShipments), sub: 'In progress', icon: Ship, href: '/shipments', tone: 'bg-cyan-50 text-cyan-600' },
-    { label: 'Offices', value: String(data.officeCount), sub: `${data.shiftCount} shifts`, icon: Building2, href: '/offices', tone: 'bg-violet-50 text-violet-600' },
-    { label: 'Open tasks', value: String(data.pendingTasks), sub: `${data.overdueTasks} overdue`, icon: CheckSquare, href: '/tasks', tone: 'bg-orange-50 text-orange-600' },
+    { label: 'Customers', value: String(data.totalCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-primary/10 text-primary' },
+    { label: 'Vehicles in stock', value: String(data.availableVehicles), sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'bg-gold/15 text-gold' },
+    { label: 'Pending auctions', value: String(data.pendingAuctions), sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'bg-primary/10 text-primary' },
+    { label: 'Active shipments', value: String(data.activeShipments), sub: 'In progress', icon: Ship, href: '/shipments', tone: 'bg-gold/15 text-gold' },
+    { label: 'Offices', value: String(data.officeCount), sub: `${data.shiftCount} shifts`, icon: Building2, href: '/offices', tone: 'bg-primary/10 text-primary' },
+    { label: 'Open tasks', value: String(data.pendingTasks), sub: `${data.overdueTasks} overdue`, icon: CheckSquare, href: '/tasks', tone: 'bg-gold/15 text-gold' },
   ];
 
   return (
@@ -164,7 +164,8 @@ function OperationsDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
-            <Card className="border-border/60 transition-shadow hover:shadow-md h-full">
+            <Card className="border-border/60 transition-shadow hover:shadow-md hover:-translate-y-0.5 h-full overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-primary to-gold" />
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${kpi.tone}`}>
@@ -239,6 +240,7 @@ function OperationsDashboardPage() {
           <CardContent className="space-y-1">
             {[
               { label: 'Offices & shifts', icon: MapPin, href: '/offices', module: 'users' as const },
+              { label: 'Bulk upload', icon: Upload, href: '/bulk-upload', module: 'vehicles' as const },
               { label: 'Vehicles', icon: Car, href: '/vehicles', module: 'vehicles' as const },
               { label: 'New invoice', icon: Receipt, href: '/invoices', module: 'invoices' as const },
               { label: 'Users & teams', icon: Users, href: '/users', module: 'users' as const },

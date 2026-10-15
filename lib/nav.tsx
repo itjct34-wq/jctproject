@@ -24,6 +24,9 @@ import {
   MapPin,
   SlidersHorizontal,
   Inbox,
+  Upload,
+  Wrench,
+  Cog,
 } from 'lucide-react';
 import type { RoleName, PermissionModule } from '@/lib/types';
 
@@ -89,7 +92,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Inventory & Auctions',
     items: [
-      { label: 'Stock inventory', href: '/vehicles', icon: Car, module: 'vehicles' },
+      { label: 'Bulk upload', href: '/bulk-upload', icon: Upload, module: 'vehicles' },
+      { label: 'Cars', href: '/vehicles', icon: Car, module: 'vehicles' },
+      { label: 'Machinery', href: '/vehicles?category=machinery', icon: Wrench, module: 'vehicles' },
+      { label: 'Parts', href: '/vehicles?category=parts', icon: Cog, module: 'vehicles' },
       { label: 'Auction Stock', href: '/auctions', icon: Gavel, module: 'auctions', salesNavHidden: true },
       { label: 'Auction Purchases', href: '/purchases', icon: ShoppingCart, module: 'purchases', salesNavHidden: true },
     ],

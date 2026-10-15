@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { differenceInCalendarDays } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -63,7 +64,19 @@ const emptyForm = {
   notes: '', primary_image_url: '', source_country_code: 'JP',
 };
 
-export default function VehiclesPage() {
+const LIST_TITLES: Record<StockCategory, { title: string; description: string }> = {
+  car: { title: 'Cars', description: 'Passenger cars · photos · FOB pricing' },
+  machinery: { title: 'Machinery', description: 'Plant and equipment · photos · FOB pricing' },
+  parts: { title: 'Parts', description: 'Spares and components · photos · FOB pricing' },
+};
+
+function VehiclesPage() {
+  const searchParams = useSearchParams();
+  const listCategory: StockCategory =
+    searchParams.get('category') === 'machinery' || searchParams.get('category') === 'parts'
+      ? (searchParams.get('category') as StockCategory)
+      : 'car';
+  const listCopy = LIST_TITLES[listCategory];
   const { profile } = useAuth();
   const { can, hasRole } = usePermissions();
   const canCreateVehicle = can('vehicles', 'create');
@@ -77,9 +90,8 @@ export default function VehiclesPage() {
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('q') || '');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -114,15 +126,14 @@ export default function VehiclesPage() {
     const q = search.trim().toLowerCase();
     return vehicles.filter((v) => {
       const matchesStatus = statusFilter === 'all' || v.status === statusFilter;
-      const matchesCategory = categoryFilter === 'all' || parseStockCategory(v.stock_category) === categoryFilter;
+      const matchesCategory = parseStockCategory(v.stock_category) === listCategory;
       const matchesSearch = !q || [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
       return matchesStatus && matchesCategory && matchesSearch;
     });
-  }, [vehicles, search, statusFilter, categoryFilter]);
+  }, [vehicles, search, statusFilter, listCategory]);
 
   const openCreate = () => {
-    const defaultCategory: StockCategory =
-      categoryFilter === 'machinery' || categoryFilter === 'parts' ? categoryFilter : 'car';
+    const defaultCategory: StockCategory = listCategory;
     setForm({
       ...emptyForm,
       stock_category: defaultCategory,
@@ -378,21 +389,25 @@ export default function VehiclesPage() {
     await loadVehicles();
   };
 
+  const catalogVehicles = useMemo(
+    () => vehicles.filter((v) => parseStockCategory(v.stock_category) === listCategory),
+    [vehicles, listCategory]
+  );
   const stats = {
-    total: vehicles.length,
-    available: vehicles.filter((v) => effectivePaymentStatus(v) === 'available').length,
-    reserved: vehicles.filter((v) => effectivePaymentStatus(v) === 'reserved').length,
+    total: catalogVehicles.length,
+    available: catalogVehicles.filter((v) => effectivePaymentStatus(v) === 'available').length,
+    reserved: catalogVehicles.filter((v) => effectivePaymentStatus(v) === 'reserved').length,
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Stock inventory" description="Cars, machinery, and parts · photos · pricing"
+      <PageHeader title={listCopy.title} description={listCopy.description}
         actions={canCreateVehicle || canEditVehicle ? (
           <div className="flex flex-wrap gap-2">
             {canEditVehicle && selectedIds.size > 0 && (
               <Button size="sm" variant="outline" onClick={() => setBulkStatusOpen(true)}>Bulk status ({selectedIds.size})</Button>
             )}
-            {canCreateVehicle && <VehiclesBulkImportButton onDone={loadVehicles} />}
+            {canCreateVehicle && <VehiclesBulkImportButton kind={listCategory} />}
             {canCreateVehicle && (
               <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
             )}
@@ -407,15 +422,13 @@ export default function VehiclesPage() {
 
       <Card className="border-border/60"><CardContent className="p-4 flex flex-col md:flex-row gap-3">
         <div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." /></div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className="md:w-40"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent><SelectItem value="all">All categories</SelectItem><SelectItem value="car">Cars</SelectItem><SelectItem value="machinery">Machinery</SelectItem><SelectItem value="parts">Parts</SelectItem></SelectContent></Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="md:w-48"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">All statuses</SelectItem>{Object.entries(statusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>
       </CardContent></Card>
 
       <Card className="overflow-hidden border-border/60">
         {loading ? <div className="p-14 flex justify-center"><Loader2 className="animate-spin h-4 w-4" /></div>
-          : filtered.length === 0 ? <div className="p-14 text-center text-muted-foreground">No vehicles</div>
+          : filtered.length === 0 ? <div className="p-14 text-center text-muted-foreground">No {listCopy.title.toLowerCase()} in this list yet. Use Bulk upload to import a sheet.</div>
           : <div className="divide-y">{filtered.map((v) => (
             <div key={v.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
               {canEditVehicle && (
@@ -571,5 +584,19 @@ export default function VehiclesPage() {
 
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete vehicle?" description="Removes vehicle and gallery." confirmLabel="Delete" destructive loading={submitting} onConfirm={confirmDelete} />
     </div>
+  );
+}
+
+export default function VehiclesPageRoute() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center p-14 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      }
+    >
+      <VehiclesPage />
+    </Suspense>
   );
 }

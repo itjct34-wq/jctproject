@@ -37,10 +37,18 @@ function mapStatus(raw: string): string | 'invalid' {
 
 export type VehicleImportResult = { ok: number; failed: number; updated: number; errors: string[] };
 
+export type VehicleImportDefaults = {
+  sourceCountry?: string;
+  sourceCountryCode?: string;
+  location?: string;
+  stockCategory?: 'car' | 'machinery' | 'parts';
+};
+
 export async function importVehicleSpreadsheetRows(
   supabase: SupabaseClient,
   profileId: string,
-  rows: Record<string, string>[]
+  rows: Record<string, string>[],
+  defaults?: VehicleImportDefaults
 ): Promise<VehicleImportResult> {
   let ok = 0;
   let failed = 0;
@@ -57,13 +65,18 @@ export async function importVehicleSpreadsheetRows(
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const line = i + 2;
-    const category = parseStockCategory(r.stock_category || r.category || r.listing_type);
+    const category = defaults?.stockCategory
+      || parseStockCategory(r.stock_category || r.category || r.listing_type);
     const partSku = (r.part_sku || '').trim() || null;
     const stockNumber = (r.stock_number || '').trim() || null;
     const chassis = (r.chassis_number || '').trim() || (category === 'parts' ? (partSku || stockNumber || '') : '');
     const make = (r.make || '').trim();
     const model = (r.model || '').trim();
-    const country = resolveSourceCountryFromRow(r);
+    const country = resolveSourceCountryFromRow({
+      ...r,
+      source_country: r.source_country || defaults?.sourceCountry || '',
+      source_country_code: r.source_country_code || defaults?.sourceCountryCode || '',
+    });
 
     if (!chassis || !make || !model) {
       failed++;
@@ -138,7 +151,7 @@ export async function importVehicleSpreadsheetRows(
       purchase_currency: (r.purchase_currency || 'JPY').trim().toUpperCase() || 'JPY',
       listed_price: listed.value,
       listed_currency: (r.listed_currency || 'USD').trim().toUpperCase() || 'USD',
-      location: r.location?.trim() || null,
+      location: r.location?.trim() || defaults?.location?.trim() || null,
       arrival_date: r.arrival_date?.trim() || null,
       status,
       notes: r.notes?.trim() || null,
