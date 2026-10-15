@@ -52,7 +52,7 @@ const emptyForm = {
   issue_date: '', due_date: '', tax: '', currency: 'USD', notes: '',
   incoterms: 'FOB', shipment_type: 'RORO', container_mode: 'RORO Vessel',
   port_of_loading: 'Nagoya, Japan', port_of_discharge: '', vessel_name: '', bl_number: '',
-  freight_total: '0', insurance_total: '0', other_charges: '0', discount_total: '0',
+  freight_total: '0', freight_notes: 'Container freight', insurance_total: '0', other_charges: '0', discount_total: '0',
   payment_terms: '100% T/T in advance / LC at sight', bank_details: '',
   sales_agent: '',
   guest_name: '', guest_company: '', guest_email: '', guest_phone: '',
@@ -102,6 +102,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [companySettings, setCompanySettings] = useState<Pick<CompanySettings, 'id' | 'invoice_prefix' | 'invoice_next_number'> | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
   const [printBankNotice, setPrintBankNotice] = useState(false);
+  const [printBreakdown, setPrintBreakdown] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -210,7 +211,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       port_of_loading: selected.port_of_loading || 'Nagoya, Japan',
       port_of_discharge: selected.port_of_discharge || '', vessel_name: selected.vessel_name || '',
       bl_number: selected.bl_number || '',
-      freight_total: String(selected.freight_total ?? 0), insurance_total: String(selected.insurance_total ?? 0),
+      freight_total: String(selected.freight_total ?? 0),
+      freight_notes: selected.freight_notes || 'Container freight',
+      insurance_total: String(selected.insurance_total ?? 0),
       other_charges: String(selected.other_charges ?? 0), discount_total: String(selected.discount_total ?? 0),
       payment_terms: selected.payment_terms || defaultPaymentTerms(kind),
       bank_details: selected.bank_details || '',
@@ -330,7 +333,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: 'unpaid', notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
+    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: 'unpaid', notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, freight_notes: form.freight_notes.trim() || null, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
     if (error) { setSubmitting(false); toast.error(`Could not create invoice: ${error.message}`); return; }
     const inv = data as Invoice;
     const itemRows = linePayload(inv.id);
@@ -364,7 +367,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, updated_at: new Date().toISOString() }).eq('id', selected.id);
+    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, freight_notes: form.freight_notes.trim() || null, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, updated_at: new Date().toISOString() }).eq('id', selected.id);
     if (error) { setSubmitting(false); toast.error(`Could not update: ${error.message}`); return; }
     const { error: delError } = await supabase.from('invoice_items').delete().eq('invoice_id', selected.id);
     if (delError) { setSubmitting(false); toast.error(`Could not update line items: ${delError.message}`); return; }
@@ -608,13 +611,53 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             ))}
           </div>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3 space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
+        <div className="space-y-2">
+          <Label>Freight</Label>
+          <div className="overflow-x-auto rounded-md border border-border/60">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/60">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Description</th>
+                  <th className="px-3 py-2 text-left font-medium">Currency</th>
+                  <th className="px-3 py-2 text-right font-medium">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border/60">
+                  <td className="px-3 py-2">
+                    <Input
+                      value={form.freight_notes}
+                      onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
+                      placeholder="Container freight"
+                    />
+                  </td>
+                  <td className="px-3 py-2 align-middle font-medium">{form.currency}</td>
+                  <td className="px-3 py-2">
+                    <Input
+                      type="number"
+                      className="text-right"
+                      value={form.freight_total}
+                      onChange={(e) => setForm({ ...form, freight_total: e.target.value })}
+                      placeholder="0"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted-foreground">Enter container freight manually. Invoice total is vehicles total plus freight.</p>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-3 space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Vehicles total</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
         {isAuction && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Deposit due</span>
             <span>{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span>
           </div>
-        )}<div className="flex justify-between text-sm"><span className="text-muted-foreground">Insurance / Other</span><span>{form.currency} {((Number(form.freight_total)||0)+(Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{form.currency} {(calcSubtotal(lineItems) + (Number(form.freight_total)||0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span></div></div><div className="border-t pt-4 space-y-3">
+        )}<div className="flex justify-between text-sm"><span className="text-muted-foreground">Freight</span><span>{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></div>
+        {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Insurance / Other</span><span>{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></div>
+        )}
+        <div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Invoice total</span><span>{form.currency} {(calcSubtotal(lineItems) + (Number(form.freight_total)||0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span></div></div><div className="border-t pt-4 space-y-3">
           <p className="text-sm font-semibold text-muted-foreground">Shipping Terms</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1"><Label>Incoterms</Label>
@@ -691,7 +734,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <Switch checked={printBankNotice} onCheckedChange={setPrintBankNotice} />
               Bank notice page {printBankNotice ? 'on' : 'off'}
             </label>
-            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page. Keep bank notice off for a single page.</p>
+            <label className="flex items-center gap-2">
+              <Switch checked={printBreakdown} onCheckedChange={setPrintBreakdown} />
+              Breakdown invoice {printBreakdown ? 'on' : 'off'}
+            </label>
+            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page. Breakdown shows qty, unit price, and line totals plus the freight table. Keep bank notice off for a single page.</p>
           </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">
@@ -705,6 +752,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   showQr={printShowQr}
                   includeBankNotice={printBankNotice}
                   variant={isAuction ? 'auction_deposit' : 'commercial'}
+                  layoutVariant={printBreakdown ? 'breakdown' : 'standard'}
                 />
               </div>
             </div>

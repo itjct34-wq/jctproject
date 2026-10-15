@@ -418,6 +418,17 @@
   color: #fff;
   border-color: #7a0e12;
 }
+.invoice-print-root table.inv-table tr.inv-subtotal td {
+  background: #0b1f3a;
+  color: #fff;
+  border-color: #0b1f3a;
+}
+.invoice-print-root table.inv-table.inv-compact th,
+.invoice-print-root table.inv-table.inv-compact td {
+  padding: 2px 6px;
+  font-size: 8px;
+  line-height: 1.25;
+}
 .invoice-print-root footer {
   overflow: visible;
 }
@@ -509,6 +520,16 @@
   body.printing-document #print-layer table.inv-table th,
   body.printing-document #print-layer table.inv-table td {
     border: 1px solid #0b1f3a !important;
+  }
+  body.printing-document #print-layer table.inv-table.inv-compact th,
+  body.printing-document #print-layer table.inv-table.inv-compact td {
+    padding: 1.5px 5px !important;
+    font-size: 7.5px !important;
+    line-height: 1.2 !important;
+  }
+  body.printing-document #print-layer table.inv-table tr.inv-subtotal td {
+    background: #0b1f3a !important;
+    color: #fff !important;
   }
   body.printing-document #print-layer .invoice-hanko-stamp {
     width: 18mm !important;

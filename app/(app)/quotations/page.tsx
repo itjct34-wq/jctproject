@@ -20,7 +20,9 @@ import { CommercialQuotationTemplate } from '@/components/quotations/commercial-
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-import { ChevronRight, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { exportQuotationExcel } from '@/lib/utils/commercial-invoice-excel';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 import { decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel } from '@/lib/jct-official';
@@ -36,25 +38,47 @@ const statusStyles: Record<Quotation['status'], string> = {
 
 const emptyForm = {
   customer_id: '',
-  vehicle_id: '',
   price_type: 'FOB' as Quotation['price_type'],
-  subtotal: '',
-  freight: '',
+  freight: '0',
+  freight_notes: 'Container freight',
   insurance: '',
   other_fees: '',
   currency: 'USD',
   valid_until: '',
   notes: '',
-  description: '',
-  chassis_number: '',
-  stock_number: '',
-  make: '',
-  model: '',
-  colour: '',
-  year: '',
-  engine: '',
-  transmission: '',
 };
+
+type LineDraft = {
+  description: string;
+  quantity: string;
+  unit_price: string;
+  vehicle_id: string;
+  chassis_number: string;
+  stock_number: string;
+  make: string;
+  model: string;
+  colour: string;
+  year: string;
+  engine: string;
+  transmission: string;
+};
+
+function emptyQuoteLine(): LineDraft {
+  return {
+    description: '',
+    quantity: '1',
+    unit_price: '',
+    vehicle_id: '',
+    chassis_number: '',
+    stock_number: '',
+    make: '',
+    model: '',
+    colour: '',
+    year: '',
+    engine: '',
+    transmission: '',
+  };
+}
 
 export default function QuotationsPage() {
   const { profile } = useAuth();
@@ -72,7 +96,9 @@ export default function QuotationsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [printBreakdown, setPrintBreakdown] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [lineItems, setLineItems] = useState<LineDraft[]>([emptyQuoteLine()]);
   const [printItems, setPrintItems] = useState<
     Array<{ description: string; quantity: number; unit_price: number; line_total: number; vehicle_id?: string | null }>
   >([]);
@@ -117,14 +143,16 @@ export default function QuotationsPage() {
   const customerName = (id: string) => customers.find((c) => c.id === id)?.full_name || 'Unknown';
   const customerOf = (id: string) => customers.find((c) => c.id === id) || null;
 
-  const applyQuoteVehicle = (vehicleId: string) => {
+  const applyQuoteVehicle = (idx: number, vehicleId: string) => {
     const v = vehicles.find((x) => x.id === vehicleId);
+    const next = [...lineItems];
     if (!v) {
-      setForm((f) => ({ ...f, vehicle_id: '' }));
+      next[idx] = { ...next[idx], vehicle_id: '' };
+      setLineItems(next);
       return;
     }
-    setForm((f) => ({
-      ...f,
+    next[idx] = {
+      ...next[idx],
       vehicle_id: v.id,
       chassis_number: v.chassis_number || '',
       stock_number: v.stock_number || '',
@@ -132,31 +160,39 @@ export default function QuotationsPage() {
       model: v.model || '',
       colour: v.color || '',
       year: v.model_year != null ? String(v.model_year) : '',
-      engine: f.engine || '',
+      engine: next[idx].engine || '',
       transmission: formatTransmissionLabel(v.transmission),
-      subtotal: f.subtotal || String(v.listed_price || ''),
-      currency: v.listed_currency || f.currency,
-    }));
+      unit_price: next[idx].unit_price || String(v.listed_price || ''),
+    };
+    setLineItems(next);
+    if (v.listed_currency) setForm((f) => ({ ...f, currency: v.listed_currency || f.currency }));
   };
 
-  const encodedLineDescription = () =>
-    describeInvoiceVehicle({
-      chassis_number: form.chassis_number,
-      stock_number: form.stock_number,
-      make: form.make,
-      model: form.model,
-      colour: form.colour,
-      year: form.year,
-      engine: form.engine,
-      transmission: form.transmission,
-      notes: form.description,
-    });
+  const updateLine = (idx: number, patch: Partial<LineDraft>) => {
+    const next = [...lineItems];
+    next[idx] = { ...next[idx], ...patch };
+    setLineItems(next);
+  };
 
+  const calcSubtotal = (items: LineDraft[]) =>
+    items.reduce((sum, item) => sum + (Number(item.quantity) || 1) * (Number(item.unit_price) || 0), 0);
+
+  const linePayload = (quotationId: string) =>
+    lineItems
+      .filter((i) => i.vehicle_id || i.chassis_number.trim() || i.make.trim() || i.stock_number.trim() || i.description.trim())
+      .map((item) => ({
+        quotation_id: quotationId,
+        vehicle_id: item.vehicle_id || null,
+        description: describeInvoiceVehicle({ ...item, notes: item.description }),
+        quantity: Number(item.quantity) || 1,
+        unit_price: Number(item.unit_price) || 0,
+        line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0),
+      }));
 
   const submitQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !form.customer_id) return;
-    const subtotal = Number(form.subtotal) || 0;
+    const subtotal = calcSubtotal(lineItems);
     const freight = Number(form.freight) || 0;
     const insurance = Number(form.insurance) || 0;
     const otherFees = Number(form.other_fees) || 0;
@@ -169,6 +205,7 @@ export default function QuotationsPage() {
         price_type: form.price_type,
         subtotal,
         freight,
+        freight_notes: form.freight_notes.trim() || null,
         insurance,
         other_fees: otherFees,
         total,
@@ -185,18 +222,13 @@ export default function QuotationsPage() {
       return;
     }
     if (data) {
-      await supabase.from('quotation_items').insert({
-        quotation_id: data.id,
-        vehicle_id: form.vehicle_id || null,
-        description: encodedLineDescription(),
-        quantity: 1,
-        unit_price: subtotal,
-        line_total: subtotal,
-      });
+      const rows = linePayload(data.id);
+      if (rows.length) await supabase.from('quotation_items').insert(rows);
     }
     setSubmitting(false);
     toast.success('Quotation created');
     setForm(emptyForm);
+    setLineItems([emptyQuoteLine()]);
     setCreateOpen(false);
     loadData();
     if (data) setSelected(data as Quotation);
@@ -205,37 +237,49 @@ export default function QuotationsPage() {
   const openEdit = async () => {
     if (!selected) return;
     const { data } = await supabase.from('quotation_items').select('*').eq('quotation_id', selected.id);
-    const item = (data || [])[0] as { description?: string; vehicle_id?: string | null } | undefined;
-    const bits = decodeInvoiceVehicle(item?.description || selected.notes);
-    const v = vehicles.find((x) => x.id === item?.vehicle_id);
+    const rows = (data || []) as Array<{
+      description?: string;
+      vehicle_id?: string | null;
+      quantity?: number;
+      unit_price?: number;
+    }>;
     setForm({
       customer_id: selected.customer_id,
-      vehicle_id: item?.vehicle_id || '',
       price_type: selected.price_type,
-      subtotal: String(selected.subtotal),
-      freight: String(selected.freight),
+      freight: String(selected.freight ?? 0),
+      freight_notes: selected.freight_notes || 'Container freight',
       insurance: String(selected.insurance),
       other_fees: String(selected.other_fees),
       currency: selected.currency,
       valid_until: selected.valid_until || '',
       notes: selected.notes || '',
-      description: bits.notes || '',
-      chassis_number: bits.chassis_number || v?.chassis_number || '',
-      stock_number: bits.stock_number || v?.stock_number || '',
-      make: bits.make || v?.make || '',
-      model: bits.model || v?.model || '',
-      colour: bits.colour || v?.color || '',
-      year: bits.year || (v?.model_year != null ? String(v.model_year) : ''),
-      engine: bits.engine || '',
-      transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
     });
+    const mapped = rows.map((item) => {
+      const bits = decodeInvoiceVehicle(item.description);
+      const v = vehicles.find((x) => x.id === item.vehicle_id);
+      return {
+        description: bits.notes || '',
+        quantity: String(item.quantity ?? 1),
+        unit_price: String(item.unit_price ?? 0),
+        vehicle_id: item.vehicle_id || '',
+        chassis_number: bits.chassis_number || v?.chassis_number || '',
+        stock_number: bits.stock_number || v?.stock_number || '',
+        make: bits.make || v?.make || '',
+        model: bits.model || v?.model || '',
+        colour: bits.colour || v?.color || '',
+        year: bits.year || (v?.model_year != null ? String(v.model_year) : ''),
+        engine: bits.engine || '',
+        transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
+      };
+    });
+    setLineItems(mapped.length ? mapped : [emptyQuoteLine()]);
     setEditOpen(true);
   };
 
   const submitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
-    const subtotal = Number(form.subtotal) || 0;
+    const subtotal = calcSubtotal(lineItems);
     const freight = Number(form.freight) || 0;
     const insurance = Number(form.insurance) || 0;
     const otherFees = Number(form.other_fees) || 0;
@@ -248,6 +292,7 @@ export default function QuotationsPage() {
         price_type: form.price_type,
         subtotal,
         freight,
+        freight_notes: form.freight_notes.trim() || null,
         insurance,
         other_fees: otherFees,
         total,
@@ -263,14 +308,8 @@ export default function QuotationsPage() {
       return;
     }
     await supabase.from('quotation_items').delete().eq('quotation_id', selected.id);
-    await supabase.from('quotation_items').insert({
-      quotation_id: selected.id,
-      vehicle_id: form.vehicle_id || null,
-      description: encodedLineDescription(),
-      quantity: 1,
-      unit_price: subtotal,
-      line_total: subtotal,
-    });
+    const rows = linePayload(selected.id);
+    if (rows.length) await supabase.from('quotation_items').insert(rows);
     setSubmitting(false);
     const updated = {
       ...selected,
@@ -284,6 +323,7 @@ export default function QuotationsPage() {
       currency: form.currency,
       valid_until: form.valid_until || null,
       notes: form.notes.trim() || null,
+      freight_notes: form.freight_notes.trim() || null,
     };
     setSelected(updated);
     setQuotations((items) => items.map((i) => (i.id === updated.id ? updated : i)));
@@ -342,7 +382,7 @@ export default function QuotationsPage() {
           quantity: 1,
           unit_price: selected.subtotal,
           line_total: selected.subtotal,
-          vehicle_id: form.vehicle_id || null,
+          vehicle_id: null,
         },
       ]);
     }
@@ -377,58 +417,6 @@ export default function QuotationsPage() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>From stock (optional)</Label>
-          <Select value={form.vehicle_id || 'none'} onValueChange={(v) => (v === 'none' ? setForm({ ...form, vehicle_id: '' }) : applyQuoteVehicle(v))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Link vehicle" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Not in database — enter below</SelectItem>
-              {vehicles.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.stock_number} · {v.make} {v.model} · {v.chassis_number}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Chassis</Label>
-          <Input value={form.chassis_number} onChange={(e) => setForm({ ...form, chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis number" />
-        </div>
-        <div className="space-y-2">
-          <Label>Stock no.</Label>
-          <Input value={form.stock_number} onChange={(e) => setForm({ ...form, stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" />
-        </div>
-        <div className="space-y-2">
-          <Label>Make</Label>
-          <Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value, vehicle_id: '' })} placeholder="Make" />
-        </div>
-        <div className="space-y-2">
-          <Label>Model</Label>
-          <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value, vehicle_id: '' })} placeholder="Model" />
-        </div>
-        <div className="space-y-2">
-          <Label>Colour</Label>
-          <Input value={form.colour} onChange={(e) => setForm({ ...form, colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
-        </div>
-        <div className="space-y-2">
-          <Label>Year</Label>
-          <Input value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value, vehicle_id: '' })} placeholder="2016" />
-        </div>
-        <div className="space-y-2">
-          <Label>Engine</Label>
-          <Input value={form.engine} onChange={(e) => setForm({ ...form, engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" />
-        </div>
-        <div className="space-y-2">
-          <Label>Transmission</Label>
-          <Input value={form.transmission} onChange={(e) => setForm({ ...form, transmission: e.target.value, vehicle_id: '' })} placeholder="Automatic" />
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
           <Label>Price type</Label>
           <Select
             value={form.price_type}
@@ -453,14 +441,69 @@ export default function QuotationsPage() {
           <Input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} />
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Vehicle / unit price (subtotal)</Label>
-          <Input type="number" value={form.subtotal} onChange={(e) => setForm({ ...form, subtotal: e.target.value })} />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Vehicles</Label>
+          <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, emptyQuoteLine()])}>
+            <Plus className="mr-1 h-3.5 w-3.5" />Add vehicle
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label>Freight</Label>
-          <Input type="number" value={form.freight} onChange={(e) => setForm({ ...form, freight: e.target.value })} />
+        <div className="space-y-3">
+          {lineItems.map((item, idx) => (
+            <div key={idx} className="space-y-2 rounded-md border border-border/60 p-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px]">From stock (optional)</Label>
+                  <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyQuoteVehicle(idx, v === 'none' ? '' : v)}>
+                    <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not in database — enter below</SelectItem>
+                      {vehicles.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.stock_number} · {v.make} {v.model} · {v.chassis_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1"><Label className="text-[11px]">Chassis</Label><Input value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-1"><Label className="text-[11px]">Make</Label><Input value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-1"><Label className="text-[11px]">Model</Label><Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-1"><Label className="text-[11px]">Year</Label><Input value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-1"><Label className="text-[11px]">Engine</Label><Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-1"><Label className="text-[11px]">Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-1"><Label className="text-[11px]">Transmission</Label><Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} /></div>
+              </div>
+              <div className="grid grid-cols-12 gap-2 items-end">
+                <div className="col-span-3"><Label className="text-[11px]">Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
+                <div className="col-span-7"><Label className="text-[11px]">Vehicle cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} /></div>
+                <div className="col-span-2"><Button type="button" size="sm" variant="ghost" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Freight</Label>
+        <div className="overflow-x-auto rounded-md border border-border/60">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/60">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Description</th>
+                <th className="px-3 py-2 text-left font-medium">Currency</th>
+                <th className="px-3 py-2 text-right font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border/60">
+                <td className="px-3 py-2">
+                  <Input value={form.freight_notes} onChange={(e) => setForm({ ...form, freight_notes: e.target.value })} placeholder="Container freight" />
+                </td>
+                <td className="px-3 py-2 align-middle font-medium">{form.currency}</td>
+                <td className="px-3 py-2">
+                  <Input type="number" className="text-right" value={form.freight} onChange={(e) => setForm({ ...form, freight: e.target.value })} />
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -473,14 +516,10 @@ export default function QuotationsPage() {
           <Input type="number" value={form.other_fees} onChange={(e) => setForm({ ...form, other_fees: e.target.value })} />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label>Notes / description (optional extra text only)</Label>
-        <Textarea
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          rows={2}
-          placeholder="Not chassis, stock, make, year, or engine"
-        />
+      <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Vehicles total</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
+        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Freight</span><span>{form.currency} {(Number(form.freight)||0).toLocaleString()}</span></div>
+        <div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Quotation total</span><span>{form.currency} {(calcSubtotal(lineItems) + (Number(form.freight)||0) + (Number(form.insurance)||0) + (Number(form.other_fees)||0)).toLocaleString()}</span></div>
       </div>
       <div className="space-y-2">
         <Label>Notes</Label>
@@ -495,7 +534,7 @@ export default function QuotationsPage() {
         title="Quotations"
         description="FOB / C&F / CIF quotes with print layout matching commercial invoices"
         actions={
-          <Button size="sm" onClick={() => { setForm(emptyForm); setCreateOpen(true); }}>
+          <Button size="sm" onClick={() => { setForm(emptyForm); setLineItems([emptyQuoteLine()]); setCreateOpen(true); }}>
             <Plus className="mr-1.5 h-4 w-4" />
             New quotation
           </Button>
@@ -740,6 +779,12 @@ export default function QuotationsPage() {
           <DialogHeader className="print:hidden">
             <DialogTitle>Print quotation</DialogTitle>
           </DialogHeader>
+          <div className="print:hidden flex flex-wrap items-center gap-4 rounded-md border border-border/60 p-3 text-sm">
+            <label className="flex items-center gap-2">
+              <Switch checked={printBreakdown} onCheckedChange={setPrintBreakdown} />
+              Breakdown quotation {printBreakdown ? 'on' : 'off'}
+            </label>
+          </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">
               <div className="min-w-[720px] print:min-w-0">
@@ -750,13 +795,31 @@ export default function QuotationsPage() {
                   vehicles={vehicles}
                   salesAgent={profile?.full_name || profile?.email}
                   verificationUrl={selected.verification_token ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/') : undefined}
+                  layoutVariant={printBreakdown ? 'breakdown' : 'standard'}
                 />
               </div>
             </div>
           )}
-          <DialogFooter className="print:hidden">
+          <DialogFooter className="print:hidden flex-wrap gap-2">
             <Button variant="outline" onClick={() => setPrintOpen(false)}>
               Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (!selected) return;
+                await exportQuotationExcel({
+                  quotation: selected,
+                  items: printItems,
+                  customer: customerOf(selected.customer_id),
+                  verifyUrl: selected.verification_token
+                    ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/')
+                    : undefined,
+                });
+                toast.success('Quotation Excel downloaded');
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" /> Excel
             </Button>
             <Button
               onClick={() => {

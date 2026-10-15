@@ -13,6 +13,7 @@ type Props = {
   verificationUrl?: string;
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color' | 'model_year' | 'transmission'>[];
   salesAgent?: string | null;
+  layoutVariant?: 'standard' | 'breakdown';
 };
 
 export function CommercialQuotationTemplate({
@@ -22,11 +23,13 @@ export function CommercialQuotationTemplate({
   verificationUrl,
   vehicles,
   salesAgent,
+  layoutVariant = 'standard',
 }: Props) {
   const insurance = Number(quotation.insurance || 0);
   const other = Number(quotation.other_fees || 0);
   const subtotal = Number(quotation.subtotal || 0);
-  const grand = Number(quotation.total || subtotal + insurance + other);
+  const freight = Number(quotation.freight || 0);
+  const grand = Number(quotation.total || subtotal + freight + insurance + other);
 
   const lines: TradeLine[] =
     items.length > 0
@@ -68,9 +71,15 @@ export function CommercialQuotationTemplate({
       shipmentTerm={quotation.price_type}
       lines={lines}
       vehicles={vehicles}
+      vehiclesTotal={subtotal}
+      freightAmount={freight}
+      freightNotes={quotation.freight_notes}
+      insuranceAmount={insurance}
+      otherAmount={other}
       grandTotal={grand}
       notes={quotation.notes}
       verificationUrl={verificationUrl}
+      layoutVariant={layoutVariant}
     />
   );
 }

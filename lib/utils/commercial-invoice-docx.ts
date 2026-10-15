@@ -173,10 +173,67 @@ export async function exportCommercialInvoiceDocx(opts: {
               ...vehicleRows,
               new TableRow({
                 children: [
-                  cell('TOTAL', { bold: true }),
+                  cell('VEHICLES TOTAL', { bold: true }),
                   cell(''),
                   cell(''),
-                  cell(formatMoney(grand, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
+                  cell(formatMoney(Number(invoice.subtotal || 0), invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({
+            spacing: { before: 200, after: 80 },
+            children: [new TextRun({ text: 'FREIGHT', bold: true, size: 18 })],
+          }),
+          new Table({
+            width: { size: 9360, type: WidthType.DXA },
+            rows: [
+              new TableRow({
+                children: [
+                  cell('Description', { bold: true, fill: RED, color: 'FFFFFF' }),
+                  cell('Currency', { bold: true, fill: RED, color: 'FFFFFF' }),
+                  cell('Amount', { bold: true, fill: RED, color: 'FFFFFF' }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  cell(invoice.freight_notes?.trim() || 'Container freight'),
+                  cell(invoice.currency),
+                  cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  cell('FREIGHT TOTAL', { bold: true }),
+                  cell(''),
+                  cell(formatMoney(freight, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({
+            spacing: { before: 200, after: 80 },
+            children: [new TextRun({ text: 'TOTALS', bold: true, size: 18 })],
+          }),
+          new Table({
+            width: { size: 9360, type: WidthType.DXA },
+            rows: [
+              new TableRow({
+                children: [
+                  cell('Vehicles total'),
+                  cell(formatMoney(Number(invoice.subtotal || 0), invoice.currency), { align: AlignmentType.RIGHT }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  cell('Freight'),
+                  cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  cell('INVOICE TOTAL', { bold: true, fill: RED, color: 'FFFFFF' }),
+                  cell(formatMoney(grand, invoice.currency), { bold: true, fill: RED, color: 'FFFFFF', align: AlignmentType.RIGHT }),
                 ],
               }),
             ],
