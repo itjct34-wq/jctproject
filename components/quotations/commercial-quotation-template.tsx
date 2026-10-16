@@ -3,17 +3,28 @@
 import { format } from 'date-fns';
 import type { Quotation, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument, type TradeLine } from '@/components/documents/official-trade-document';
-import { decodeInvoiceVehicle } from '@/lib/jct-official';
+import { decodeInvoiceVehicle, type CompanyLetterheadSettings } from '@/lib/jct-official';
 
 type Props = {
   quotation: Quotation;
   items?: TradeLine[];
   customer?: Customer | null;
-  company?: { name?: string; address?: string; phone?: string; email?: string };
+  company?: CompanyLetterheadSettings | { name?: string; address?: string; phone?: string; email?: string } | null;
   verificationUrl?: string;
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color' | 'model_year' | 'transmission'>[];
   salesAgent?: string | null;
 };
+
+function toLetterhead(
+  company?: Props['company']
+): CompanyLetterheadSettings | null {
+  if (!company) return null;
+  if ('company_name' in company || 'logo_url' in company || 'hanko_url' in company || 'legal_name' in company) {
+    return company as CompanyLetterheadSettings;
+  }
+  const legacy = company as { name?: string };
+  return legacy.name ? { company_name: legacy.name } : null;
+}
 
 export function CommercialQuotationTemplate({
   quotation,
@@ -78,7 +89,7 @@ export function CommercialQuotationTemplate({
       grandTotal={grand}
       notes={quotation.notes}
       verificationUrl={verificationUrl}
-      company={company?.name ? { company_name: company.name } : null}
+      company={toLetterhead(company)}
     />
   );
 }

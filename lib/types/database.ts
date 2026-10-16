@@ -172,6 +172,8 @@ export interface CompanySettings {
   company_name: string;
   legal_name: string | null;
   logo_url: string | null;
+  /** Company seal / hanko image URL for invoices & quotations. */
+  hanko_url: string | null;
   address_line1: string | null;
   address_line2: string | null;
   city: string | null;

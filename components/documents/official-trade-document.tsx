@@ -7,6 +7,8 @@ import {
   formatDocumentNo,
   formatMoney,
   formatTransmissionLabel,
+  letterheadHankoUrl,
+  letterheadLogoUrl,
   letterheadName,
   type CompanyLetterheadSettings,
 } from '@/lib/jct-official';
@@ -182,6 +184,8 @@ export function OfficialTradeDocument({
   const mode = shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel');
   const printedNo = formatDocumentNo(documentNo);
   const orgName = letterheadName(company);
+  const logoUrl = letterheadLogoUrl(company);
+  const hankoUrl = letterheadHankoUrl(company);
   const beneficiaryName = letterheadName(company) || JCT_OFFICIAL.bank.beneficiary;
   const showDeposit = kind === 'invoice';
   const vehiclesSum =
@@ -203,11 +207,20 @@ export function OfficialTradeDocument({
   return (
     <div className="invoice-print-root bg-white text-[#0b1f3a] max-w-[210mm] mx-auto">
       <div className="invoice-sheet flex flex-col bg-white p-[8mm]">
-        <header className="flex items-end justify-between gap-4 border-b-2 border-[#c4161c] pb-2">
-          <div className="min-w-0">
-            <p className="text-[14px] font-bold leading-tight tracking-tight text-[#0b1f3a]">{orgName}</p>
-            <p className="mt-0.5 text-[8px] leading-snug text-[#0b1f3a]">{JCT_OFFICIAL.address}</p>
-          </div>
+        <header className="flex items-center justify-between gap-4 border-b-2 border-[#c4161c] pb-2">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- print docs need a plain img for PDF capture
+            <img
+              src={logoUrl}
+              alt={orgName}
+              className="h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0"
+            />
+          ) : (
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold leading-tight tracking-tight text-[#0b1f3a]">{orgName}</p>
+              <p className="mt-0.5 text-[8px] leading-snug text-[#0b1f3a]">{JCT_OFFICIAL.address}</p>
+            </div>
+          )}
           <div className="text-right shrink-0">
             <h1 className="text-[22px] font-black leading-none tracking-tight text-[#0b1f3a]">{title}</h1>
             <p className="mt-1 font-mono text-[12px] font-bold text-[#0b1f3a]">{printedNo}</p>
@@ -453,7 +466,7 @@ export function OfficialTradeDocument({
                 <span className="font-semibold">{JCT_OFFICIAL.directorTitle}</span>{' '}
                 <span className="invoice-hanko-name">
                   <span className="invoice-hanko-director">{JCT_OFFICIAL.director}</span>
-                  <JctHanko className="invoice-hanko-stamp" />
+                  <JctHanko className="invoice-hanko-stamp" src={hankoUrl} alt={`${orgName} seal`} />
                 </span>
               </p>
               <p className="mt-0.5 text-[7.5px] leading-snug">

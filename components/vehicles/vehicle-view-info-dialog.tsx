@@ -24,7 +24,8 @@ import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
 import { cn } from '@/lib/utils';
 import type { VehicleRemittanceRef } from '@/components/vehicles/vehicle-remittance-popover';
-import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
+import type { CompanySettings, Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
+import type { CompanyLetterheadSettings } from '@/lib/jct-official';
 import {
   commissionAmountPkr,
   effectiveCommissionStatus,
@@ -209,10 +210,34 @@ export function VehicleViewInfoDialog({
   const [previewItems, setPreviewItems] = useState<InvoiceItem[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [companyLetterhead, setCompanyLetterhead] = useState<CompanyLetterheadSettings | null>(null);
 
   useEffect(() => {
     if (open) setTab(VIEW_INFO_DEFAULT_TAB);
   }, [open, vehicle?.id]);
+
+  useEffect(() => {
+    if (!open && !previewOpen) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('company_name, legal_name, logo_url, hanko_url')
+        .limit(1)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const row = data as Pick<CompanySettings, 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'>;
+      setCompanyLetterhead({
+        company_name: row.company_name,
+        legal_name: row.legal_name,
+        logo_url: row.logo_url,
+        hanko_url: row.hanko_url,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, previewOpen]);
 
   const loadHistory = useCallback(async (vehicleId: string) => {
     setHistoryLoading(true);
@@ -842,6 +867,7 @@ export function VehicleViewInfoDialog({
                   invoice={previewInvoice}
                   items={previewItems}
                   customer={previewCustomer as Customer | null}
+                  company={companyLetterhead}
                   vehicles={[vehicle]}
                   salesAgent={previewInvoice.sales_agent_name || null}
                   showQr

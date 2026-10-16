@@ -26,14 +26,22 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [brandUploading, setBrandUploading] = useState<'logo' | 'hanko' | null>(null);
   const [fullName, setFullName] = useState('');
   const [preferredCurrency, setPreferredCurrency] = useState('USD');
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+  const hankoFileRef = useRef<HTMLInputElement>(null);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from('company_settings').select('*').limit(1).maybeSingle();
-    setSettings(data as CompanySettings | null);
+    if (!data) {
+      setSettings(null);
+    } else {
+      const row = data as CompanySettings;
+      setSettings({ ...row, hanko_url: row.hanko_url ?? null, logo_url: row.logo_url ?? null });
+    }
     setLoading(false);
   }, []);
 
@@ -56,6 +64,8 @@ export default function SettingsPage() {
       .update({
         company_name: settings.company_name,
         legal_name: settings.legal_name,
+        logo_url: settings.logo_url,
+        hanko_url: settings.hanko_url,
         address_line1: settings.address_line1,
         address_line2: settings.address_line2,
         city: settings.city,
@@ -157,8 +167,56 @@ export default function SettingsPage() {
     if (typeof refreshProfile === 'function') await refreshProfile();
   };
 
-  const update = (field: keyof CompanySettings, value: string | number) => {
+  const update = (field: keyof CompanySettings, value: string | number | null) => {
     setSettings((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const uploadCompanyAsset = async (kind: 'logo' | 'hanko', file: File) => {
+    if (!settings) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be under 2MB');
+      return;
+    }
+    setBrandUploading(kind);
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `company/${kind}.${ext}`;
+    const field = kind === 'logo' ? 'logo_url' : 'hanko_url';
+
+    const persistUrl = async (url: string) => {
+      const { error } = await supabase.from('company_settings').update({ [field]: url }).eq('id', settings.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      update(field, url);
+      toast.success(kind === 'logo' ? 'Company logo updated' : 'Hanko / seal updated');
+    };
+
+    const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+    });
+    if (upErr) {
+      if (upErr.message.toLowerCase().includes('bucket') || upErr.message.toLowerCase().includes('not found')) {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          await persistUrl(String(reader.result));
+          setBrandUploading(null);
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+      setBrandUploading(null);
+      toast.error(upErr.message);
+      return;
+    }
+    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+    await persistUrl(`${pub.publicUrl}?t=${Date.now()}`);
+    setBrandUploading(null);
   };
 
   if (loading) {
@@ -271,6 +329,116 @@ export default function SettingsPage() {
               <CardContent className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Company Name</Label><Input value={settings.company_name} onChange={(e) => update('company_name', e.target.value)} disabled={!canEdit} /></div>
                 <div className="space-y-2"><Label>Legal Name</Label><Input value={settings.legal_name || ''} onChange={(e) => update('legal_name', e.target.value)} disabled={!canEdit} /></div>
+                <div className="md:col-span-2 grid sm:grid-cols-2 gap-4 rounded-lg border border-border/60 p-4">
+                  <div className="space-y-2">
+                    <Label>Letterhead logo</Label>
+                    <p className="text-xs text-muted-foreground">Used on invoices, auction invoices, and quotations.</p>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-20 w-36 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/30">
+                        {settings.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={settings.logo_url} alt="" className="h-full w-full object-contain" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No logo</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!canEdit || brandUploading === 'logo'}
+                          onClick={() => logoFileRef.current?.click()}
+                        >
+                          {brandUploading === 'logo' ? (
+                            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Uploading…</>
+                          ) : (
+                            <><Camera className="mr-1.5 h-3.5 w-3.5" />Upload logo</>
+                          )}
+                        </Button>
+                        {settings.logo_url && canEdit && (
+                          <Button type="button" size="sm" variant="ghost" onClick={() => update('logo_url', null)}>
+                            Clear
+                          </Button>
+                        )}
+                        <input
+                          ref={logoFileRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void uploadCompanyAsset('logo', f);
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Or logo URL</Label>
+                      <Input
+                        value={settings.logo_url || ''}
+                        onChange={(e) => update('logo_url', e.target.value || null)}
+                        disabled={!canEdit}
+                        placeholder="/images/company-logo.png"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hanko / company seal</Label>
+                    <p className="text-xs text-muted-foreground">Stamp shown next to the director name on print docs.</p>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/30">
+                        {settings.hanko_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={settings.hanko_url} alt="" className="h-full w-full object-contain" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No seal</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!canEdit || brandUploading === 'hanko'}
+                          onClick={() => hankoFileRef.current?.click()}
+                        >
+                          {brandUploading === 'hanko' ? (
+                            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Uploading…</>
+                          ) : (
+                            <><Camera className="mr-1.5 h-3.5 w-3.5" />Upload hanko</>
+                          )}
+                        </Button>
+                        {settings.hanko_url && canEdit && (
+                          <Button type="button" size="sm" variant="ghost" onClick={() => update('hanko_url', null)}>
+                            Clear
+                          </Button>
+                        )}
+                        <input
+                          ref={hankoFileRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void uploadCompanyAsset('hanko', f);
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Or hanko URL</Label>
+                      <Input
+                        value={settings.hanko_url || ''}
+                        onChange={(e) => update('hanko_url', e.target.value || null)}
+                        disabled={!canEdit}
+                        placeholder="/images/company-hanko.png"
+                      />
+                    </div>
+                  </div>
+                </div>
                 <div className="space-y-2"><Label>Address Line 1</Label><Input value={settings.address_line1 || ''} onChange={(e) => update('address_line1', e.target.value)} disabled={!canEdit} /></div>
                 <div className="space-y-2"><Label>Address Line 2</Label><Input value={settings.address_line2 || ''} onChange={(e) => update('address_line2', e.target.value)} disabled={!canEdit} /></div>
                 <div className="space-y-2"><Label>City</Label><Input value={settings.city || ''} onChange={(e) => update('city', e.target.value)} disabled={!canEdit} /></div>

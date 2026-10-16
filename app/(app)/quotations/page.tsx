@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
-import type { Quotation, Customer, Vehicle } from '@/lib/types';
+import type { Quotation, Customer, Vehicle, CompanySettings } from '@/lib/types';
 import { CommercialQuotationTemplate } from '@/components/quotations/commercial-quotation-template';
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
@@ -24,7 +24,12 @@ import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Printer, Searc
 import { exportQuotationExcel } from '@/lib/utils/commercial-invoice-excel';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
-import { decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel } from '@/lib/jct-official';
+import {
+  decodeInvoiceVehicle,
+  describeInvoiceVehicle,
+  formatTransmissionLabel,
+  type CompanyLetterheadSettings,
+} from '@/lib/jct-official';
 
 const statusStyles: Record<Quotation['status'], string> = {
   draft: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -100,10 +105,11 @@ export default function QuotationsPage() {
   const [printItems, setPrintItems] = useState<
     Array<{ description: string; quantity: number; unit_price: number; line_total: number; vehicle_id?: string | null }>
   >([]);
+  const [companyLetterhead, setCompanyLetterhead] = useState<CompanyLetterheadSettings | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [qRes, cRes, vRes] = await Promise.all([
+    const [qRes, cRes, vRes, setRes] = await Promise.all([
       supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(250),
       supabase
         .from('customers')
@@ -118,11 +124,25 @@ export default function QuotationsPage() {
         .in('status', ['in_stock', 'reserved'])
         .order('updated_at', { ascending: false })
         .limit(250),
+      supabase
+        .from('company_settings')
+        .select('company_name, legal_name, logo_url, hanko_url')
+        .limit(1)
+        .maybeSingle(),
     ]);
     if (qRes.error) toast.error(`Unable to load quotations: ${qRes.error.message}`);
     else setQuotations((qRes.data || []) as Quotation[]);
     if (cRes.data) setCustomers(cRes.data as Customer[]);
     if (vRes.data) setVehicles(vRes.data as Vehicle[]);
+    if (setRes.data) {
+      const row = setRes.data as Pick<CompanySettings, 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'>;
+      setCompanyLetterhead({
+        company_name: row.company_name,
+        legal_name: row.legal_name,
+        logo_url: row.logo_url,
+        hanko_url: row.hanko_url,
+      });
+    }
     setLoading(false);
   }, []);
 
@@ -786,6 +806,7 @@ export default function QuotationsPage() {
                   quotation={selected}
                   items={printItems}
                   customer={customerOf(selected.customer_id)}
+                  company={companyLetterhead}
                   vehicles={vehicles}
                   salesAgent={profile?.full_name || profile?.email}
                   verificationUrl={selected.verification_token ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/') : undefined}

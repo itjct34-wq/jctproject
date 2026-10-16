@@ -3,19 +3,30 @@
 import { format } from 'date-fns';
 import type { Invoice, InvoiceItem, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument } from '@/components/documents/official-trade-document';
-import { decodeInvoiceVehicle } from '@/lib/jct-official';
+import { decodeInvoiceVehicle, type CompanyLetterheadSettings } from '@/lib/jct-official';
 import { buildVerifyUrl } from './qr-code';
 
 type Props = {
   invoice: Invoice;
   items: InvoiceItem[];
   customer?: Customer | null;
-  company?: { name?: string; address?: string; phone?: string; email?: string };
+  company?: CompanyLetterheadSettings | { name?: string; address?: string; phone?: string; email?: string } | null;
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color' | 'model_year' | 'transmission'>[];
   salesAgent?: string | null;
   showQr?: boolean;
   variant?: 'commercial' | 'auction_deposit';
 };
+
+function toLetterhead(
+  company?: Props['company']
+): CompanyLetterheadSettings | null {
+  if (!company) return null;
+  if ('company_name' in company || 'logo_url' in company || 'hanko_url' in company || 'legal_name' in company) {
+    return company as CompanyLetterheadSettings;
+  }
+  const legacy = company as { name?: string };
+  return legacy.name ? { company_name: legacy.name } : null;
+}
 
 export function CommercialInvoiceTemplate({
   invoice,
@@ -82,7 +93,7 @@ export function CommercialInvoiceTemplate({
       verificationUrl={verifyUrl || undefined}
       showQr={showQr}
       depositMode={variant === 'auction_deposit' ? 'amount' : 'ratio'}
-      company={company?.name ? { company_name: company.name } : null}
+      company={toLetterhead(company)}
     />
   );
 }

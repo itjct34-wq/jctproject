@@ -104,7 +104,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [form, setForm] = useState(emptyForm);
   const [lineItems, setLineItems] = useState<LineDraft[]>([]);
   const isAuction = kind === 'auction';
-  const [companySettings, setCompanySettings] = useState<Pick<CompanySettings, 'id' | 'invoice_prefix' | 'invoice_next_number'> | null>(null);
+  const [companySettings, setCompanySettings] = useState<Pick<
+    CompanySettings,
+    'id' | 'invoice_prefix' | 'invoice_next_number' | 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'
+  > | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -114,14 +117,25 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2').order('full_name').limit(250),
       supabase.from('sales').select('id, sale_code').order('created_at', { ascending: false }).limit(250),
       supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, model_year, transmission').order('created_at', { ascending: false }).limit(250),
-      supabase.from('company_settings').select('id, invoice_prefix, invoice_next_number').limit(1).maybeSingle(),
+      supabase
+        .from('company_settings')
+        .select('id, invoice_prefix, invoice_next_number, company_name, legal_name, logo_url, hanko_url')
+        .limit(1)
+        .maybeSingle(),
     ]);
     if (iRes.error) toast.error(`Unable to load invoices: ${iRes.error.message}`);
     else setInvoices((iRes.data || []) as Invoice[]);
     if (cRes.data) setCustomers(cRes.data as Customer[]);
     if (sRes.data) setSales(sRes.data as Sale[]);
     if (vRes.data) setVehicles(vRes.data as Vehicle[]);
-    if (setRes.data) setCompanySettings(setRes.data as Pick<CompanySettings, 'id' | 'invoice_prefix' | 'invoice_next_number'>);
+    if (setRes.data) {
+      setCompanySettings(
+        setRes.data as Pick<
+          CompanySettings,
+          'id' | 'invoice_prefix' | 'invoice_next_number' | 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'
+        >
+      );
+    }
     setLoading(false);
   }, []);
 
@@ -847,6 +861,16 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   invoice={selected}
                   items={items}
                   customer={customers.find((c) => c.id === selected.customer_id) || null}
+                  company={
+                    companySettings
+                      ? {
+                          company_name: companySettings.company_name,
+                          legal_name: companySettings.legal_name,
+                          logo_url: companySettings.logo_url,
+                          hanko_url: companySettings.hanko_url,
+                        }
+                      : null
+                  }
                   vehicles={vehicles}
                   salesAgent={selected.sales_agent_name || form.sales_agent || null}
                   showQr={printShowQr}

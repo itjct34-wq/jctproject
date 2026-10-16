@@ -1,4 +1,21 @@
-/** Company seal image removed from branding; keep component as a no-op for layout callers. */
-export function JctHanko(_props: { className?: string }) {
-  return null;
+/** Company seal / hanko for print letterheads. Renders nothing when src is empty. */
+export function JctHanko({
+  className = '',
+  src,
+  alt = 'Company seal',
+}: {
+  className?: string;
+  src?: string | null;
+  alt?: string;
+}) {
+  const url = (src || '').trim();
+  if (!url) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- print docs need a plain img for PDF capture
+    <img
+      src={url}
+      alt={alt}
+      className={`h-[86px] w-[86px] shrink-0 object-contain ${className}`}
+    />
+  );
 }

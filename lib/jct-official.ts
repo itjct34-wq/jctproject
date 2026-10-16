@@ -1,9 +1,19 @@
 /** Neutral letterhead when company_settings.company_name / legal_name are unset. */
 export const COMPANY_NAME_FALLBACK = 'Company';
 
+/**
+ * Optional public paths used only when company_settings logo/hanko URLs are empty.
+ * Set these (e.g. `/images/company-logo.png`) if you ship neutral assets under public/;
+ * leave empty to rely solely on Settings uploads — never hard-code a brand name in UI text.
+ */
+export const COMPANY_LOGO_PUBLIC_FALLBACK = '';
+export const COMPANY_HANKO_PUBLIC_FALLBACK = '';
+
 export type CompanyLetterheadSettings = {
   company_name?: string | null;
   legal_name?: string | null;
+  logo_url?: string | null;
+  hanko_url?: string | null;
 };
 
 /** Prefer org settings for visible company name; never hard-code a brand wordmark. */
@@ -11,6 +21,20 @@ export function letterheadName(settings?: CompanyLetterheadSettings | null) {
   const legal = settings?.legal_name?.trim();
   const company = settings?.company_name?.trim();
   return legal || company || COMPANY_NAME_FALLBACK;
+}
+
+/** Letterhead logo: settings URL first, then optional public fallback path. */
+export function letterheadLogoUrl(settings?: CompanyLetterheadSettings | null) {
+  const fromSettings = settings?.logo_url?.trim();
+  if (fromSettings) return fromSettings;
+  return COMPANY_LOGO_PUBLIC_FALLBACK || '';
+}
+
+/** Hanko / company seal: settings URL first, then optional public fallback path. */
+export function letterheadHankoUrl(settings?: CompanyLetterheadSettings | null) {
+  const fromSettings = settings?.hanko_url?.trim();
+  if (fromSettings) return fromSettings;
+  return COMPANY_HANKO_PUBLIC_FALLBACK || '';
 }
 
 export const JCT_OFFICIAL = {
