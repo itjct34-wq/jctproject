@@ -30,6 +30,19 @@ import {
   formatTransmissionLabel,
   type CompanyLetterheadSettings,
 } from '@/lib/jct-official';
+import {
+  normalizeFreightAmount,
+  normalizeFreightNotes,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
+
+function quoteFreightPolicy(priceType: Quotation['price_type']) {
+  return resolveFreightPolicy({
+    incoterm: priceType === 'CNF' ? 'C&F' : priceType,
+    shipmentType: 'RORO',
+    containerMode: 'RORO Vessel',
+  });
+}
 
 const statusStyles: Record<Quotation['status'], string> = {
   draft: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -44,7 +57,7 @@ const emptyForm = {
   customer_id: '',
   price_type: 'FOB' as Quotation['price_type'],
   freight: '0',
-  freight_notes: 'Container freight',
+  freight_notes: 'Ocean freight',
   insurance: '',
   other_fees: '',
   currency: 'USD',
@@ -212,8 +225,10 @@ export default function QuotationsPage() {
   const submitQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !form.customer_id) return;
+    const policy = quoteFreightPolicy(form.price_type);
     const subtotal = calcSubtotal(lineItems);
-    const freight = Number(form.freight) || 0;
+    const freight = normalizeFreightAmount(policy, form.freight);
+    const freightNotes = normalizeFreightNotes(policy, form.freight_notes);
     const insurance = Number(form.insurance) || 0;
     const otherFees = Number(form.other_fees) || 0;
     const total = subtotal + freight + insurance + otherFees;
@@ -225,7 +240,7 @@ export default function QuotationsPage() {
         price_type: form.price_type,
         subtotal,
         freight,
-        freight_notes: form.freight_notes.trim() || null,
+        freight_notes: freightNotes,
         insurance,
         other_fees: otherFees,
         total,
@@ -263,11 +278,12 @@ export default function QuotationsPage() {
       quantity?: number;
       unit_price?: number;
     }>;
+    const editPolicy = quoteFreightPolicy(selected.price_type);
     setForm({
       customer_id: selected.customer_id,
       price_type: selected.price_type,
-      freight: String(selected.freight ?? 0),
-      freight_notes: selected.freight_notes || 'Container freight',
+      freight: String(normalizeFreightAmount(editPolicy, selected.freight)),
+      freight_notes: normalizeFreightNotes(editPolicy, selected.freight_notes) || '',
       insurance: String(selected.insurance),
       other_fees: String(selected.other_fees),
       currency: selected.currency,
@@ -299,8 +315,10 @@ export default function QuotationsPage() {
   const submitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return;
+    const policy = quoteFreightPolicy(form.price_type);
     const subtotal = calcSubtotal(lineItems);
-    const freight = Number(form.freight) || 0;
+    const freight = normalizeFreightAmount(policy, form.freight);
+    const freightNotes = normalizeFreightNotes(policy, form.freight_notes);
     const insurance = Number(form.insurance) || 0;
     const otherFees = Number(form.other_fees) || 0;
     const total = subtotal + freight + insurance + otherFees;
@@ -312,7 +330,7 @@ export default function QuotationsPage() {
         price_type: form.price_type,
         subtotal,
         freight,
-        freight_notes: form.freight_notes.trim() || null,
+        freight_notes: freightNotes,
         insurance,
         other_fees: otherFees,
         total,
@@ -343,7 +361,7 @@ export default function QuotationsPage() {
       currency: form.currency,
       valid_until: form.valid_until || null,
       notes: form.notes.trim() || null,
-      freight_notes: form.freight_notes.trim() || null,
+      freight_notes: freightNotes,
     };
     setSelected(updated);
     setQuotations((items) => items.map((i) => (i.id === updated.id ? updated : i)));
@@ -420,8 +438,8 @@ export default function QuotationsPage() {
 
   const formFields = (
     <>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-2">
+      <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-0.5">
           <Label>Customer *</Label>
           <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
             <SelectTrigger>
@@ -436,11 +454,21 @@ export default function QuotationsPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-0.5">
           <Label>Price type</Label>
           <Select
             value={form.price_type}
-            onValueChange={(v: Quotation['price_type']) => setForm({ ...form, price_type: v })}
+            onValueChange={(v: Quotation['price_type']) => {
+              const policy = quoteFreightPolicy(v);
+              setForm({
+                ...form,
+                price_type: v,
+                freight: policy.allowFreight ? form.freight : '0',
+                freight_notes: policy.allowFreight
+                  ? form.freight_notes.trim() || policy.defaultFreightLabel
+                  : '',
+              });
+            }}
           >
             <SelectTrigger>
               <SelectValue />
@@ -452,96 +480,91 @@ export default function QuotationsPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-0.5">
           <Label>Currency</Label>
           <CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-0.5">
           <Label>Valid until</Label>
           <Input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} />
         </div>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label>Vehicles</Label>
+          <Label className="text-xs font-semibold">Vehicles</Label>
           <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, emptyQuoteLine()])}>
-            <Plus className="mr-1 h-3.5 w-3.5" />Add vehicle
+            <Plus className="mr-1 h-3.5 w-3.5" />Add
           </Button>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-1.5">
           {lineItems.map((item, idx) => (
-            <div key={idx} className="space-y-1.5 rounded-md border border-border/60 p-2.5">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px]">From stock (optional)</Label>
+            <div key={idx} className="space-y-1 rounded-md border border-border/60 p-1.5">
+              <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="space-y-0.5 sm:col-span-2">
+                  <Label>From stock</Label>
                   <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyQuoteVehicle(idx, v === 'none' ? '' : v)}>
                     <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Not in database — enter below</SelectItem>
+                      <SelectItem value="none">Enter manually</SelectItem>
                       {vehicles.map((v) => (
                         <SelectItem key={v.id} value={v.id}>{v.stock_number} · {v.make} {v.model} · {v.chassis_number}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1"><Label className="text-[11px]">Chassis</Label><Input value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} /></div>
-                <div className="space-y-1"><Label className="text-[11px]">Make</Label><Input value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} /></div>
-                <div className="space-y-1"><Label className="text-[11px]">Model</Label><Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} /></div>
-                <div className="space-y-1"><Label className="text-[11px]">Year</Label><Input value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} /></div>
-                <div className="space-y-1"><Label className="text-[11px]">Engine</Label><Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} /></div>
-                <div className="space-y-1"><Label className="text-[11px]">Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} /></div>
-                <div className="space-y-1"><Label className="text-[11px]">Transmission</Label><Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} /></div>
-              </div>
-              <div className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-3"><Label className="text-[11px]">Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
-                <div className="col-span-7"><Label className="text-[11px]">Vehicle cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} /></div>
-                <div className="col-span-2"><Button type="button" size="sm" variant="ghost" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+                <div className="space-y-0.5"><Label>Chassis</Label><Input value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Make</Label><Input value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Model</Label><Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Year</Label><Input value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Engine</Label><Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Transmission</Label><Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} /></div>
+                <div className="space-y-0.5"><Label>Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
+                <div className="space-y-0.5"><Label>Cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} /></div>
+                <div className="flex items-end justify-end">
+                  <Button type="button" size="icon" variant="ghost" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove vehicle">
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-      <div className="space-y-2">
-        <Label>Freight</Label>
-        <div className="overflow-x-auto rounded-md border border-border/60">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">Description</th>
-                <th className="px-3 py-2 text-left font-medium">Currency</th>
-                <th className="px-3 py-2 text-right font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-t border-border/60">
-                <td className="px-3 py-2">
-                  <Input value={form.freight_notes} onChange={(e) => setForm({ ...form, freight_notes: e.target.value })} placeholder="Container freight" />
-                </td>
-                <td className="px-3 py-2 align-middle font-medium">{form.currency}</td>
-                <td className="px-3 py-2">
-                  <Input type="number" className="text-right" value={form.freight} onChange={(e) => setForm({ ...form, freight: e.target.value })} />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      {quoteFreightPolicy(form.price_type).allowFreight ? (
+        <div className="grid gap-1.5 sm:grid-cols-4">
+          <div className="space-y-0.5 sm:col-span-2">
+            <Label>Ocean freight description</Label>
+            <Input
+              value={form.freight_notes}
+              onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
+              placeholder="Ocean freight"
+            />
+          </div>
+          <div className="space-y-0.5">
+            <Label>Freight ({form.currency})</Label>
+            <Input type="number" value={form.freight} onChange={(e) => setForm({ ...form, freight: e.target.value })} />
+          </div>
+          <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance} onChange={(e) => setForm({ ...form, insurance: e.target.value })} /></div>
+          <div className="space-y-0.5 sm:col-span-4 lg:col-span-1"><Label>Other fees</Label><Input type="number" value={form.other_fees} onChange={(e) => setForm({ ...form, other_fees: e.target.value })} /></div>
         </div>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Insurance</Label>
-          <Input type="number" value={form.insurance} onChange={(e) => setForm({ ...form, insurance: e.target.value })} />
+      ) : (
+        <div className="grid gap-1.5 sm:grid-cols-4">
+          <p className="sm:col-span-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+            FOB — vehicle cost only; freight is not included.
+          </p>
+          <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance} onChange={(e) => setForm({ ...form, insurance: e.target.value })} /></div>
+          <div className="space-y-0.5"><Label>Other fees</Label><Input type="number" value={form.other_fees} onChange={(e) => setForm({ ...form, other_fees: e.target.value })} /></div>
         </div>
-        <div className="space-y-2">
-          <Label>Other fees</Label>
-          <Input type="number" value={form.other_fees} onChange={(e) => setForm({ ...form, other_fees: e.target.value })} />
-        </div>
+      )}
+      <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs space-y-0.5">
+        <div className="flex justify-between"><span className="text-muted-foreground">Vehicles</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
+        {quoteFreightPolicy(form.price_type).allowFreight && (
+          <div className="flex justify-between"><span className="text-muted-foreground">Ocean freight</span><span>{form.currency} {(Number(form.freight)||0).toLocaleString()}</span></div>
+        )}
+        <div className="flex justify-between border-t border-border pt-1 text-sm font-bold"><span>Quotation total</span><span>{form.currency} {(calcSubtotal(lineItems) + (quoteFreightPolicy(form.price_type).allowFreight ? (Number(form.freight)||0) : 0) + (Number(form.insurance)||0) + (Number(form.other_fees)||0)).toLocaleString()}</span></div>
       </div>
-      <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Vehicles total</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
-        <div className="flex justify-between text-sm"><span className="text-muted-foreground">Freight</span><span>{form.currency} {(Number(form.freight)||0).toLocaleString()}</span></div>
-        <div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Quotation total</span><span>{form.currency} {(calcSubtotal(lineItems) + (Number(form.freight)||0) + (Number(form.insurance)||0) + (Number(form.other_fees)||0)).toLocaleString()}</span></div>
-      </div>
-      <div className="space-y-2">
+      <div className="space-y-0.5">
         <Label>Notes</Label>
         <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
       </div>
@@ -620,34 +643,34 @@ export default function QuotationsPage() {
               <button
                 key={q.id}
                 onClick={() => setSelected(q)}
-                className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-muted/40"
+                className="erp-list-row"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <FileText className="h-5 w-5" />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <FileText className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{q.quotation_code}</p>
-                    <Badge variant="outline" className={statusStyles[q.status]}>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-sm font-medium">{q.quotation_code}</p>
+                    <Badge variant="outline" className={`text-[10px] ${statusStyles[q.status]}`}>
                       {q.status}
                     </Badge>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-[10px]">
                       {q.price_type}
                     </Badge>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{customerName(q.customer_id)}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{customerName(q.customer_id)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold">
+                  <p className="text-xs font-semibold">
                     {q.currency} {q.total.toLocaleString()}
                   </p>
                   {q.valid_until && (
-                    <p className="text-xs text-muted-foreground">
-                      Valid until {format(new Date(q.valid_until), 'MMM d')}
+                    <p className="text-[10px] text-muted-foreground">
+                      Until {format(new Date(q.valid_until), 'MMM d')}
                     </p>
                   )}
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               </button>
             ))}
           </div>

@@ -21,6 +21,9 @@ export function customerContactErrorMessage(error: {
   if (/customers_require_shipping_address/i.test(msg)) {
     return 'Consignee address is required for shipping.';
   }
+  if (/row-level security|RLS|42501/i.test(msg) || error.code === '42501') {
+    return 'You do not have permission to update this customer.';
+  }
   return error.message || 'Could not save customer';
 }
 

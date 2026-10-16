@@ -4,6 +4,11 @@ import { format } from 'date-fns';
 import type { Invoice, InvoiceItem, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument } from '@/components/documents/official-trade-document';
 import { decodeInvoiceVehicle, type CompanyLetterheadSettings } from '@/lib/jct-official';
+import {
+  normalizeFreightAmount,
+  normalizeFreightNotes,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 import { buildVerifyUrl } from './qr-code';
 
 type Props = {
@@ -39,7 +44,13 @@ export function CommercialInvoiceTemplate({
   variant = 'commercial',
 }: Props) {
   const vehiclesTotal = Number(invoice.subtotal || 0);
-  const freight = Number(invoice.freight_total || 0);
+  const freightPolicy = resolveFreightPolicy({
+    incoterm: invoice.incoterms,
+    shipmentType: invoice.shipment_type,
+    containerMode: invoice.container_mode,
+  });
+  const freight = normalizeFreightAmount(freightPolicy, invoice.freight_total);
+  const freightNotes = normalizeFreightNotes(freightPolicy, invoice.freight_notes);
   const insurance = Number(invoice.insurance_total || 0);
   const other = Number(invoice.other_charges || 0);
   const discount = Number(invoice.discount_total || 0);
@@ -84,7 +95,7 @@ export function CommercialInvoiceTemplate({
       vehicles={vehicles}
       vehiclesTotal={vehiclesTotal}
       freightAmount={freight}
-      freightNotes={invoice.freight_notes}
+      freightNotes={freightNotes}
       insuranceAmount={insurance}
       otherAmount={other}
       discountAmount={discount}

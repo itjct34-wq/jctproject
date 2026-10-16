@@ -17,15 +17,15 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
   const hasBid = Number(bidJpy) > 0;
 
   return (
-    <section className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3">
+    <section className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-2">
       <div>
-        <h3 className="text-sm font-semibold">Bid &amp; FOB</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          FOB JPY = bid + 10% + expense · FOB USD = FOB JPY ÷ TT (JPY per 1 USD)
+        <h3 className="text-xs font-semibold">Bid &amp; FOB</h3>
+        <p className="text-[10px] text-muted-foreground">
+          FOB JPY = bid + 10% + expense · FOB USD = FOB JPY ÷ TT
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="space-y-1">
+      <div className="grid gap-1.5 sm:grid-cols-3">
+        <div className="space-y-0.5">
           <Label>Bid price (JPY)</Label>
           <Input
             type="number"
@@ -36,7 +36,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
             placeholder="Auction / purchase bid"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label>Expense (JPY)</Label>
           <Input
             type="number"
@@ -47,7 +47,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
             placeholder="45000–65000"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label>TT rate (JPY / USD)</Label>
           <Input
             type="number"
@@ -59,7 +59,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
           />
         </div>
       </div>
-      <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm sm:grid-cols-5">
+      <div className="grid gap-1.5 rounded-md border border-border bg-background p-2 text-xs sm:grid-cols-5">
         <FormulaCell label="Bid" value={`¥${Math.round(preview.bidJpy).toLocaleString()}`} />
         <FormulaCell label="10%" value={`¥${Math.round(preview.markupJpy).toLocaleString()}`} />
         <FormulaCell label="Expense" value={`¥${Math.round(preview.expenseJpy).toLocaleString()}`} />

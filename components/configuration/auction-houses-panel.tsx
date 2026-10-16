@@ -165,9 +165,10 @@ export function AuctionHousesPanel() {
             Auction houses
           </CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Reusable auction house directory for listings and purchases. Stored in the{' '}
-            <code className="text-xs">suppliers</code> table (
-            <code className="text-xs">supplier_type = auction_house</code>).
+            Reusable auction house directory for listings and purchases. City is the Japan export
+            port (Yokohama / Nagoya / Kobe / Hakata). NS Kyushu houses are container-only (no RORO);
+            all other houses allow RORO and container. Stored in <code className="text-xs">suppliers</code>{' '}
+            (<code className="text-xs">supplier_type = auction_house</code>).
           </p>
         </div>
         {canEdit && (
@@ -219,6 +220,9 @@ export function AuctionHousesPanel() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{formatAuctionHouseLabel(house)}</p>
                   <p className="text-xs text-muted-foreground">{house.supplier_code}</p>
+                  {house.notes ? (
+                    <p className="mt-1 text-xs text-amber-800 dark:text-amber-200/90">{house.notes}</p>
+                  ) : null}
                 </div>
                 <Badge variant="outline" className={statusStyles[house.status]}>
                   {house.status}

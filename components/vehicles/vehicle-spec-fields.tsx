@@ -43,8 +43,8 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
   const parts = form.stock_category === 'parts';
   return (
     <>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1 sm:col-span-2">
+      <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-0.5 sm:col-span-2 lg:col-span-1">
           <Label className="text-[11px]">Category *</Label>
           <Select
             value={form.stock_category}
@@ -58,7 +58,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1 sm:col-span-2">
+        <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
           <Label className="text-[11px]">{parts ? 'Part number / chassis *' : 'Chassis *'}</Label>
           <Input
             value={form.chassis_number}
@@ -68,7 +68,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         {parts ? (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <Label className="text-[11px]">Part SKU</Label>
             <Input
               value={form.part_sku}
@@ -77,16 +77,15 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             />
           </div>
         ) : null}
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Stock no.</Label>
           <Input
             value={form.stock_number}
             onChange={(e) => onChange({ stock_number: e.target.value })}
             placeholder="JCT-V-1001"
           />
-          <p className="text-[11px] text-muted-foreground">Assigned by ERP. Edit only if you need a different code.</p>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Make *</Label>
           <Input
             value={form.make}
@@ -95,7 +94,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             required
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Model *</Label>
           <Input
             value={form.model}
@@ -104,7 +103,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             required
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Colour</Label>
           <Input
             value={form.colour}
@@ -112,7 +111,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             placeholder="Colour"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Year</Label>
           <Input
             value={form.model_year}
@@ -120,7 +119,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             placeholder="2016"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Engine</Label>
           <Input
             value={form.engine}
@@ -128,7 +127,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             placeholder="1500cc"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <Label className="text-[11px]">Transmission</Label>
           <Input
             value={form.transmission}

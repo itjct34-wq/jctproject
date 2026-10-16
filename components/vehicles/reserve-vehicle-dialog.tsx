@@ -16,6 +16,10 @@ import type { Customer, Office, Vehicle } from '@/lib/types';
 import { createReservationInvoice } from '@/lib/utils/create-reservation-invoice';
 import { isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
 import {
+  freightValidationError,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
+import {
   BID_MARKUP_RATE,
   calcFobFromBid,
   DEFAULT_TT_RATE,
@@ -23,6 +27,8 @@ import {
 } from '@/lib/utils/vehicle-pricing';
 import { publicFobUsd, reservationExclusivityMessage, type VehicleFreightMode, type VehicleIncoterm } from '@/lib/vehicle-lifecycle';
 import { SOURCE_COUNTRIES, loadPortsForCountry } from '@/lib/source-countries';
+
+type ContainerSize = '20ft Container' | '40ft Container' | '40ft HC';
 
 type CustomerRow = Pick<
   Customer,
@@ -86,7 +92,7 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={className || 'space-y-1'}>
+    <div className={className || 'space-y-0.5'}>
       <Label className="text-xs font-medium">
         {label}
         {required ? <span className="text-destructive"> *</span> : null}
@@ -151,6 +157,7 @@ export function ReserveVehicleDialog({
   const [auctionHouse, setAuctionHouse] = useState('');
   const [paymentTermPct, setPaymentTermPct] = useState('100');
   const [freightMode, setFreightMode] = useState<'' | VehicleFreightMode>('');
+  const [containerSize, setContainerSize] = useState<ContainerSize>('40ft Container');
   const [officeId, setOfficeId] = useState('');
   const [requesterName, setRequesterName] = useState('');
   const [requesterAgentId, setRequesterAgentId] = useState<string | null>(null);
@@ -196,15 +203,38 @@ export function ReserveVehicleDialog({
 
   const fobUsd = fobBreakdown?.fobUsd ?? null;
 
+  const shipmentTypeLabel = freightMode === 'container' ? 'Container' : 'RORO';
+  const containerModeLabel =
+    freightMode === 'container' ? containerSize : freightMode === 'roro' ? 'RORO Vessel' : 'RORO Vessel';
+  const freightPolicy = useMemo(
+    () =>
+      resolveFreightPolicy({
+        incoterm: shipmentTerm,
+        shipmentType: shipmentTypeLabel,
+        containerMode: containerModeLabel,
+        freightMode: freightMode || null,
+      }),
+    [shipmentTerm, shipmentTypeLabel, containerModeLabel, freightMode]
+  );
+
   const chargeExtras = useMemo(
-    () => CHARGE_FIELDS.reduce((sum, { key }) => sum + (Number(charges[key]) || 0), 0),
-    [charges]
+    () =>
+      CHARGE_FIELDS.reduce((sum, { key }) => {
+        if (key === 'freight' && !freightPolicy.allowFreight) return sum;
+        return sum + (Number(charges[key]) || 0);
+      }, 0),
+    [charges, freightPolicy.allowFreight]
   );
 
   const quotedUsd = Number(quotedPrice) || 0;
   const discountUsd = Number(discount) || 0;
   const profitUsd = fobUsd != null && quotedPrice !== '' ? roundMoney(quotedUsd - fobUsd) : null;
   const invoiceTotal = roundMoney(Math.max(0, quotedUsd + chargeExtras - discountUsd));
+
+  useEffect(() => {
+    if (freightPolicy.allowFreight) return;
+    setCharges((prev) => (prev.freight ? { ...prev, freight: '' } : prev));
+  }, [freightPolicy.allowFreight]);
 
   useEffect(() => {
     if (!open || !vehicle || !profile) return;
@@ -231,6 +261,7 @@ export function ReserveVehicleDialog({
     setAuctionHouse(vehicle.source_supplier || '');
     setPaymentTermPct('100');
     setFreightMode(vehicle.freight_mode === 'roro' || vehicle.freight_mode === 'container' ? vehicle.freight_mode : '');
+    setContainerSize('40ft Container');
     setOfficeId(profile.office_id || offices[0]?.id || '');
     setRequesterName(profile.full_name || profile.email || '');
     setRequesterAgentId(profile.id);
@@ -354,6 +385,12 @@ export function ReserveVehicleDialog({
       toast.error('Quoted price (USD) must be greater than zero');
       return;
     }
+    const freightAmt = freightPolicy.allowFreight ? Number(charges.freight) || 0 : 0;
+    const freightErr = freightValidationError(freightPolicy, freightAmt);
+    if (freightErr) {
+      toast.error(freightErr);
+      return;
+    }
     const totalUsd = roundMoney(Math.max(0, vehicleLineUsd + chargeExtras - discountUsd));
     if (totalUsd <= 0) {
       toast.error('Invoice total must be greater than zero');
@@ -400,7 +437,7 @@ export function ReserveVehicleDialog({
         freight_mode: mode,
         shipping_port_of_discharge: destinationPort.trim(),
         shipping_place_of_delivery: destinationPort.trim(),
-        shipping_freight_charges: Number(charges.freight) || null,
+        shipping_freight_charges: freightPolicy.allowFreight ? Number(charges.freight) || null : null,
         shipping_vanning_charges: Number(charges.vanning) || null,
         updated_at: new Date().toISOString(),
       })
@@ -467,7 +504,13 @@ export function ReserveVehicleDialog({
     });
 
     const shipmentType = mode === 'container' ? 'Container' : 'RORO';
-    const containerMode = mode === 'container' ? '40ft Container' : 'RORO Vessel';
+    const containerMode = mode === 'container' ? containerSize : 'RORO Vessel';
+    const chargePayload = Object.fromEntries(
+      CHARGE_FIELDS.map(({ key }) => {
+        if (key === 'freight' && !freightPolicy.allowFreight) return [key, 0];
+        return [key, Number(charges[key]) || 0];
+      })
+    ) as Record<ChargeKey, number>;
     const inv = await createReservationInvoice({
       customerId,
       saleId: saleData.id,
@@ -481,12 +524,10 @@ export function ReserveVehicleDialog({
       portOfLoading: live.shipping_port_of_loading || 'Nagoya, Japan',
       portOfDischarge: destinationPort.trim(),
       destinationCountry: destinationCountry.trim(),
-      freightUsd: Number(charges.freight) || 0,
+      freightUsd: freightAmt,
       insuranceUsd: Number(charges.insurance) || 0,
       discountUsd,
-      charges: Object.fromEntries(
-        CHARGE_FIELDS.map(({ key }) => [key, Number(charges[key]) || 0])
-      ) as Record<ChargeKey, number>,
+      charges: chargePayload,
       consignee: {
         name: consigneeName.trim(),
         country: consigneeCountry.trim(),
@@ -536,10 +577,10 @@ export function ReserveVehicleDialog({
             Reserve Vehicle · {vehicle.stock_number} · {vehicle.make} {vehicle.model}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-3">
-          <section className="space-y-2 rounded-xl border border-border/70 p-3">
-            <h3 className="text-sm font-semibold text-primary">Selling Detail</h3>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <form onSubmit={submit} className="space-y-2.5">
+          <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+            <h3 className="text-xs font-semibold text-primary">Selling Detail</h3>
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Customer" required>
                 <Select value={customerId || 'none'} onValueChange={(v) => setCustomerId(v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
@@ -636,10 +677,32 @@ export function ReserveVehicleDialog({
                   </SelectContent>
                 </Select>
               </Field>
+              {freightMode === 'container' && (
+                <Field label="Container size">
+                  <Select value={containerSize} onValueChange={(v: ContainerSize) => setContainerSize(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="20ft Container">20ft</SelectItem>
+                      <SelectItem value="40ft Container">40ft</SelectItem>
+                      <SelectItem value="40ft HC">40ft HC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
               <Field label="Hold (days)">
                 <Input type="number" min={1} value={reserveDays} onChange={(e) => setReserveDays(e.target.value)} />
               </Field>
             </div>
+            {!freightPolicy.allowFreight && (
+              <p className="text-[11px] text-muted-foreground">
+                FOB — vehicle cost only; freight charge is excluded from the reservation invoice.
+              </p>
+            )}
+            {freightPolicy.requireFreight && (
+              <p className="text-[11px] text-amber-700">
+                Container + {shipmentTerm}: enter Ocean freight (USD) below.
+              </p>
+            )}
 
             <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -702,17 +765,27 @@ export function ReserveVehicleDialog({
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {CHARGE_FIELDS.map(({ key, label }) => (
-                <Field key={key} label={`${label} (USD)`}>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={charges[key]}
-                    onChange={(e) => setCharges((prev) => ({ ...prev, [key]: e.target.value }))}
-                  />
-                </Field>
-              ))}
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-5">
+              {CHARGE_FIELDS.map(({ key, label }) => {
+                const isFreight = key === 'freight';
+                const disabled = isFreight && !freightPolicy.allowFreight;
+                return (
+                  <Field
+                    key={key}
+                    label={`${isFreight ? 'Ocean freight' : label} (USD)${isFreight && freightPolicy.requireFreight ? ' *' : ''}`}
+                  >
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={disabled ? '' : charges[key]}
+                      disabled={disabled}
+                      required={isFreight && freightPolicy.requireFreight}
+                      onChange={(e) => setCharges((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={disabled ? 'N/A (FOB)' : undefined}
+                    />
+                  </Field>
+                );
+              })}
             </div>
             <Field label="Selling / invoice amount (USD)" required className="max-w-xs space-y-1">
               <Input type="number" readOnly value={String(invoiceTotal)} />
@@ -723,28 +796,28 @@ export function ReserveVehicleDialog({
             </Field>
           </section>
 
-          <section className="space-y-2 rounded-xl border border-border/70 p-3">
-            <h3 className="text-sm font-semibold text-primary">Consignee Detail</h3>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+            <h3 className="text-xs font-semibold text-primary">Consignee Detail</h3>
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Name" required><Input value={consigneeName} onChange={(e) => setConsigneeName(e.target.value)} /></Field>
               <Field label="Country" required><Input value={consigneeCountry} onChange={(e) => setConsigneeCountry(e.target.value)} /></Field>
               <Field label="City"><Input value={consigneeCity} onChange={(e) => setConsigneeCity(e.target.value)} /></Field>
-              <Field label="Address" required className="sm:col-span-2 space-y-1">
+              <Field label="Address" required className="sm:col-span-2 space-y-0.5">
                 <Input value={consigneeAddress} onChange={(e) => setConsigneeAddress(e.target.value)} />
               </Field>
               <Field label="Phone" required><Input value={consigneePhone} onChange={(e) => setConsigneePhone(e.target.value)} /></Field>
               <Field label="Email" required><Input type="email" value={consigneeEmail} onChange={(e) => setConsigneeEmail(e.target.value)} /></Field>
             </div>
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 text-xs font-medium">
               <Checkbox checked={notifySame} onCheckedChange={(v) => setNotifySame(v === true)} />
               Notify party same as consignee
             </label>
             {!notifySame ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Notify name"><Input value={notifyName} onChange={(e) => setNotifyName(e.target.value)} /></Field>
                 <Field label="Notify country"><Input value={notifyCountry} onChange={(e) => setNotifyCountry(e.target.value)} /></Field>
                 <Field label="Notify city"><Input value={notifyCity} onChange={(e) => setNotifyCity(e.target.value)} /></Field>
-                <Field label="Notify address" className="sm:col-span-2 space-y-1">
+                <Field label="Notify address" className="sm:col-span-2 space-y-0.5">
                   <Input value={notifyAddress} onChange={(e) => setNotifyAddress(e.target.value)} />
                 </Field>
                 <Field label="Notify phone"><Input value={notifyPhone} onChange={(e) => setNotifyPhone(e.target.value)} /></Field>
@@ -753,9 +826,9 @@ export function ReserveVehicleDialog({
             ) : null}
           </section>
 
-          <section className="space-y-2 rounded-xl border border-border/70 p-3">
-            <h3 className="text-sm font-semibold text-primary">Invoice Detail</h3>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+            <h3 className="text-xs font-semibold text-primary">Invoice Detail</h3>
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Invoice date" required>
                 <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
               </Field>

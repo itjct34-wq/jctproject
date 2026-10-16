@@ -31,6 +31,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   fullscreen?: boolean;
+  overlayClassName?: string;
 };
 
 const FULLSCREEN_CLASS =
@@ -39,9 +40,9 @@ const FULLSCREEN_CLASS =
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, fullscreen, style, ...props }, ref) => (
+>(({ className, children, fullscreen, overlayClassName, style, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       data-dialog-workform={fullscreen ? 'true' : undefined}
@@ -122,7 +123,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      'text-lg font-semibold leading-none tracking-tight',
+      'text-base font-semibold leading-none tracking-tight',
       className
     )}
     {...props}

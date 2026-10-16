@@ -1,6 +1,11 @@
 import ExcelJS from 'exceljs';
 import type { Invoice, InvoiceItem, Customer, Quotation } from '@/lib/types';
 import { decodeInvoiceVehicle, extractChassis, formatDepositRatio, formatDocumentNo } from '@/lib/jct-official';
+import {
+  normalizeFreightAmount,
+  normalizeFreightNotes,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 
 type TradeLine = {
   description: string;
@@ -102,7 +107,27 @@ export async function exportTradeDocumentExcel(opts: {
   notes?: string | null;
   filename: string;
   showDeposit?: boolean;
+  showFreight?: boolean;
 }) {
+  const freightPolicy = resolveFreightPolicy({
+    incoterm: opts.shipmentTerm,
+    shipmentType: opts.shipmentType,
+    containerMode: opts.shipmentMode,
+  });
+  const freight = freightPolicy.allowFreight ? Number(opts.freight || 0) : 0;
+  const freightNotes =
+    normalizeFreightNotes(freightPolicy, opts.freightNotes) || freightPolicy.defaultFreightLabel;
+  const showFreight =
+    opts.showFreight ??
+    (freightPolicy.showFreightOnDocument || (freightPolicy.allowFreight && freight > 0));
+  const vehiclesTotal = Number(opts.vehiclesTotal || 0);
+  const insurance = Number(opts.insurance || 0);
+  const other = Number(opts.other || 0);
+  const discount = Number(opts.discount || 0);
+  const grandTotal = freightPolicy.allowFreight
+    ? Number(opts.grandTotal || 0)
+    : vehiclesTotal + insurance + other - discount;
+
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Vehicle Export ERP';
   wb.created = new Date();
@@ -212,53 +237,53 @@ export async function exportTradeDocumentExcel(opts: {
   ws.getCell(row, 1).value = 'Vehicles total';
   styleHeader(ws.getCell(row, 1));
   ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
-  ws.getCell(row, lastCol).value = money(opts.vehiclesTotal);
+  ws.getCell(row, lastCol).value = money(vehiclesTotal);
   ws.getCell(row, lastCol).numFmt = '#,##0.00';
   styleHeader(ws.getCell(row, lastCol));
   row += 2;
 
-  mergeTo(row);
-  ws.getCell(row, 1).value = 'FREIGHT';
-  styleHeader(ws.getCell(row, 1), NAVY);
-  row += 1;
-  ws.mergeCells(row, 1, row, lastCol - 2);
-  ws.getCell(row, 1).value = 'Description';
-  styleHeader(ws.getCell(row, 1), RED);
-  ws.getCell(row, lastCol - 1).value = 'Currency';
-  styleHeader(ws.getCell(row, lastCol - 1), RED);
-  ws.getCell(row, lastCol).value = 'Amount';
-  styleHeader(ws.getCell(row, lastCol), RED);
-  row += 1;
-  ws.mergeCells(row, 1, row, lastCol - 2);
-  ws.getCell(row, 1).value = opts.freightNotes?.trim() || 'Container freight';
-  styleBody(ws.getCell(row, 1));
-  ws.getCell(row, lastCol - 1).value = opts.currency;
-  styleBody(ws.getCell(row, lastCol - 1));
-  ws.getCell(row, lastCol).value = money(opts.freight);
-  ws.getCell(row, lastCol).numFmt = '#,##0.00';
-  styleBody(ws.getCell(row, lastCol), { align: 'right' });
-  row += 1;
-  ws.mergeCells(row, 1, row, lastCol - 1);
-  ws.getCell(row, 1).value = 'Freight total';
-  styleHeader(ws.getCell(row, 1));
-  ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
-  ws.getCell(row, lastCol).value = money(opts.freight);
-  ws.getCell(row, lastCol).numFmt = '#,##0.00';
-  styleHeader(ws.getCell(row, lastCol));
-  row += 2;
+  if (showFreight) {
+    mergeTo(row);
+    ws.getCell(row, 1).value = 'FREIGHT';
+    styleHeader(ws.getCell(row, 1), NAVY);
+    row += 1;
+    ws.mergeCells(row, 1, row, lastCol - 2);
+    ws.getCell(row, 1).value = 'Description';
+    styleHeader(ws.getCell(row, 1), RED);
+    ws.getCell(row, lastCol - 1).value = 'Currency';
+    styleHeader(ws.getCell(row, lastCol - 1), RED);
+    ws.getCell(row, lastCol).value = 'Amount';
+    styleHeader(ws.getCell(row, lastCol), RED);
+    row += 1;
+    ws.mergeCells(row, 1, row, lastCol - 2);
+    ws.getCell(row, 1).value = freightNotes;
+    styleBody(ws.getCell(row, 1));
+    ws.getCell(row, lastCol - 1).value = opts.currency;
+    styleBody(ws.getCell(row, lastCol - 1));
+    ws.getCell(row, lastCol).value = money(freight);
+    ws.getCell(row, lastCol).numFmt = '#,##0.00';
+    styleBody(ws.getCell(row, lastCol), { align: 'right' });
+    row += 1;
+    ws.mergeCells(row, 1, row, lastCol - 1);
+    ws.getCell(row, 1).value = 'Freight total';
+    styleHeader(ws.getCell(row, 1));
+    ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
+    ws.getCell(row, lastCol).value = money(freight);
+    ws.getCell(row, lastCol).numFmt = '#,##0.00';
+    styleHeader(ws.getCell(row, lastCol));
+    row += 2;
+  }
 
   mergeTo(row);
   ws.getCell(row, 1).value = 'TOTALS';
   styleHeader(ws.getCell(row, 1), NAVY);
   row += 1;
 
-  const totals: [string, number, boolean?][] = [
-    ['Vehicles total', opts.vehiclesTotal],
-    ['Freight', opts.freight],
-  ];
-  if (opts.insurance) totals.push(['Insurance', opts.insurance]);
-  if (opts.other) totals.push(['Other charges', opts.other]);
-  if (opts.discount) totals.push(['Discount', -opts.discount]);
+  const totals: [string, number, boolean?][] = [['Vehicles total', vehiclesTotal]];
+  if (showFreight) totals.push([freightPolicy.isRoro ? 'Ocean freight' : 'Freight', freight]);
+  if (insurance) totals.push(['Insurance', insurance]);
+  if (other) totals.push(['Other charges', other]);
+  if (discount) totals.push(['Discount', -discount]);
   totals.forEach(([lab, val]) => {
     ws.mergeCells(row, 1, row, lastCol - 1);
     ws.getCell(row, 1).value = lab;
@@ -272,7 +297,7 @@ export async function exportTradeDocumentExcel(opts: {
   ws.getCell(row, 1).value = 'GRAND TOTAL';
   styleHeader(ws.getCell(row, 1), RED);
   ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
-  ws.getCell(row, lastCol).value = money(opts.grandTotal);
+  ws.getCell(row, lastCol).value = money(grandTotal);
   ws.getCell(row, lastCol).numFmt = `"${opts.currency}"#,##0.00`;
   styleHeader(ws.getCell(row, lastCol), RED);
   row += 2;
@@ -303,7 +328,12 @@ export async function exportCommercialInvoiceExcel(opts: {
   verifyUrl?: string;
 }) {
   const { invoice, items, customer, verifyUrl } = opts;
-  const freight = Number(invoice.freight_total || 0);
+  const policy = resolveFreightPolicy({
+    incoterm: invoice.incoterms,
+    shipmentType: invoice.shipment_type,
+    containerMode: invoice.container_mode,
+  });
+  const freight = normalizeFreightAmount(policy, invoice.freight_total);
   const insurance = Number(invoice.insurance_total || 0);
   const other = Number(invoice.other_charges || 0);
   const discount = Number(invoice.discount_total || 0);
@@ -323,7 +353,7 @@ export async function exportCommercialInvoiceExcel(opts: {
     lines: items.map(lineFromItem),
     vehiclesTotal,
     freight,
-    freightNotes: invoice.freight_notes,
+    freightNotes: normalizeFreightNotes(policy, invoice.freight_notes),
     insurance,
     other,
     discount,
@@ -342,24 +372,30 @@ export async function exportQuotationExcel(opts: {
   verifyUrl?: string;
 }) {
   const { quotation, items, customer, verifyUrl } = opts;
-  const freight = Number(quotation.freight || 0);
+  const term = quotation.price_type === 'CNF' ? 'C&F' : quotation.price_type;
+  const policy = resolveFreightPolicy({
+    incoterm: term,
+    shipmentType: 'RORO',
+    containerMode: 'RORO Vessel',
+  });
+  const freight = normalizeFreightAmount(policy, quotation.freight);
   const insurance = Number(quotation.insurance || 0);
   const other = Number(quotation.other_fees || 0);
   const vehiclesTotal = Number(quotation.subtotal || 0);
-  const grand = Number(quotation.total || vehiclesTotal + freight + insurance + other);
+  const grand = vehiclesTotal + freight + insurance + other;
   await exportTradeDocumentExcel({
     title: 'QUOTATION',
     documentNo: quotation.quotation_code,
     issueDate: quotation.created_at?.slice(0, 10) || '',
     currency: quotation.currency,
     customer,
-    shipmentTerm: quotation.price_type,
+    shipmentTerm: term,
     shipmentType: 'RORO',
     shipmentMode: 'RORO Vessel',
     lines: items.map(lineFromItem),
     vehiclesTotal,
     freight,
-    freightNotes: quotation.freight_notes,
+    freightNotes: normalizeFreightNotes(policy, quotation.freight_notes),
     insurance,
     other,
     grandTotal: grand,

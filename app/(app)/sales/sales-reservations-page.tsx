@@ -525,8 +525,8 @@ export default function SalesPage() {
           <DialogHeader>
             <DialogTitle>Reserve vehicle for customer</DialogTitle>
           </DialogHeader>
-          <form onSubmit={submitReservation} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <form onSubmit={submitReservation} className="space-y-2.5">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Customer *</Label>
                 <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
@@ -553,7 +553,7 @@ export default function SalesPage() {
                 <div className="space-y-1"><Label>Profit (USD)</Label><Input type="number" inputMode="decimal" value={form.profit_usd} onChange={(e) => setForm({ ...form, profit_usd: e.target.value })} /></div>
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-1.5 sm:grid-cols-3">
               <div className="space-y-2"><Label>Price term</Label>
                 <Select value={form.price_term} onValueChange={(v: PriceTerm) => setForm({ ...form, price_term: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -578,7 +578,7 @@ export default function SalesPage() {
                 <Input type="number" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} required />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-1.5 sm:grid-cols-3">
               <div className="space-y-2"><Label>Freight USD</Label><Input type="number" value={form.freight_usd} onChange={(e) => setForm({ ...form, freight_usd: e.target.value })} /></div>
               <div className="space-y-2"><Label>Insurance USD</Label><Input type="number" value={form.insurance_usd} onChange={(e) => setForm({ ...form, insurance_usd: e.target.value })} /></div>
               <div className="space-y-2"><Label>Reserve days</Label><Input type="number" value={form.reservation_days} onChange={(e) => setForm({ ...form, reservation_days: e.target.value })} /></div>
@@ -645,7 +645,7 @@ export default function SalesPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent fullscreen>
           <DialogHeader><DialogTitle>Edit sale</DialogTitle></DialogHeader>
-          <form onSubmit={submitEdit} className="space-y-4">
+          <form onSubmit={submitEdit} className="space-y-2.5">
             <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v: Sale['status']) => setForm({ ...form, status: v })}>

@@ -941,8 +941,8 @@ function VehiclesPage() {
 
   const workflowFormSections = (mode: 'create' | 'edit') => (
     <>
-      <section className="space-y-2 rounded-xl border-2 border-primary/40 bg-primary/5 p-3">
-        <h3 className="text-sm font-semibold tracking-wide text-primary">Status</h3>
+      <section className="space-y-1.5 rounded-xl border-2 border-primary/40 bg-primary/5 p-2">
+        <h3 className="text-xs font-semibold tracking-wide text-primary">Status</h3>
         <ShippingStepper
           vehicle={{
             payment_status: form.payment_status,
@@ -951,8 +951,8 @@ function VehiclesPage() {
             status: form.status,
           }}
         />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
+        <div className="grid gap-1.5 sm:grid-cols-3">
+          <div className="space-y-0.5">
             <Label>Payment status</Label>
             <Select
               value={form.payment_status}
@@ -967,7 +967,7 @@ function VehiclesPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <Label>Shipping status</Label>
             <Select
               value={form.shipping_status}
@@ -982,8 +982,8 @@ function VehiclesPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1 sm:col-span-2">
-            <Label>Legacy stock listing (public catalog)</Label>
+          <div className="space-y-0.5">
+            <Label>Listing status</Label>
             <Select
               value={form.status}
               onValueChange={(v: Vehicle['status']) => setForm({ ...form, status: v })}
@@ -996,13 +996,9 @@ function VehiclesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Payment and shipping are the primary workflow. Saving them also syncs listing status (in stock, reserved, sold, in transit, exported) unless you set On hold or Archived.
-              {!canEditVehicle ? ' Sales roles can see the current stage; only operations staff can override statuses here. Shipped / delivered normally follow B/L documents.' : ' Operations can override any stage here, including shipped / delivered without waiting for documents.'}
-            </p>
           </div>
           {selected && commissionAmountPkr(selected) != null && Number(selected.commission_pkr) > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-3">
               {effectiveCommissionStatus(selected) === 'paid' ? (
                 <Badge className="border-emerald-600 bg-emerald-600 text-white">Commission paid</Badge>
               ) : effectiveCommissionStatus(selected) === 'due' ? (
@@ -1027,24 +1023,26 @@ function VehiclesPage() {
         onChange={(patch) => setForm({ ...form, ...patch })}
         disabled={!canEditVehicle && mode === 'edit'}
       />
-      <section className="space-y-2 rounded-xl border border-border/70 p-3">
-        <h3 className="text-sm font-semibold">Vehicle specs</h3>
+      <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+        <h3 className="text-xs font-semibold">Vehicle specs</h3>
         <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} showPhotos={false} />
-        <div className="space-y-1">
-          <Label>Source country *</Label>
-          <Select value={form.source_country_code} onValueChange={(v) => setForm({ ...form, source_country_code: v })}>
-            <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-            <SelectContent>
-              {SOURCE_COUNTRIES.map((c) => (
-                <SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          <div className="space-y-0.5">
+            <Label>Source country *</Label>
+            <Select value={form.source_country_code} onValueChange={(v) => setForm({ ...form, source_country_code: v })}>
+              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+              <SelectContent>
+                {SOURCE_COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-0.5"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
         </div>
-        <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
       </section>
-      <section className="space-y-2 rounded-xl border border-border/70 p-3">
-        <h3 className="text-sm font-semibold">Photos</h3>
+      <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+        <h3 className="text-xs font-semibold">Photos</h3>
         <MultiImageUpload
           folder={chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number)}
           images={gallery}

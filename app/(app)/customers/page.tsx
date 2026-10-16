@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -35,7 +35,9 @@ const ASSIGNABLE_ROLES = new Set(['sales_agent', 'freelancer', 'operations', 'ma
 
 export default function CustomersPage() {
   const { profile } = useAuth();
-  const { isSellingFocused, isElevatedStaff } = usePermissions();
+  const { can, isSellingFocused, isElevatedStaff } = usePermissions();
+  const canEditCustomer = can('customers', 'edit');
+  const canDeleteCustomer = can('customers', 'delete');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
@@ -52,6 +54,7 @@ export default function CustomersPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteChecking, setDeleteChecking] = useState(false);
   const [deleteBlocked, setDeleteBlocked] = useState<string | null>(null);
+  const archiveTargetRef = useRef<Customer | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [requirementOpen, setRequirementOpen] = useState(false);
   const [communicationOpen, setCommunicationOpen] = useState(false);
@@ -249,14 +252,28 @@ export default function CustomersPage() {
 
   const checkDelete = async () => {
     if (!selected) return;
-    setDeleteOpen(true); setDeleteChecking(true); setDeleteBlocked(null);
-    const [salesRes, invoicesRes, paymentsRes, shipmentsRes] = await Promise.all([
+    if (!canEditCustomer && !canDeleteCustomer) {
+      toast.error('You do not have permission to remove or archive customers.');
+      return;
+    }
+    archiveTargetRef.current = selected;
+    setDeleteOpen(true);
+    setDeleteChecking(true);
+    setDeleteBlocked(null);
+    const [salesRes, invoicesRes, paymentsRes, quotationsRes, vehiclesRes] = await Promise.all([
       supabase.from('sales').select('id', { count: 'exact', head: true }).eq('customer_id', selected.id),
       supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('customer_id', selected.id),
       supabase.from('payments').select('id', { count: 'exact', head: true }).eq('customer_id', selected.id),
       supabase.from('quotations').select('id', { count: 'exact', head: true }).eq('customer_id', selected.id),
+      supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('customer_id', selected.id),
     ]);
-    const counts = { sales: salesRes.count || 0, invoices: invoicesRes.count || 0, payments: paymentsRes.count || 0, quotations: shipmentsRes.count || 0 };
+    const counts = {
+      sales: salesRes.count || 0,
+      invoices: invoicesRes.count || 0,
+      payments: paymentsRes.count || 0,
+      quotations: quotationsRes.count || 0,
+      vehicles: vehiclesRes.count || 0,
+    };
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     if (total > 0) {
       const parts: string[] = [];
@@ -264,36 +281,103 @@ export default function CustomersPage() {
       if (counts.invoices) parts.push(`${counts.invoices} invoice(s)`);
       if (counts.payments) parts.push(`${counts.payments} payment(s)`);
       if (counts.quotations) parts.push(`${counts.quotations} quotation(s)`);
+      if (counts.vehicles) parts.push(`${counts.vehicles} reserved/linked vehicle(s)`);
       setDeleteBlocked(`This customer has ${parts.join(', ')}. Archive them instead to preserve history.`);
     }
     setDeleteChecking(false);
   };
 
   const confirmDelete = async () => {
-    if (!selected) return;
+    const customer = archiveTargetRef.current || selected;
+    if (!customer) {
+      toast.error('No customer selected to delete.');
+      return;
+    }
+    if (!canDeleteCustomer) {
+      toast.error('Only admins and managers can permanently delete customers. Use Archive instead.');
+      return;
+    }
     setSubmitting(true);
-    const { error } = await supabase.from('customers').delete().eq('id', selected.id);
+    const { data, error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', customer.id)
+      .select('id')
+      .maybeSingle();
     setSubmitting(false);
-    if (error) { toast.error(`Could not delete: ${error.message}`); return; }
-    toast.success('Customer deleted'); setDeleteOpen(false); setSelected(null); await loadCustomers();
+    if (error) {
+      toast.error(`Could not delete: ${error.message}`);
+      return;
+    }
+    if (!data) {
+      toast.error('Could not delete: you may not have permission, or the customer was already removed.');
+      return;
+    }
+    toast.success('Customer deleted');
+    setDeleteOpen(false);
+    archiveTargetRef.current = null;
+    setSelected(null);
+    await loadCustomers();
   };
 
   const archiveCustomer = async () => {
-    if (!selected) return;
-    const { error } = await supabase.from('customers').update({ status: 'inactive', updated_at: new Date().toISOString() }).eq('id', selected.id);
-    if (error) { toast.error(error.message); return; }
-    const updated = { ...selected, status: 'inactive' as const };
-    setSelected(updated); setCustomers((items) => items.map((i) => i.id === updated.id ? updated : i));
-    toast.success('Customer archived'); setDeleteOpen(false);
+    const customer = archiveTargetRef.current || selected;
+    if (!customer) {
+      toast.error('No customer selected to archive.');
+      return;
+    }
+    if (!canEditCustomer && !isElevatedStaff) {
+      toast.error('You do not have permission to archive this customer.');
+      return;
+    }
+    setSubmitting(true);
+    const { data, error } = await supabase
+      .from('customers')
+      .update({ status: 'inactive', updated_at: new Date().toISOString() })
+      .eq('id', customer.id)
+      .select('id, status')
+      .maybeSingle();
+    setSubmitting(false);
+    if (error) {
+      toast.error(customerContactErrorMessage(error));
+      return;
+    }
+    if (!data) {
+      toast.error('Could not archive: you may not have permission to update this customer.');
+      return;
+    }
+    const updated = { ...customer, status: 'inactive' as const };
+    setSelected((cur) => (cur?.id === updated.id ? updated : cur));
+    setCustomers((items) => items.map((i) => (i.id === updated.id ? { ...i, status: 'inactive' } : i)));
+    toast.success('Customer archived (status set to inactive)');
+    setDeleteOpen(false);
+    archiveTargetRef.current = null;
   };
 
   const updateStatus = async (status: Customer['status']) => {
     if (!selected) return;
-    const { error } = await supabase.from('customers').update({ status, updated_at: new Date().toISOString() }).eq('id', selected.id);
-    if (error) { toast.error(error.message); return; }
-    const updated = { ...selected, status }; setSelected(updated);
-    setCustomers((items) => items.map((i) => i.id === updated.id ? updated : i));
-    toast.success('Status updated');
+    if (!canEditCustomer && !isElevatedStaff) {
+      toast.error('You do not have permission to change customer status.');
+      return;
+    }
+    const { data, error } = await supabase
+      .from('customers')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', selected.id)
+      .select('id, status')
+      .maybeSingle();
+    if (error) {
+      toast.error(customerContactErrorMessage(error));
+      return;
+    }
+    if (!data) {
+      toast.error('Could not update status: you may not have permission.');
+      return;
+    }
+    const updated = { ...selected, status };
+    setSelected(updated);
+    setCustomers((items) => items.map((i) => (i.id === updated.id ? updated : i)));
+    toast.success(status === 'inactive' ? 'Customer archived' : 'Status updated');
   };
 
   const submitContact = async (e: React.FormEvent) => {
@@ -335,6 +419,13 @@ export default function CustomersPage() {
   };
 
   const stats = { total: customers.length, leads: customers.filter((c) => c.status === 'lead').length, active: customers.filter((c) => c.status === 'active').length, requirements: requirements.length };
+  const forceArchive = Boolean(deleteBlocked) || !canDeleteCustomer;
+  const deleteDescription = deleteChecking
+    ? 'Checking for related records...'
+    : deleteBlocked
+      || (canDeleteCustomer
+        ? 'This will permanently remove the customer. This action cannot be undone.'
+        : 'Permanent delete requires an admin or manager. Archive sets status to inactive and keeps history.');
 
   return (
     <div className="space-y-6">
@@ -343,34 +434,36 @@ export default function CustomersPage() {
         { label: 'Total customers', value: stats.total }, { label: 'Open leads', value: stats.leads }, { label: 'Active accounts', value: stats.active }, { label: 'Requirements', value: stats.requirements },
       ].map((s) => <Card key={s.label}><CardContent className="p-4"><p className="text-xs font-medium text-muted-foreground">{s.label}</p><p className="erp-stat-value mt-0.5">{s.value}</p></CardContent></Card>)}</div>
       <Card><CardContent className="p-4"><div className="erp-filter-bar"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, code, company, email..." /></div><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></CardContent></Card>
-      <Card className="overflow-hidden">{loading ? <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading customer records...</div> : filtered.length === 0 ? <div className="flex flex-col items-center justify-center p-12 text-center"><CircleUserRound className="mb-3 h-10 w-10 text-muted-foreground/50" /><h3 className="font-semibold text-primary">No customers found</h3><p className="mt-1 text-sm text-muted-foreground">{isSellingFocused ? 'You only see customers assigned to you.' : 'Create a customer or adjust your search filters.'}</p></div> : <div className="divide-y divide-border">{filtered.map((c) => <button key={c.id} onClick={() => loadDetails(c)} className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/45"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{c.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate font-medium">{c.full_name}</p><Badge variant="outline" className={statusStyles[c.status]}>{c.status}</Badge></div><p className="mt-0.5 truncate text-xs text-muted-foreground">{c.customer_code}{c.company_name ? ` · ${c.company_name}` : ''} · Assigned to {staffName(c.assigned_to)}</p></div><div className="hidden items-center gap-5 text-xs text-muted-foreground md:flex">{c.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{c.email}</span>}{c.country && <span>{c.country}</span>}</div><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></button>)}</div>}</Card>
+      <Card className="overflow-hidden">{loading ? <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading customer records...</div> : filtered.length === 0 ? <div className="flex flex-col items-center justify-center p-10 text-center"><CircleUserRound className="mb-2 h-8 w-8 text-muted-foreground/50" /><h3 className="text-sm font-semibold text-primary">No customers found</h3><p className="mt-1 text-xs text-muted-foreground">{isSellingFocused ? 'You only see customers assigned to you.' : 'Create a customer or adjust your search filters.'}</p></div> : <div className="divide-y divide-border">{filtered.map((c) => <button key={c.id} onClick={() => loadDetails(c)} className="erp-list-row"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{c.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><p className="truncate text-sm font-medium">{c.full_name}</p><Badge variant="outline" className={`text-[10px] ${statusStyles[c.status]}`}>{c.status}</Badge></div><p className="truncate text-[11px] text-muted-foreground">{c.customer_code}{c.company_name ? ` · ${c.company_name}` : ''} · Assigned to {staffName(c.assigned_to)}</p></div><div className="hidden items-center gap-3 text-[11px] text-muted-foreground md:flex">{c.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</span>}{c.country && <span>{c.country}</span>}</div><ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /></button>)}</div>}</Card>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen><DialogHeader><DialogTitle>Add customer</DialogTitle></DialogHeader><form onSubmit={submitCreate} className="space-y-3">
-        <p className="text-xs text-muted-foreground">Consignee details appear on commercial invoices and are required to ship vehicles. Phone and email must be unique.</p>
-        <div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Consignee Name *</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div><div className="space-y-1"><Label>Customer type</Label><Select value={form.customer_type} onValueChange={(v: Customer['customer_type']) => setForm({ ...form, customer_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="individual">Individual</SelectItem><SelectItem value="company">Company</SelectItem></SelectContent></Select></div></div>
-        <div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Company name</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div><div className="space-y-1"><Label>Source</Label><Select value={form.source} onValueChange={(v) => setForm({ ...form, source: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="website">Website</SelectItem><SelectItem value="referral">Referral</SelectItem><SelectItem value="auction">Auction enquiry</SelectItem><SelectItem value="walk_in">Walk-in</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div></div>
-        <div className="grid gap-2 sm:grid-cols-3"><div className="space-y-1"><Label>Contact *</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required placeholder="+923353522447" /><p className="text-[11px] text-muted-foreground">Phone — unique</p></div><div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /><p className="text-[11px] text-muted-foreground">Unique</p></div><div className="space-y-1"><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div></div>
-        <div className="space-y-1"><Label>Address *</Label><Textarea value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} rows={2} required placeholder="Shipping address (e.g. Bahamas Nassau)" /></div>
-        <div className="grid gap-2 sm:grid-cols-3"><div className="space-y-1"><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div><div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div><div className="space-y-1"><Label>Status</Label><Select value={form.status} onValueChange={(v: Customer['status']) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></div>
-        <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} /></div>
-        <p className="text-xs text-muted-foreground">This customer will be assigned to you. You can reassign later if you hand off the deal.</p>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen><DialogHeader><DialogTitle>Add customer</DialogTitle></DialogHeader><form onSubmit={submitCreate} className="space-y-2.5">
+        <p className="text-[11px] text-muted-foreground">Consignee details print on invoices. Phone and email must be unique.</p>
+        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3"><div className="space-y-0.5"><Label>Consignee Name *</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div><div className="space-y-0.5"><Label>Customer type</Label><Select value={form.customer_type} onValueChange={(v: Customer['customer_type']) => setForm({ ...form, customer_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="individual">Individual</SelectItem><SelectItem value="company">Company</SelectItem></SelectContent></Select></div><div className="space-y-0.5"><Label>Source</Label><Select value={form.source} onValueChange={(v) => setForm({ ...form, source: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="website">Website</SelectItem><SelectItem value="referral">Referral</SelectItem><SelectItem value="auction">Auction enquiry</SelectItem><SelectItem value="walk_in">Walk-in</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div><div className="space-y-0.5"><Label>Company name</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div><div className="space-y-0.5"><Label>Contact *</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required placeholder="+923353522447" /></div><div className="space-y-0.5"><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div><div className="space-y-0.5"><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div><div className="space-y-0.5"><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div><div className="space-y-0.5"><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div><div className="space-y-0.5 sm:col-span-2 lg:col-span-2"><Label>Address *</Label><Input value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} required placeholder="Shipping address" /></div><div className="space-y-0.5"><Label>Status</Label><Select value={form.status} onValueChange={(v: Customer['status']) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div><div className="space-y-0.5 sm:col-span-2 lg:col-span-3"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div></div>
+        <p className="text-[11px] text-muted-foreground">Assigned to you; reassign later if you hand off the deal.</p>
         <DialogFooter><Button type="submit" disabled={submitting || !consigneeReady}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Create customer'}</Button></DialogFooter>
       </form></DialogContent></Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen><DialogHeader><DialogTitle>Edit customer</DialogTitle></DialogHeader><form onSubmit={submitEdit} className="space-y-3">
-        <p className="text-xs text-muted-foreground">Consignee details appear on commercial invoices. Phone and email must be unique.</p>
-        <div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Consignee Name *</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div><div className="space-y-1"><Label>Customer type</Label><Select value={form.customer_type} onValueChange={(v: Customer['customer_type']) => setForm({ ...form, customer_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="individual">Individual</SelectItem><SelectItem value="company">Company</SelectItem></SelectContent></Select></div></div>
-        <div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Company name</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div><div className="space-y-1"><Label>Source</Label><Select value={form.source} onValueChange={(v) => setForm({ ...form, source: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="website">Website</SelectItem><SelectItem value="referral">Referral</SelectItem><SelectItem value="auction">Auction enquiry</SelectItem><SelectItem value="walk_in">Walk-in</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div></div>
-        <div className="grid gap-2 sm:grid-cols-3"><div className="space-y-1"><Label>Contact *</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required /><p className="text-[11px] text-muted-foreground">Phone — unique</p></div><div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /><p className="text-[11px] text-muted-foreground">Unique</p></div><div className="space-y-1"><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div></div>
-        <div className="space-y-1"><Label>Address *</Label><Textarea value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} rows={2} required /></div>
-        <div className="grid gap-2 sm:grid-cols-3"><div className="space-y-1"><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div><div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div><div className="space-y-1"><Label>Status</Label><Select value={form.status} onValueChange={(v: Customer['status']) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></div>
-        <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} /></div>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen><DialogHeader><DialogTitle>Edit customer</DialogTitle></DialogHeader><form onSubmit={submitEdit} className="space-y-2.5">
+        <p className="text-[11px] text-muted-foreground">Consignee details print on invoices. Phone and email must be unique.</p>
+        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3"><div className="space-y-0.5"><Label>Consignee Name *</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div><div className="space-y-0.5"><Label>Customer type</Label><Select value={form.customer_type} onValueChange={(v: Customer['customer_type']) => setForm({ ...form, customer_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="individual">Individual</SelectItem><SelectItem value="company">Company</SelectItem></SelectContent></Select></div><div className="space-y-0.5"><Label>Source</Label><Select value={form.source} onValueChange={(v) => setForm({ ...form, source: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="website">Website</SelectItem><SelectItem value="referral">Referral</SelectItem><SelectItem value="auction">Auction enquiry</SelectItem><SelectItem value="walk_in">Walk-in</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div><div className="space-y-0.5"><Label>Company name</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div><div className="space-y-0.5"><Label>Contact *</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required /></div><div className="space-y-0.5"><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div><div className="space-y-0.5"><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div><div className="space-y-0.5"><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div><div className="space-y-0.5"><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div><div className="space-y-0.5 sm:col-span-2 lg:col-span-2"><Label>Address *</Label><Input value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} required /></div><div className="space-y-0.5"><Label>Status</Label><Select value={form.status} onValueChange={(v: Customer['status']) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div><div className="space-y-0.5 sm:col-span-2 lg:col-span-3"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div></div>
         <DialogFooter><Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button><Button type="submit" disabled={submitting || !consigneeReady}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save changes'}</Button></DialogFooter>
       </form></DialogContent></Dialog>
 
-      <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete customer?" description={deleteChecking ? 'Checking for related records...' : deleteBlocked || 'This will permanently remove the customer. This action cannot be undone.'} confirmLabel={deleteBlocked ? 'Archive instead' : 'Delete permanently'} destructive={!deleteBlocked} loading={deleteChecking || submitting} onConfirm={deleteBlocked ? archiveCustomer : confirmDelete} />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) archiveTargetRef.current = null;
+        }}
+        title={forceArchive ? 'Archive customer?' : 'Delete customer?'}
+        description={deleteDescription}
+        confirmLabel={forceArchive ? (deleteBlocked ? 'Archive instead' : 'Archive customer') : 'Delete permanently'}
+        destructive={!forceArchive}
+        loading={deleteChecking || submitting}
+        onConfirm={forceArchive ? archiveCustomer : confirmDelete}
+      />
 
-      <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><SheetContent className="w-full overflow-y-auto sm:max-w-xl"><>{selected && <><SheetHeader className="pr-8"><div className="flex items-start justify-between gap-3"><div><SheetTitle>{selected.full_name}</SheetTitle><SheetDescription>{selected.customer_code}{selected.company_name ? ` · ${selected.company_name}` : ''}</SheetDescription></div><div className="flex items-center gap-2"><Select value={selected.status} onValueChange={(v: Customer['status']) => updateStatus(v)}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></div></SheetHeader><div className="flex gap-2 pb-2"><Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</Button><Button size="sm" variant="outline" onClick={checkDelete}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete</Button></div>{detailLoading ? <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading profile...</div> : <div className="space-y-6 pt-2"><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Assigned to</p>{canReassign(selected) ? <Select value={selected.assigned_to ?? undefined} onValueChange={(v) => void reassignCustomer(selected, v)}><SelectTrigger className="mt-2"><SelectValue placeholder="Select staff" /></SelectTrigger><SelectContent>{staff.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email || p.id}</SelectItem>)}{selected.assigned_to && !staff.some((p) => p.id === selected.assigned_to) && <SelectItem value={selected.assigned_to}>{staffName(selected.assigned_to)}</SelectItem>}</SelectContent></Select> : <p className="mt-1 text-sm font-medium">{staffName(selected.assigned_to)}</p>}<p className="mt-1 text-xs text-muted-foreground">Company and ongoing quotes, invoices, and sales follow this owner.</p></div><div className="grid grid-cols-2 gap-3"><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Consignee contact</p><p className="mt-1 text-sm font-medium">{selected.email || 'No email'}</p><p className="mt-1 text-xs text-muted-foreground">{selected.phone || 'No phone number'}</p></div><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Shipping address</p><p className="mt-1 text-sm font-medium">{selected.address_line1 || 'Address not set'}</p><p className="mt-1 text-xs text-muted-foreground">{[selected.city, selected.country].filter(Boolean).join(', ') || 'City / country not set'}</p></div></div>{selected.notes && <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground"><FileText className="mr-2 inline h-4 w-4" />{selected.notes}</div>}<section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Contacts</h3></div><Button variant="outline" size="sm" onClick={() => setContactOpen(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button></div>{contacts.length === 0 ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No additional contacts yet.</p> : <div className="space-y-2">{contacts.map((contact) => <div key={contact.id} className="flex items-center gap-3 rounded-lg border border-border/70 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted"><UserRound className="h-4 w-4 text-muted-foreground" /></div><div className="min-w-0 flex-1"><p className="text-sm font-medium">{contact.name}{contact.is_primary && <span className="ml-2 text-[10px] text-primary">PRIMARY</span>}</p><p className="truncate text-xs text-muted-foreground">{contact.role || contact.email || contact.phone || 'No details'}</p></div></div>)}</div>}</section><section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Vehicle requirements</h3></div><Button variant="outline" size="sm" onClick={() => setRequirementOpen(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button></div>{requirements.length === 0 ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No vehicle requirements yet.</p> : <div className="space-y-2">{requirements.map((r) => <div key={r.id} className="rounded-lg border border-border/70 p-3"><div className="flex items-center justify-between gap-2"><p className="text-sm font-medium">{[r.make, r.model].filter(Boolean).join(' ') || 'Vehicle preference'}</p><Badge variant="outline">{r.status}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{r.year_from || 'Any'} - {r.year_to || 'Any'}{r.budget_min || r.budget_max ? ` · ${r.currency} ${r.budget_min || 0} - ${r.budget_max || 'open'}` : ''}</p></div>)}</div>}</section><section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Communication timeline</h3></div><Button variant="outline" size="sm" onClick={() => setCommunicationOpen(true)}><Plus className="mr-1 h-3.5 w-3.5" />Log interaction</Button></div>{communications.length === 0 ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No interactions logged yet.</p> : <div className="space-y-3">{communications.map((com) => <div key={com.id} className="relative border-l-2 border-border pl-4"><span className="absolute -left-[5px] top-1 h-2 w-2 rounded-full bg-primary" /><div className="flex items-center gap-2"><MessageSquare className="h-3.5 w-3.5 text-primary" /><p className="text-sm font-medium">{com.subject}</p></div><p className="mt-1 text-xs text-muted-foreground">{com.communication_type} · {format(new Date(com.created_at), 'MMM d, yyyy h:mm a')}</p>{com.body && <p className="mt-2 text-sm text-muted-foreground">{com.body}</p>}</div>)}</div>}</section></div>}</>}</></SheetContent></Sheet>
+      <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><SheetContent className="w-full overflow-y-auto sm:max-w-xl"><>{selected && <><SheetHeader className="pr-8"><div className="flex items-start justify-between gap-3"><div><SheetTitle>{selected.full_name}</SheetTitle><SheetDescription>{selected.customer_code}{selected.company_name ? ` · ${selected.company_name}` : ''}</SheetDescription></div><div className="flex items-center gap-2"><Select value={selected.status} onValueChange={(v: Customer['status']) => updateStatus(v)}><SelectTrigger className="w-28"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></div></SheetHeader><div className="flex gap-2 pb-2">{canEditCustomer && <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</Button>}{(canEditCustomer || canDeleteCustomer) && <Button size="sm" variant="outline" onClick={() => void checkDelete()}><Trash2 className="mr-1.5 h-3.5 w-3.5" />{canDeleteCustomer ? 'Delete' : 'Archive'}</Button>}</div>{detailLoading ? <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading profile...</div> : <div className="space-y-6 pt-2"><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Assigned to</p>{canReassign(selected) ? <Select value={selected.assigned_to ?? undefined} onValueChange={(v) => void reassignCustomer(selected, v)}><SelectTrigger className="mt-2"><SelectValue placeholder="Select staff" /></SelectTrigger><SelectContent>{staff.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email || p.id}</SelectItem>)}{selected.assigned_to && !staff.some((p) => p.id === selected.assigned_to) && <SelectItem value={selected.assigned_to}>{staffName(selected.assigned_to)}</SelectItem>}</SelectContent></Select> : <p className="mt-1 text-sm font-medium">{staffName(selected.assigned_to)}</p>}<p className="mt-1 text-xs text-muted-foreground">Company and ongoing quotes, invoices, and sales follow this owner.</p></div><div className="grid grid-cols-2 gap-3"><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Consignee contact</p><p className="mt-1 text-sm font-medium">{selected.email || 'No email'}</p><p className="mt-1 text-xs text-muted-foreground">{selected.phone || 'No phone number'}</p></div><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Shipping address</p><p className="mt-1 text-sm font-medium">{selected.address_line1 || 'Address not set'}</p><p className="mt-1 text-xs text-muted-foreground">{[selected.city, selected.country].filter(Boolean).join(', ') || 'City / country not set'}</p></div></div>{selected.notes && <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground"><FileText className="mr-2 inline h-4 w-4" />{selected.notes}</div>}<section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Contacts</h3></div><Button variant="outline" size="sm" onClick={() => setContactOpen(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button></div>{contacts.length === 0 ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No additional contacts yet.</p> : <div className="space-y-2">{contacts.map((contact) => <div key={contact.id} className="flex items-center gap-3 rounded-lg border border-border/70 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted"><UserRound className="h-4 w-4 text-muted-foreground" /></div><div className="min-w-0 flex-1"><p className="text-sm font-medium">{contact.name}{contact.is_primary && <span className="ml-2 text-[10px] text-primary">PRIMARY</span>}</p><p className="truncate text-xs text-muted-foreground">{contact.role || contact.email || contact.phone || 'No details'}</p></div></div>)}</div>}</section><section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Vehicle requirements</h3></div><Button variant="outline" size="sm" onClick={() => setRequirementOpen(true)}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button></div>{requirements.length === 0 ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No vehicle requirements yet.</p> : <div className="space-y-2">{requirements.map((r) => <div key={r.id} className="rounded-lg border border-border/70 p-3"><div className="flex items-center justify-between gap-2"><p className="text-sm font-medium">{[r.make, r.model].filter(Boolean).join(' ') || 'Vehicle preference'}</p><Badge variant="outline">{r.status}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{r.year_from || 'Any'} - {r.year_to || 'Any'}{r.budget_min || r.budget_max ? ` · ${r.currency} ${r.budget_min || 0} - ${r.budget_max || 'open'}` : ''}</p></div>)}</div>}</section><section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Communication timeline</h3></div><Button variant="outline" size="sm" onClick={() => setCommunicationOpen(true)}><Plus className="mr-1 h-3.5 w-3.5" />Log interaction</Button></div>{communications.length === 0 ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">No interactions logged yet.</p> : <div className="space-y-3">{communications.map((com) => <div key={com.id} className="relative border-l-2 border-border pl-4"><span className="absolute -left-[5px] top-1 h-2 w-2 rounded-full bg-primary" /><div className="flex items-center gap-2"><MessageSquare className="h-3.5 w-3.5 text-primary" /><p className="text-sm font-medium">{com.subject}</p></div><p className="mt-1 text-xs text-muted-foreground">{com.communication_type} · {format(new Date(com.created_at), 'MMM d, yyyy h:mm a')}</p>{com.body && <p className="mt-2 text-sm text-muted-foreground">{com.body}</p>}</div>)}</div>}</section></div>}</>}</></SheetContent></Sheet>
 
       <Dialog open={contactOpen} onOpenChange={setContactOpen}><DialogContent fullscreen><DialogHeader><DialogTitle>Add contact</DialogTitle></DialogHeader><form onSubmit={submitContact} className="space-y-3"><div className="space-y-1"><Label>Name *</Label><Input value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} required /></div><div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Email</Label><Input type="email" value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} /></div><div className="space-y-1"><Label>Phone</Label><Input value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></div></div><div className="space-y-1"><Label>Role</Label><Input value={contactForm.role} onChange={(e) => setContactForm({ ...contactForm, role: e.target.value })} /></div><DialogFooter><Button type="submit" disabled={submitting || !contactForm.name.trim()}>Save contact</Button></DialogFooter></form></DialogContent></Dialog>
 

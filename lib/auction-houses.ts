@@ -3,7 +3,7 @@ import type { Supplier } from '@/lib/types';
 
 export type AuctionHousePick = Pick<
   Supplier,
-  'id' | 'name' | 'supplier_code' | 'city' | 'country' | 'status'
+  'id' | 'name' | 'supplier_code' | 'city' | 'country' | 'status' | 'notes' | 'category'
 >;
 
 export async function fetchAuctionHouses(
@@ -12,7 +12,7 @@ export async function fetchAuctionHouses(
 ): Promise<{ data: AuctionHousePick[]; error: Error | null }> {
   let query = client
     .from('suppliers')
-    .select('id, name, supplier_code, city, country, status')
+    .select('id, name, supplier_code, city, country, status, notes, category')
     .eq('supplier_type', 'auction_house')
     .order('name');
 
@@ -43,7 +43,7 @@ export async function createOrGetAuctionHouse(
 
   const { data: existing, error: findError } = await client
     .from('suppliers')
-    .select('id, name, supplier_code, city, country, status')
+    .select('id, name, supplier_code, city, country, status, notes, category')
     .eq('supplier_type', 'auction_house')
     .ilike('name', name)
     .maybeSingle();
@@ -64,7 +64,7 @@ export async function createOrGetAuctionHouse(
           updated_at: new Date().toISOString(),
         })
         .eq('id', row.id)
-        .select('id, name, supplier_code, city, country, status')
+        .select('id, name, supplier_code, city, country, status, notes, category')
         .maybeSingle();
       if (updateError) {
         return { data: null, error: updateError as Error, created: false };
@@ -84,7 +84,7 @@ export async function createOrGetAuctionHouse(
       status: 'active',
       created_by: input.createdBy,
     })
-    .select('id, name, supplier_code, city, country, status')
+    .select('id, name, supplier_code, city, country, status, notes, category')
     .maybeSingle();
 
   if (insertError) {

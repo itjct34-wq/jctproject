@@ -27,7 +27,7 @@ const VIEW_ROLES: Record<PermissionModule, RoleName[]> = {
 
 const WRITE_ROLES: Record<PermissionModule, RoleName[]> = {
   dashboard: [],
-  customers: ['admin', 'operations', 'manager', 'sales_agent'],
+  customers: ['admin', 'operations', 'manager', 'sales_agent', 'freelancer'],
   vehicles: ['admin', 'operations', 'manager'],
   auctions: ['admin', 'operations', 'manager'],
   purchases: ['admin', 'operations', 'manager'],

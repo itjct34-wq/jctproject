@@ -14,6 +14,11 @@ import {
 } from 'docx';
 import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney, letterheadName } from '@/lib/jct-official';
 import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
+import {
+  normalizeFreightAmount,
+  normalizeFreightNotes,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 
 const RED = 'C4161C';
 const thin = { style: BorderStyle.SINGLE, size: 4, color: '666666' };
@@ -49,7 +54,16 @@ export async function exportCommercialInvoiceDocx(opts: {
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number'>[];
 }) {
   const { invoice, items, customer, vehicles = [] } = opts;
-  const freight = Number(invoice.freight_total || 0);
+  const freightPolicy = resolveFreightPolicy({
+    incoterm: invoice.incoterms,
+    shipmentType: invoice.shipment_type,
+    containerMode: invoice.container_mode,
+  });
+  const freight = normalizeFreightAmount(freightPolicy, invoice.freight_total);
+  const freightNotes =
+    normalizeFreightNotes(freightPolicy, invoice.freight_notes) || freightPolicy.defaultFreightLabel;
+  const showFreight =
+    freightPolicy.showFreightOnDocument || (freightPolicy.allowFreight && freight > 0);
   const grand =
     Number(invoice.subtotal || 0) +
     Number(invoice.tax || 0) +
@@ -181,36 +195,40 @@ export async function exportCommercialInvoiceDocx(opts: {
               }),
             ],
           }),
-          new Paragraph({
-            spacing: { before: 200, after: 80 },
-            children: [new TextRun({ text: 'FREIGHT', bold: true, size: 18 })],
-          }),
-          new Table({
-            width: { size: 9360, type: WidthType.DXA },
-            rows: [
-              new TableRow({
-                children: [
-                  cell('Description', { bold: true, fill: RED, color: 'FFFFFF' }),
-                  cell('Currency', { bold: true, fill: RED, color: 'FFFFFF' }),
-                  cell('Amount', { bold: true, fill: RED, color: 'FFFFFF' }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  cell(invoice.freight_notes?.trim() || 'Container freight'),
-                  cell(invoice.currency),
-                  cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  cell('FREIGHT TOTAL', { bold: true }),
-                  cell(''),
-                  cell(formatMoney(freight, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
-                ],
-              }),
-            ],
-          }),
+          ...(showFreight
+            ? [
+                new Paragraph({
+                  spacing: { before: 200, after: 80 },
+                  children: [new TextRun({ text: 'FREIGHT', bold: true, size: 18 })],
+                }),
+                new Table({
+                  width: { size: 9360, type: WidthType.DXA },
+                  rows: [
+                    new TableRow({
+                      children: [
+                        cell('Description', { bold: true, fill: RED, color: 'FFFFFF' }),
+                        cell('Currency', { bold: true, fill: RED, color: 'FFFFFF' }),
+                        cell('Amount', { bold: true, fill: RED, color: 'FFFFFF' }),
+                      ],
+                    }),
+                    new TableRow({
+                      children: [
+                        cell(freightNotes),
+                        cell(invoice.currency),
+                        cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
+                      ],
+                    }),
+                    new TableRow({
+                      children: [
+                        cell('FREIGHT TOTAL', { bold: true }),
+                        cell(''),
+                        cell(formatMoney(freight, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
+                      ],
+                    }),
+                  ],
+                }),
+              ]
+            : []),
           new Paragraph({
             spacing: { before: 200, after: 80 },
             children: [new TextRun({ text: 'TOTALS', bold: true, size: 18 })],
@@ -224,12 +242,16 @@ export async function exportCommercialInvoiceDocx(opts: {
                   cell(formatMoney(Number(invoice.subtotal || 0), invoice.currency), { align: AlignmentType.RIGHT }),
                 ],
               }),
-              new TableRow({
-                children: [
-                  cell('Freight'),
-                  cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
-                ],
-              }),
+              ...(showFreight
+                ? [
+                    new TableRow({
+                      children: [
+                        cell(freightPolicy.isRoro ? 'Ocean freight' : 'Freight'),
+                        cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
+                      ],
+                    }),
+                  ]
+                : []),
               new TableRow({
                 children: [
                   cell('INVOICE TOTAL', { bold: true, fill: RED, color: 'FFFFFF' }),

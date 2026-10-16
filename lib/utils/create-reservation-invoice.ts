@@ -1,5 +1,11 @@
 import { supabase } from '@/lib/supabase/client';
 import type { Vehicle } from '@/lib/types';
+import {
+  freightValidationError,
+  normalizeFreightAmount,
+  normalizeFreightNotes,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 
 export type ReservationParty = {
   name: string;
@@ -97,7 +103,18 @@ function chargesNotes(charges?: ReservationCharges): string | null {
  * Returns { ok, error?, invoiceId? }.
  */
 export async function createReservationInvoice(input: ReservationInvoiceInput) {
-  const freight = Number(input.freightUsd) || Number(input.charges?.freight) || 0;
+  const incoterm = input.priceTerm === 'CNF' ? 'C&F' : input.priceTerm;
+  const freightPolicy = resolveFreightPolicy({
+    incoterm,
+    shipmentType: input.shipmentType,
+    containerMode: input.containerMode,
+  });
+  const rawFreight = Number(input.freightUsd) || Number(input.charges?.freight) || 0;
+  const freightCheck = freightValidationError(freightPolicy, rawFreight);
+  if (freightCheck) {
+    return { ok: false as const, error: freightCheck };
+  }
+  const freight = normalizeFreightAmount(freightPolicy, rawFreight);
   const insurance = Number(input.insuranceUsd) || Number(input.charges?.insurance) || 0;
   const salePrice = Number(input.salePrice) || 0;
   const discount = Number(input.discountUsd) || 0;
@@ -112,7 +129,18 @@ export async function createReservationInvoice(input: ReservationInvoiceInput) {
     (Number(input.charges?.other) || 0);
   const otherCharges = Number(input.otherChargesUsd) || otherFromCharges;
   const description = buildVehicleInvoiceDescription(input.vehicle, input.priceTerm);
-  const chargeNote = chargesNotes(input.charges);
+  const chargeNote = freightPolicy.allowFreight
+    ? chargesNotes({
+        ...input.charges,
+        freight: freight || undefined,
+      })
+    : chargesNotes({
+        ...input.charges,
+        freight: undefined,
+      });
+  const freightNotes =
+    normalizeFreightNotes(freightPolicy, chargeNote) ||
+    (freight > 0 ? freightPolicy.defaultFreightLabel : null);
   const consignee = input.consignee;
   const notify = input.notifyParty;
   const issueDate = input.issueDate || new Date().toISOString().split('T')[0];
@@ -138,14 +166,14 @@ export async function createReservationInvoice(input: ReservationInvoiceInput) {
       total,
       currency: input.currency || 'USD',
       payment_status: 'unpaid',
-      incoterms: input.priceTerm === 'CNF' ? 'C&F' : input.priceTerm,
+      incoterms: incoterm,
       shipment_type: input.shipmentType,
       container_mode: input.containerMode,
       port_of_loading: input.portOfLoading || 'Nagoya, Japan',
       port_of_discharge: input.portOfDischarge || null,
       destination_country: input.destinationCountry || null,
       freight_total: freight,
-      freight_notes: chargeNote,
+      freight_notes: freightNotes,
       insurance_total: insurance,
       other_charges: otherCharges,
       discount_total: discount,
@@ -196,11 +224,11 @@ export async function createReservationInvoice(input: ReservationInvoiceInput) {
     },
   ];
 
-  if (freight > 0) {
+  if (freightPolicy.allowFreight && freight > 0) {
     lineItems.push({
       invoice_id: invData.id,
       vehicle_id: null,
-      description: 'Ocean freight',
+      description: freightPolicy.defaultFreightLabel,
       quantity: 1,
       unit_price: freight,
       discount: 0,

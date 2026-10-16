@@ -4,6 +4,11 @@ import { format } from 'date-fns';
 import type { Quotation, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument, type TradeLine } from '@/components/documents/official-trade-document';
 import { decodeInvoiceVehicle, type CompanyLetterheadSettings } from '@/lib/jct-official';
+import {
+  normalizeFreightAmount,
+  normalizeFreightNotes,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 
 type Props = {
   quotation: Quotation;
@@ -38,8 +43,14 @@ export function CommercialQuotationTemplate({
   const insurance = Number(quotation.insurance || 0);
   const other = Number(quotation.other_fees || 0);
   const subtotal = Number(quotation.subtotal || 0);
-  const freight = Number(quotation.freight || 0);
-  const grand = Number(quotation.total || subtotal + freight + insurance + other);
+  const freightPolicy = resolveFreightPolicy({
+    incoterm: quotation.price_type === 'CNF' ? 'C&F' : quotation.price_type,
+    shipmentType: 'RORO',
+    containerMode: 'RORO Vessel',
+  });
+  const freight = normalizeFreightAmount(freightPolicy, quotation.freight);
+  const freightNotes = normalizeFreightNotes(freightPolicy, quotation.freight_notes);
+  const grand = subtotal + freight + insurance + other;
 
   const lines: TradeLine[] =
     items.length > 0
@@ -78,12 +89,12 @@ export function CommercialQuotationTemplate({
       currency={quotation.currency}
       shipmentType="RORO"
       shipmentMode="RORO Vessel"
-      shipmentTerm={quotation.price_type}
+      shipmentTerm={quotation.price_type === 'CNF' ? 'C&F' : quotation.price_type}
       lines={lines}
       vehicles={vehicles}
       vehiclesTotal={subtotal}
       freightAmount={freight}
-      freightNotes={quotation.freight_notes}
+      freightNotes={freightNotes}
       insuranceAmount={insurance}
       otherAmount={other}
       grandTotal={grand}

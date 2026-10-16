@@ -14,6 +14,7 @@ import {
 } from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
+import { resolveFreightPolicy } from '@/lib/utils/commercial-freight-rules';
 
 export type TradeLine = {
   description: string;
@@ -205,13 +206,23 @@ export function OfficialTradeDocument({
       (sum, line) => sum + (Number(line.line_total || 0) || Number(line.quantity || 1) * Number(line.unit_price || 0)),
       0
     );
-  const freight = Number(freightAmount || 0);
+  const freightPolicy = resolveFreightPolicy({
+    incoterm: shipmentTerm,
+    shipmentType,
+    containerMode: shipmentMode,
+  });
+  const freight = freightPolicy.allowFreight ? Number(freightAmount || 0) : 0;
   const insurance = Number(insuranceAmount || 0);
   const other = Number(otherAmount || 0);
   const discount = Number(discountAmount || 0);
   const computedGrand = vehiclesSum + freight + insurance + other - discount;
-  const total = Number.isFinite(grandTotal) ? grandTotal : computedGrand;
-  const freightLabel = freightNotes?.trim() || 'Container freight';
+  // When FOB strips freight, recompute so print never includes a freight line/total.
+  const total =
+    !freightPolicy.allowFreight || !Number.isFinite(grandTotal) ? computedGrand : grandTotal;
+  const showFreightBlock =
+    freightPolicy.showFreightOnDocument || (freightPolicy.allowFreight && freight > 0);
+  const freightLabel =
+    freightNotes?.trim() || freightPolicy.defaultFreightLabel || 'Ocean freight';
   const vehicleColSpan = showDeposit ? 5 : 4;
   const totalWord = kind === 'quotation' ? 'Quotation total' : 'Invoice total';
 
@@ -371,29 +382,33 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        <p className="mt-1.5 mb-0.5 text-[9px] font-bold text-[#0b1f3a]">Freight</p>
-        <table className="inv-table inv-compact text-[8px]">
-          <thead>
-            <tr>
-              <th className="px-1.5 py-0.5 text-left">Description</th>
-              <th className="px-1.5 py-0.5 text-left">Currency</th>
-              <th className="px-1.5 py-0.5 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="px-1.5 py-0.5">{freightLabel}</td>
-              <td className="px-1.5 py-0.5 font-semibold">{currency}</td>
-              <td className="px-1.5 py-0.5 text-right font-medium">{formatMoney(freight, currency)}</td>
-            </tr>
-            <tr className="inv-subtotal">
-              <td colSpan={2} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
-                Freight total
-              </td>
-              <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(freight, currency)}</td>
-            </tr>
-          </tbody>
-        </table>
+        {showFreightBlock && (
+          <>
+            <p className="mt-1.5 mb-0.5 text-[9px] font-bold text-[#0b1f3a]">Freight</p>
+            <table className="inv-table inv-compact text-[8px]">
+              <thead>
+                <tr>
+                  <th className="px-1.5 py-0.5 text-left">Description</th>
+                  <th className="px-1.5 py-0.5 text-left">Currency</th>
+                  <th className="px-1.5 py-0.5 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="px-1.5 py-0.5">{freightLabel}</td>
+                  <td className="px-1.5 py-0.5 font-semibold">{currency}</td>
+                  <td className="px-1.5 py-0.5 text-right font-medium">{formatMoney(freight, currency)}</td>
+                </tr>
+                <tr className="inv-subtotal">
+                  <td colSpan={2} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
+                    Freight total
+                  </td>
+                  <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(freight, currency)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
 
         <table className="inv-table inv-compact mt-1.5 text-[8px]">
           <tbody>
@@ -401,10 +416,14 @@ export function OfficialTradeDocument({
               <td className="px-1.5 py-0.5 text-right font-semibold">Vehicles total</td>
               <td className="w-[28%] px-1.5 py-0.5 text-right">{formatMoney(vehiclesSum, currency)}</td>
             </tr>
-            <tr>
-              <td className="px-1.5 py-0.5 text-right font-semibold">Freight</td>
-              <td className="px-1.5 py-0.5 text-right">{formatMoney(freight, currency)}</td>
-            </tr>
+            {showFreightBlock && (
+              <tr>
+                <td className="px-1.5 py-0.5 text-right font-semibold">
+                  {freightPolicy.isRoro ? 'Ocean freight' : 'Freight'}
+                </td>
+                <td className="px-1.5 py-0.5 text-right">{formatMoney(freight, currency)}</td>
+              </tr>
+            )}
             {insurance > 0 && (
               <tr>
                 <td className="px-1.5 py-0.5 text-right font-semibold">Insurance</td>
