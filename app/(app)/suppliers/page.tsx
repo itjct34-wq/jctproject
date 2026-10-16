@@ -186,7 +186,33 @@ export default function SuppliersPage() {
         { label: 'Countries', value: stats.countries, icon: MapPin, tone: 'bg-cyan-50 text-cyan-600' },
       ].map((stat) => <Card key={stat.label} className="border-border/60"><CardContent className="flex items-center gap-3 p-4"><div className={`flex h-9 w-9 items-center justify-center rounded-lg ${stat.tone}`}><stat.icon className="h-4 w-4" /></div><div><p className="text-xs text-muted-foreground">{stat.label}</p><p className="text-xl font-bold">{stat.value}</p></div></CardContent></Card>)}</div>
 
-      <Card className="border-border/60"><CardContent className="p-4"><div className="flex flex-col gap-3 md:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, code, country, contact..." /></div><Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger className="w-full md:w-44"><SelectValue placeholder="All types" /></SelectTrigger><SelectContent><SelectItem value="all">All types</SelectItem><SelectItem value="auction_house">Auction House</SelectItem><SelectItem value="dealer">Dealer</SelectItem><SelectItem value="wholesaler">Wholesaler</SelectItem><SelectItem value="individual">Individual</SelectItem></SelectContent></Select><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full md:w-40"><SelectValue placeholder="All statuses" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></CardContent></Card>
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
+          <div className="erp-filter-search">
+            <Search aria-hidden />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, code, country, contact..." />
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="erp-filter-select"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="auction_house">Auction House</SelectItem>
+              <SelectItem value="dealer">Dealer</SelectItem>
+              <SelectItem value="wholesaler">Wholesaler</SelectItem>
+              <SelectItem value="individual">Individual</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="erp-filter-select"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Card className="overflow-hidden border-border/60">{loading ? <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading suppliers...</div> : filteredSuppliers.length === 0 ? <div className="flex flex-col items-center justify-center p-14 text-center"><Building2 className="mb-3 h-10 w-10 text-muted-foreground/50" /><h3 className="font-semibold">No suppliers found</h3><p className="mt-1 text-sm text-muted-foreground">Add a supplier or adjust your search filters.</p></div> : <div className="divide-y divide-border/70">{filteredSuppliers.map((supplier) => { const TypeIcon = typeIcons[supplier.supplier_type]; return <button key={supplier.id} onClick={() => loadDetails(supplier)} className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/40"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><TypeIcon className="h-5 w-5" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-medium">{supplier.name}</p><Badge variant="outline" className={statusStyles[supplier.status]}>{supplier.status}</Badge></div><p className="mt-0.5 truncate text-xs text-muted-foreground">{supplier.supplier_code} · {typeLabels[supplier.supplier_type]}{supplier.country ? ` · ${supplier.country}` : ''}</p></div><div className="hidden items-center gap-5 text-xs text-muted-foreground md:flex">{supplier.contact_person && <span className="flex items-center gap-1"><UserRound className="h-3.5 w-3.5" />{supplier.contact_person}</span>}{supplier.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{supplier.email}</span>}</div><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></button>; })}</div>}</Card>
 

@@ -26,7 +26,7 @@ import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } from '@/lib/types';
-import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
+import { ChevronRight, Download, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
 import { customerContactErrorMessage, isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
@@ -58,7 +58,7 @@ const emptyForm = {
   customer_id: '', sale_id: '', invoice_type: 'commercial' as Invoice['invoice_type'],
   invoice_code_mode: 'auto' as 'auto' | 'manual', invoice_code: '',
   issue_date: '', due_date: '', tax: '', currency: 'USD', notes: '',
-  incoterms: 'FOB', shipment_type: 'RORO', container_mode: 'RORO Vessel',
+  incoterms: 'FOB', shipment_type: 'RORO', container_mode: 'RORO',
   port_of_loading: 'Nagoya, Japan', port_of_discharge: '', vessel_name: '', bl_number: '',
   freight_total: '0', freight_notes: 'Ocean freight', insurance_total: '0', other_charges: '0', discount_total: '0',
   payment_terms: '100% T/T in advance / LC at sight', bank_details: '',
@@ -242,7 +242,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     const editPolicy = resolveFreightPolicy({
       incoterm: selected.incoterms || 'FOB',
       shipmentType: selected.shipment_type || 'RORO',
-      containerMode: selected.container_mode || 'RORO Vessel',
+      containerMode: selected.container_mode || 'RORO',
     });
     setForm({
       customer_mode: 'existing',
@@ -253,7 +253,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       issue_date: selected.issue_date, due_date: selected.due_date || '', tax: String(selected.tax),
       currency: selected.currency, notes: selected.notes || '',
       incoterms: selected.incoterms || 'FOB', shipment_type: selected.shipment_type || 'RORO',
-      container_mode: selected.container_mode || 'RORO Vessel',
+      container_mode: selected.container_mode === 'RORO Vessel' ? 'RORO' : (selected.container_mode || 'RORO'),
       port_of_loading: selected.port_of_loading || 'Nagoya, Japan',
       port_of_discharge: selected.port_of_discharge || '', vessel_name: selected.vessel_name || '',
       bl_number: selected.bl_number || '',
@@ -389,7 +389,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: form.payment_status, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: freight, freight_notes: freightNotes, insurance_total: insurance, other_charges: other, discount_total: discount, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
+    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: form.payment_status, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: freight, freight_notes: freightNotes, insurance_total: insurance, other_charges: other, discount_total: discount, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
     if (error) { setSubmitting(false); toast.error(`Could not create invoice: ${error.message}`); return; }
     const inv = data as Invoice;
     const itemRows = linePayload(inv.id);
@@ -434,7 +434,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: freight, freight_notes: freightNotes, insurance_total: insurance, other_charges: other, discount_total: discount, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, payment_status: form.payment_status, updated_at: new Date().toISOString() }).eq('id', selected.id);
+    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: freight, freight_notes: freightNotes, insurance_total: insurance, other_charges: other, discount_total: discount, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, payment_status: form.payment_status, updated_at: new Date().toISOString() }).eq('id', selected.id);
     if (error) { setSubmitting(false); toast.error(`Could not update: ${error.message}`); return; }
     const { error: delError } = await supabase.from('invoice_items').delete().eq('invoice_id', selected.id);
     if (delError) { setSubmitting(false); toast.error(`Could not update line items: ${delError.message}`); return; }
@@ -658,9 +658,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <div className="space-y-0.5"><Label>Type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div>
             <div className="space-y-0.5"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div>
             <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
-            <div className="space-y-0.5"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
-            <div className="space-y-0.5 sm:col-span-2 lg:col-span-4"><Label>Sales agent</Label><Input value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Sales agent name" /></div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="min-w-0 space-y-0.5"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div>
+            <div className="min-w-0 space-y-0.5"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
+            <div className="min-w-0 space-y-0.5"><Label>Sales agent</Label><Input value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Sales agent name" /></div>
           </div>
         </section>
 
@@ -767,9 +769,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           <div className="flex justify-between border-t border-border pt-1 text-sm font-bold"><span>Invoice total</span><span>{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.allowFreight ? (Number(form.freight_total)||0) : 0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span></div>
         </div>
 
-        {/* Shipping / bank — collapsed by default */}
+        {/* Shipping / charges — collapsed by default */}
         <details className="rounded-md border border-border/60 open:pb-1.5">
-          <summary className="cursor-pointer select-none px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">Shipping terms, charges & bank</summary>
+          <summary className="cursor-pointer select-none px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">Shipping terms & charges</summary>
           <div className="grid gap-1.5 border-t border-border/60 px-2.5 pt-1.5 sm:grid-cols-3">
             <div className="space-y-0.5"><Label>Incoterms</Label>
               <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
@@ -777,42 +779,29 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 <SelectContent>{['FOB','C&F','CFR','CIF','EXW','FCA','CPT','CIP','DAP','DDP'].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-0.5"><Label>Shipment type</Label>
-              <Select value={form.shipment_type} onValueChange={(v) => applyShippingPatch({
-                shipment_type: v,
-                container_mode: v === 'RORO' ? 'RORO Vessel' : v === 'Container' ? '40ft Container' : form.container_mode,
-              })}>
+            <div className="space-y-0.5"><Label>Shipment mode</Label>
+              <Select
+                value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
+                onValueChange={(v) =>
+                  applyShippingPatch({
+                    container_mode: v,
+                    shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
+                  })
+                }
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="RORO">RORO</SelectItem>
-                  <SelectItem value="Container">Container</SelectItem>
-                  <SelectItem value="Air Freight">Air Freight</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-0.5"><Label>RORO / Container</Label>
-              <Select value={form.container_mode} onValueChange={(v) => applyShippingPatch({ container_mode: v, shipment_type: v.includes('Container') ? 'Container' : v.includes('RORO') ? 'RORO' : form.shipment_type })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RORO Vessel">RORO Vessel</SelectItem>
-                  <SelectItem value="20ft Container">20ft Container</SelectItem>
-                  <SelectItem value="40ft Container">40ft Container</SelectItem>
-                  <SelectItem value="40ft HC">40ft HC Container</SelectItem>
-                  <SelectItem value="LCL">LCL Container</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="20ft Container">Container 20ft</SelectItem>
+                  <SelectItem value="40ft Container">Container 40ft</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-0.5"><Label>Port of loading</Label><Input value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
             <div className="space-y-0.5"><Label>Port of discharge</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Vessel</Label><Input value={form.vessel_name} onChange={(e) => setForm({ ...form, vessel_name: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>BL number</Label><Input value={form.bl_number} onChange={(e) => setForm({ ...form, bl_number: e.target.value })} /></div>
             <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
             <div className="space-y-0.5"><Label>Other charges</Label><Input type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
             <div className="space-y-0.5"><Label>Discount</Label><Input type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
-            <div className="space-y-0.5 sm:col-span-2"><Label>Payment terms</Label><Input value={form.payment_terms} onChange={(e) => setForm({ ...form, payment_terms: e.target.value })} /></div>
-            <div className="space-y-0.5 sm:col-span-3"><Label>Bank details</Label><Textarea value={form.bank_details} onChange={(e) => setForm({ ...form, bank_details: e.target.value })} rows={2} placeholder="Bank, account, SWIFT..." /></div>
             <div className="space-y-0.5 sm:col-span-3"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
           </div>
         </details>
@@ -826,7 +815,25 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
         { label: 'Total invoices', value: stats.total, tone: 'bg-blue-50 text-blue-600' }, { label: 'Unpaid', value: stats.unpaid, tone: 'bg-red-50 text-red-600' }, { label: 'Paid', value: stats.paid, tone: 'bg-emerald-50 text-emerald-600' }, { label: 'Outstanding', value: stats.outstanding.toLocaleString(), tone: 'bg-amber-50 text-amber-600' },
       ].map((s) => <Card key={s.label} className="border-border/60"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.label}</p><p className="text-xl font-bold">{s.value}</p></CardContent></Card>)}</div>
-      <Card className="border-border/60"><CardContent className="p-4"><div className="flex flex-col gap-3 md:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice code..." /></div><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div></CardContent></Card>
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
+          <div className="erp-filter-search">
+            <Search aria-hidden />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice code..." />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="erp-filter-select"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="credited">Credited</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <Card className="overflow-hidden border-border/60">{loading ? <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading invoices...</div> : filtered.length === 0 ? <div className="flex flex-col items-center justify-center p-10 text-center"><FileText className="mb-2 h-8 w-8 text-muted-foreground/50" /><h3 className="text-sm font-semibold">No invoices found</h3><p className="mt-1 text-xs text-muted-foreground">{isSellingFocused ? 'You only see invoices you created or that belong to your customers.' : 'Create an invoice or adjust your filters.'}</p></div> : <div className="divide-y divide-border/70">{filtered.map((inv) => (
         <div
           key={inv.id}
@@ -856,13 +863,96 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
             <p className="truncate text-[11px] text-muted-foreground">{customerName(inv.customer_id)} · {inv.currency} {inv.total.toLocaleString()}</p>
           </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 shrink-0 gap-1.5 px-2.5"
+            aria-label={`Actions for ${inv.invoice_code}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void loadDetails(inv);
+            }}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+            Actions
+          </Button>
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </div>
       ))}</div>}</Card>
       {lineItemForm(createOpen, () => setCreateOpen(false), submitCreate, isAuction ? 'New auction deposit invoice' : 'New invoice')}
       {lineItemForm(editOpen, () => setEditOpen(false), submitEdit, isAuction ? 'Edit auction deposit invoice' : 'Edit invoice')}
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete invoice?" description="This will permanently remove the invoice and its line items." onConfirm={confirmDelete} loading={submitting} />
-      <Sheet open={detailSheetOpen} onOpenChange={(o) => { setDetailSheetOpen(o); if (!o && !printOpen) setSelected(null); }}><SheetContent className="w-full overflow-y-auto sm:max-w-lg"><SheetHeader><SheetTitle>{selected?.invoice_code}</SheetTitle><SheetDescription>{selected && typeLabels[selected.invoice_type]}</SheetDescription></SheetHeader>{selected && (<><div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={printInvoice}><Printer className="mr-1.5 h-4 w-4" />Print</Button>{canEditInvoice && <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-4 w-4" />Edit</Button>}{canDeleteInvoice && <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" />Delete</Button>}</div><div className="mt-6 space-y-4">{detailLoading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div> : (<><div className="flex flex-wrap gap-2"><Badge variant="outline" className={statusStyles[selected.payment_status]}>{selected.payment_status}</Badge>{['unpaid','partial','paid','cancelled','credited'].map((s) => <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s as Invoice['payment_status'])}>{s}</Button>)}</div><div className="rounded-lg border border-border/70 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p><p className="mt-1 font-medium">{customerName(selected.customer_id)}</p></div>{items.length > 0 && <Table><TableHeader><TableRow><TableHead>Description</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader><TableBody>{items.map((item) => <TableRow key={item.id}><TableCell>{item.description}</TableCell><TableCell className="text-right">{item.quantity}</TableCell><TableCell className="text-right">{item.line_total.toLocaleString()}</TableCell></TableRow>)}</TableBody></Table>}<div className="space-y-1"><div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{selected.currency} {selected.subtotal.toLocaleString()}</span></div><div className="flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><span>{selected.currency} {selected.total.toLocaleString()}</span></div></div></>)}</div></>)}</SheetContent></Sheet>
+      <Sheet open={detailSheetOpen} onOpenChange={(o) => { setDetailSheetOpen(o); if (!o && !printOpen) setSelected(null); }}>
+        <SheetContent
+          side="right"
+          className="inset-0 h-[100dvh] w-screen max-w-none border-0 p-4 sm:max-w-none data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+        >
+          <SheetHeader className="pr-10 text-left">
+            <SheetTitle>{selected?.invoice_code}</SheetTitle>
+            <SheetDescription>{selected && typeLabels[selected.invoice_type]}</SheetDescription>
+          </SheetHeader>
+          {selected && (
+            <>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={printInvoice}><Printer className="mr-1.5 h-4 w-4" />Print</Button>
+                {canEditInvoice && <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-4 w-4" />Edit</Button>}
+                {canDeleteInvoice && <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" />Delete</Button>}
+              </div>
+              <div className="mt-6 space-y-4">
+                {detailLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline" className={statusStyles[selected.payment_status]}>{selected.payment_status}</Badge>
+                      {(['unpaid', 'partial', 'paid', 'cancelled', 'credited'] as const).map((s) => (
+                        <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s)}>
+                          {s}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="rounded-lg border border-border/70 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p>
+                      <p className="mt-1 font-medium">{customerName(selected.customer_id)}</p>
+                    </div>
+                    {items.length > 0 && (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Qty</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.description}</TableCell>
+                              <TableCell className="text-right">{item.quantity}</TableCell>
+                              <TableCell className="text-right">{item.line_total.toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>{selected.currency} {selected.subtotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-border pt-2 text-sm font-bold">
+                        <span>Total</span>
+                        <span>{selected.currency} {selected.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
       <Dialog open={printOpen} onOpenChange={closePrintPreview}>
         <DialogContent fullscreen className="print:max-w-none print:shadow-none print:border-0">
           <DialogHeader className="print:hidden">

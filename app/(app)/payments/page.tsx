@@ -385,37 +385,34 @@ function RemittancesPageInner() {
       ) : (
         <RemittanceCurrencyDashboard totals={currencyTotals} />
       )}
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={
-                  tab === 'unknown'
-                    ? 'Search remitter, bank, code...'
-                    : 'Search remitter, customer, code...'
-                }
-              />
-            </div>
-            {tab === 'all' ? (
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="unallocated">Unallocated</SelectItem>
-                  <SelectItem value="allocated">Allocated</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : null}
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
+          <div className="erp-filter-search">
+            <Search aria-hidden />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={
+                tab === 'unknown'
+                  ? 'Search remitter, bank, code...'
+                  : 'Search remitter, customer, code...'
+              }
+            />
           </div>
-        </CardContent>
-      </Card>
+          {tab === 'all' ? (
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="erp-filter-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="unallocated">Unallocated</SelectItem>
+                <SelectItem value="allocated">Allocated</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
+        </div>
+      </div>
       <Card className="overflow-hidden border-border/60">
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground">

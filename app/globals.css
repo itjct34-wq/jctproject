@@ -123,7 +123,41 @@
 .erp-shell .erp-filter-bar button[role='combobox'],
 .erp-shell .erp-filter-panel button[role='combobox'] {
   border-color: hsl(var(--input));
+  border-radius: 0.375rem;
   min-height: 2.25rem;
+  height: 2.25rem;
+}
+.erp-shell .erp-filter-search {
+  @apply relative min-w-0 flex-1;
+}
+.erp-shell .erp-filter-search > svg {
+  @apply pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground;
+}
+.erp-shell .erp-filter-search input {
+  padding-left: 2.25rem;
+}
+.erp-shell .erp-filter-select {
+  width: 100%;
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .erp-shell .erp-filter-select {
+    width: 12rem; /* 192px */
+  }
+}
+
+/* Native date inputs — room for calendar icon, no clip in workforms */
+.erp-shell input[type='date'],
+[data-dialog-workform='true'] input[type='date'] {
+  min-width: 9.5rem;
+  padding-right: 0.625rem;
+  overflow: visible;
+}
+.erp-shell input[type='date']::-webkit-calendar-picker-indicator,
+[data-dialog-workform='true'] input[type='date']::-webkit-calendar-picker-indicator {
+  margin-inline-end: 0.125rem;
+  cursor: pointer;
+  opacity: 1;
 }
 .erp-shell .erp-table-scroll {
   @apply max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto scrollbar-thin;
@@ -478,14 +512,32 @@
   position: sticky;
   top: 0;
   z-index: 2;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  padding: 0.5rem 3rem 0.5rem 1rem;
+  min-height: 3.25rem;
+  padding: 0.625rem 3.25rem 0.625rem 1rem;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--background));
 }
 [data-dialog-workform='true'] > [data-slot='dialog-header'] h2 {
   font-size: 1rem;
   line-height: 1.25;
+  margin: 0;
+}
+/* Center close X with sticky workform title bar */
+[data-dialog-workform='true'] > button[data-radix-dialog-close],
+[data-dialog-workform='true'] > button.absolute {
+  top: 0;
+  right: 0.5rem;
+  height: 3.25rem;
+  width: 2.75rem;
+  min-height: 3.25rem;
+  min-width: 2.75rem;
+  border-radius: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Cap form width so fields stay readable; leave bare divs uncapped (print previews) */
 [data-dialog-workform='true'] > form {

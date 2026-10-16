@@ -74,12 +74,15 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className={cn(
-        'absolute flex items-center justify-center opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground',
-        fullscreen
-          ? 'right-2 top-2 z-10 h-11 w-11 min-h-11 min-w-11 rounded-md'
-          : 'right-2 top-2 h-9 w-9 min-h-9 min-w-9 rounded-md sm:right-3 sm:top-3'
-      )}>
+      <DialogPrimitive.Close
+        data-radix-dialog-close=""
+        className={cn(
+          'absolute z-10 flex items-center justify-center opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground',
+          fullscreen
+            ? 'right-2 top-0 h-[3.25rem] w-11 min-h-[3.25rem] min-w-11 rounded-md'
+            : 'right-2 top-2 h-9 w-9 min-h-9 min-w-9 rounded-md sm:right-3 sm:top-3'
+        )}
+      >
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

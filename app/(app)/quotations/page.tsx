@@ -600,30 +600,28 @@ export default function QuotationsPage() {
         ))}
       </div>
 
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search quotation code..." />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
+          <div className="erp-filter-search">
+            <Search aria-hidden />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search quotation code..." />
           </div>
-        </CardContent>
-      </Card>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="erp-filter-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="accepted">Accepted</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+              <SelectItem value="converted">Converted</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Card className="overflow-hidden border-border/60">
         {loading ? (
