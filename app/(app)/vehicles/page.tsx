@@ -51,7 +51,7 @@ import {
   effectiveCommissionStatus,
   effectivePaymentStatus,
   effectiveShippingStatus,
-  INCOTERMS,
+  incotermSelectOptions,
   reservationExclusivityMessage,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUSES,
@@ -1019,7 +1019,7 @@ function VehiclesPage() {
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {INCOTERMS.map((t) => (
+                {incotermSelectOptions(form.incoterm).map((t) => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>

@@ -25,7 +25,7 @@ import {
   DEFAULT_TT_RATE,
   FIXED_EXPENSE_JPY,
 } from '@/lib/utils/vehicle-pricing';
-import { publicFobUsd, reservationExclusivityMessage, type VehicleFreightMode, type VehicleIncoterm } from '@/lib/vehicle-lifecycle';
+import { incotermSelectOptions, publicFobUsd, reservationExclusivityMessage, type VehicleFreightMode, type VehicleIncoterm } from '@/lib/vehicle-lifecycle';
 import { SOURCE_COUNTRIES, loadPortsForCountry } from '@/lib/source-countries';
 
 type ContainerSize = '20ft Container' | '40ft Container' | '40ft HC';
@@ -601,7 +601,7 @@ export function ReserveVehicleDialog({
                 <Select value={quotedTerm} onValueChange={(v: VehicleIncoterm) => setQuotedTerm(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(['FOB', 'C&F', 'CIF'] as VehicleIncoterm[]).map((t) => (
+                    {incotermSelectOptions(quotedTerm).map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
@@ -636,7 +636,7 @@ export function ReserveVehicleDialog({
                 <Select value={shipmentTerm} onValueChange={(v: VehicleIncoterm) => setShipmentTerm(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(['FOB', 'C&F', 'CIF'] as VehicleIncoterm[]).map((t) => (
+                    {incotermSelectOptions(shipmentTerm).map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>

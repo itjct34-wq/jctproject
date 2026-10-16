@@ -17,7 +17,7 @@ function configValues(value:unknown,keys:string[]):string[]{if(Array.isArray(val
 const CONFIGS=[
  {key:'currencies',label:'Supported currencies',help:'One ISO currency code per line, e.g. JPY, USD, EUR, GBP, PKR.'},
  {key:'freight_destinations',label:'Freight destination countries',help:'One destination country per line. Used by public inquiries and future shipping forms.'},
- {key:'incoterms',label:'Trade terms',help:'One trade term per line, e.g. FOB, CFR, CIF, EXW.'},
+ {key:'incoterms',label:'Trade terms',help:'One trade term per line. Commercial UI uses FOB, C&F, CIF.'},
  {key:'shipment_types',label:'Shipment types',help:'One shipment type per line, e.g. RORO, Container, Bulk.'},
 ];
 export default function ConfigurationPage(){

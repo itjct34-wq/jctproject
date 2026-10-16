@@ -50,7 +50,20 @@ export const WORKFLOW_STAGE_LABELS: Record<VehicleWorkflowStage, string> = {
 
 export const WORKFLOW_STAGES: VehicleWorkflowStage[] = ['in_stock', 'reserved', 'booked', 'shipped', 'delivered'];
 
+/** Selectable FOB / trade terms in app pickers (vehicles, invoices, reservations). */
 export const INCOTERMS: VehicleIncoterm[] = ['FOB', 'C&F', 'CIF'];
+
+/**
+ * Options for an Incoterm select: only FOB / C&F / CIF for new choices,
+ * plus the current saved value when it is a legacy term (so display does not blank).
+ */
+export function incotermSelectOptions(current?: string | null): string[] {
+  const cur = (current || '').trim();
+  if (cur && !(INCOTERMS as readonly string[]).includes(cur)) {
+    return [cur, ...INCOTERMS];
+  }
+  return [...INCOTERMS];
+}
 
 export const FREIGHT_MODES: VehicleFreightMode[] = ['roro', 'container'];
 

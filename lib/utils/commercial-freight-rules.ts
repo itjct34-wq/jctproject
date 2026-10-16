@@ -1,6 +1,9 @@
 /**
  * Commercial-document freight rules (invoices, quotations, reservation invoices).
  *
+ * Selectable UI terms: FOB, C&F, CIF (see INCOTERMS in vehicle-lifecycle).
+ * Aliases below still normalize legacy saved values (CFR, CNF, CPT, …).
+ *
  * Matrix (term × mode → freight):
  *   FOB × any mode              → no freight (vehicle cost only)
  *   C&F/CFR/CNF/CIF × RORO      → freight allowed; rolled into vehicle cost on print

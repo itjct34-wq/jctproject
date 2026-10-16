@@ -29,7 +29,7 @@ import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Switch } from '@/components/ui/switch';
-import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } from '@/lib/types';
+import type { Invoice, InvoiceItem, Customer, Vehicle, CompanySettings } from '@/lib/types';
 import { Download, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
@@ -40,6 +40,7 @@ import {
   normalizeFreightNotes,
   resolveFreightPolicy,
 } from '@/lib/utils/commercial-freight-rules';
+import { incotermSelectOptions } from '@/lib/vehicle-lifecycle';
 import { formatCurrency } from '@/lib/utils/currencies';
 import { sumByCurrency } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -108,7 +109,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
@@ -132,10 +132,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [iRes, cRes, sRes, vRes, setRes] = await Promise.all([
+    const [iRes, cRes, vRes, setRes] = await Promise.all([
       supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(250),
       supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2').order('full_name').limit(250),
-      supabase.from('sales').select('id, sale_code').order('created_at', { ascending: false }).limit(250),
       supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, fob_usd, sold_price, model_year, transmission').order('created_at', { ascending: false }).limit(250),
       supabase
         .from('company_settings')
@@ -146,7 +145,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     if (iRes.error) toast.error(`Unable to load invoices: ${iRes.error.message}`);
     else setInvoices((iRes.data || []) as Invoice[]);
     if (cRes.data) setCustomers(cRes.data as Customer[]);
-    if (sRes.data) setSales(sRes.data as Sale[]);
     if (vRes.data) setVehicles(vRes.data as Vehicle[]);
     if (setRes.data) {
       setCompanySettings(
@@ -178,7 +176,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   }, [invoices, search, statusFilter, isAuction]);
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.full_name || 'Unknown';
-  const saleCode = (id: string | null) => id ? sales.find((s) => s.id === id)?.sale_code || '' : '';
 
   const nextAutoInvoiceCode = () => {
     const prefix = (companySettings?.invoice_prefix || 'JCT').replace(/-+$/, '');
@@ -604,7 +601,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         <div className="erp-invoice-workform-body">
         {/* 1. Customer + invoice meta */}
         <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
-          <div className="grid gap-1 sm:grid-cols-3">
+          <div className="grid gap-1 sm:grid-cols-2">
             <div className="space-y-0.5">
               <Label>Customer source</Label>
               <Select
@@ -616,13 +613,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   <SelectItem value="existing">From database</SelectItem>
                   <SelectItem value="manual">Enter details</SelectItem>
                 </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-0.5">
-              <Label>Sale (optional)</Label>
-              <Select value={form.sale_id} onValueChange={(v) => setForm({ ...form, sale_id: v })}>
-                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue placeholder="Link to sale" /></SelectTrigger>
-                <SelectContent>{sales.map((s) => <SelectItem key={s.id} value={s.id}>{s.sale_code}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {form.customer_mode === 'existing' ? (
@@ -709,7 +699,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <div className="space-y-0.5"><Label>FOB term</Label>
               <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
                 <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{['FOB','C&F','CFR','CIF','EXW','FCA','CPT','CIP','DAP','DDP'].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {incotermSelectOptions(form.incoterms).map((x) => (
+                    <SelectItem key={x} value={x}>{x}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
