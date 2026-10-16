@@ -207,11 +207,13 @@
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  /* Remap tokens so Tailwind utilities stay valid (no circular @apply). */
+  --foreground: 0 0% 98%;
+  --muted-foreground: 220 10% 68%;
+  --muted: 0 0% 100%;
+  --border: 0 0% 100%;
 }
-.erp-shell .erp-sidebar .text-foreground { color: hsl(0 0% 98%); }
-.erp-shell .erp-sidebar .text-muted-foreground { color: hsl(220 10% 68%); }
 .erp-shell .erp-sidebar .hover\:bg-muted\/60:hover { background: hsl(0 0% 100% / 0.08); }
-.erp-shell .erp-sidebar .hover\:text-foreground:hover { color: hsl(0 0% 100%); }
 .erp-shell .erp-sidebar .border-border\/60 { border-color: hsl(0 0% 100% / 0.1); }
 .erp-shell .erp-list-panel {
   border-radius: calc(var(--radius) - 2px);
