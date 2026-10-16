@@ -17,7 +17,7 @@ const STATUS_STYLES: Record<string, string> = {
   inactive: 'bg-muted text-foreground/70 border-border',
   auction_won: 'bg-success/15 text-success border-success/35',
   bidding: 'bg-info/15 text-info border-info/35',
-  in_yard: 'bg-gold/15 text-gold-foreground border-gold/40',
+  in_yard: 'bg-brand/15 text-brand border-brand/35',
   in_transit: 'bg-info/15 text-info border-info/35',
   delivered: 'bg-success/15 text-success border-success/35',
   fully_paid: 'bg-success/15 text-success border-success/35',

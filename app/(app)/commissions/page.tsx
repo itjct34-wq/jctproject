@@ -225,7 +225,7 @@ export default function CommissionsPage() {
             const office = agent?.office_id ? offices.find((o) => o.id === agent.office_id) : null;
             return (
               <div key={agentId} className="border-b border-border last:border-0">
-                <div className="border-l-4 border-gold bg-muted/50 px-4 py-2.5 text-sm font-semibold text-primary">
+                <div className="border-l-4 border-brand bg-muted/50 px-4 py-2.5 text-sm font-semibold text-foreground">
                   {personName(agent)}
                   {office ? <span className="ml-2 font-normal text-muted-foreground">· {office.name}</span> : null}
                 </div>

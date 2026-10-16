@@ -147,7 +147,7 @@ export function BulkUploadHistory({ refreshKey = 0 }: { refreshKey?: number }) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="h-1 bg-gradient-to-r from-primary via-primary to-gold" />
+      <div className="h-1 bg-gradient-to-r from-brand/80 to-info/50" />
       <CardContent className="space-y-3 p-5">
         <div>
           <p className="text-sm font-semibold">Recent uploads</p>

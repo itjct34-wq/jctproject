@@ -70,7 +70,7 @@ function CurrencyCard({ totals }: { totals: RemittanceCurrencyTotals }) {
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2">
           <p className="text-base font-bold tracking-tight text-primary">
-            <span className="mr-1.5 text-gold">{symbol}</span>
+            <span className="mr-1.5 text-brand">{symbol}</span>
             {totals.currency}
           </p>
           <p className="text-right text-xs font-medium text-muted-foreground">

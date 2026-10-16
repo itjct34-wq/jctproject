@@ -28,12 +28,16 @@ export function ErpEmptyState({
         className
       )}
     >
-      {Icon ? <Icon className="mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden /> : null}
-      <h3 className="text-sm font-semibold text-primary">{title}</h3>
-      {description ? (
-        <p className="mt-1 max-w-sm text-xs text-muted-foreground">{description}</p>
+      {Icon ? (
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/70 ring-1 ring-border/60">
+          <Icon className="h-5 w-5 text-muted-foreground" aria-hidden />
+        </div>
       ) : null}
-      {action ? <div className="mt-3">{action}</div> : null}
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {description ? (
+        <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-muted-foreground">{description}</p>
+      ) : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }

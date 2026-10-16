@@ -69,7 +69,7 @@ export default function AgentsPage() {
     setEditing(null);
     setForm({
       ...empty,
-      agent_code: `JCT-AGT-${String(agents.length + 1).padStart(3, '0')}`,
+      agent_code: `AGT-${String(agents.length + 1).padStart(3, '0')}`,
     });
     setOpen(true);
   };

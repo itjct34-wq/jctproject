@@ -68,20 +68,20 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/95 px-3 shadow-[0_1px_0_hsl(var(--gold)/0.45)] backdrop-blur supports-[backdrop-filter]:bg-card/90 sm:gap-3 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/50 bg-card/70 px-3 shadow-glass-sm backdrop-blur-xl supports-[backdrop-filter]:bg-card/55 sm:gap-3 sm:px-4">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
-        className="lg:hidden flex shrink-0 items-center justify-center w-10 h-10 -ml-1 rounded-md hover:bg-accent"
+        className="lg:hidden -ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-muted/70"
       >
-        <Menu className="w-5 h-5" />
+        <Menu className="h-5 w-5" />
       </button>
 
-      <div className="hidden md:flex items-center text-sm text-muted-foreground">
+      <div className="hidden items-center text-sm text-muted-foreground md:flex">
         {today}
       </div>
 
-      <div className="flex-1 min-w-0 max-w-md mx-auto">
+      <div className="mx-auto min-w-0 max-w-md flex-1">
         <form
           className="relative"
           onSubmit={(e) => {
@@ -92,12 +92,12 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             setSearchQ('');
           }}
         >
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
             placeholder="Search vehicles…"
-            className="pl-9 h-9 bg-muted/50 border-transparent focus-visible:bg-background"
+            className="h-9 rounded-full border-border/50 bg-muted/40 pl-9 focus-visible:bg-background/90"
             aria-label="Search vehicles"
           />
         </form>
@@ -107,20 +107,23 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
         <DropdownMenuTrigger asChild>
-          <button aria-label="Notifications" className="relative flex shrink-0 items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-md hover:bg-accent transition-colors">
-            <Bell className="w-5 h-5 text-muted-foreground" />
+          <button
+            aria-label="Notifications"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-muted/70 md:h-9 md:w-9"
+          >
+            <Bell className="h-5 w-5 text-muted-foreground" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-primary rounded-full">
+              <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-foreground">
                 {unreadCount}
               </span>
             )}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[calc(100vw-1.5rem)] max-w-[20rem] p-0">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <span className="text-sm font-semibold">Notifications</span>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-primary hover:underline">
+              <button onClick={markAllRead} className="text-xs text-brand hover:underline">
                 Mark all read
               </button>
             )}
@@ -163,18 +166,18 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                     if (e.key === 'Enter' || e.key === ' ') (e.currentTarget as HTMLElement).click();
                   }}
                   className={cn(
-                    'px-4 py-3 border-b border-border/50 hover:bg-accent/50 cursor-pointer transition-colors',
-                    !n.is_read && 'bg-primary/5'
+                    'cursor-pointer border-b border-border/50 px-4 py-3 transition-colors hover:bg-accent/50',
+                    !n.is_read && 'bg-brand/5'
                   )}
                 >
                   <div className="flex items-start gap-2">
-                    {!n.is_read && <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />}
+                    {!n.is_read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" />}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground leading-snug">{n.title}</p>
+                      <p className="text-sm font-medium leading-snug text-foreground">{n.title}</p>
                       {n.message && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.message}</p>
                       )}
-                      <p className="text-[10px] text-muted-foreground mt-1">
+                      <p className="mt-1 text-[10px] text-muted-foreground">
                         {format(new Date(n.created_at), 'MMM d, h:mm a')}
                       </p>
                     </div>
@@ -188,24 +191,27 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button aria-label="User menu" className="flex shrink-0 items-center gap-2 rounded-md px-1 sm:px-2 py-1.5 hover:bg-accent transition-colors">
-            <Avatar className="w-8 h-8">
+          <button
+            aria-label="User menu"
+            className="flex shrink-0 items-center gap-2 rounded-xl px-1 py-1.5 transition-colors hover:bg-muted/70 sm:px-2"
+          >
+            <Avatar className="h-8 w-8 ring-2 ring-border/60">
               {profile?.avatar_url && (
                 <AvatarImage src={profile.avatar_url} alt={profile.full_name || 'User'} />
               )}
-              <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+              <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="hidden md:block text-left">
-              <p className="text-sm font-medium text-foreground leading-tight">
+            <div className="hidden text-left md:block">
+              <p className="text-sm font-medium leading-tight text-foreground">
                 {profile?.full_name || profile?.email}
               </p>
-              <p className="text-[10px] text-muted-foreground leading-tight">
+              <p className="text-[10px] leading-tight text-muted-foreground">
                 {roles[0]?.display_name || 'User'}
               </p>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden md:block" />
+            <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
@@ -217,7 +223,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   <span
                     key={role.id}
                     className={cn(
-                      'inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded border',
+                      'inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium',
                       ROLE_COLORS[role.name]
                     )}
                   >

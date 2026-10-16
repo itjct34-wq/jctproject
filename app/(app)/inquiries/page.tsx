@@ -319,7 +319,7 @@ export default function InquiriesPage() {
                     <UserPlus className="mr-1.5 h-3.5 w-3.5" />
                     Convert to customer
                   </Button>
-                  <a className="text-xs text-primary underline" href={'mailto:' + r.email + '?subject=' + encodeURIComponent('JCT inquiry ' + r.inquiry_code)}>
+                  <a className="text-xs text-primary underline" href={'mailto:' + r.email + '?subject=' + encodeURIComponent('Inquiry ' + r.inquiry_code)}>
                     Email buyer
                   </a>
                 </div>

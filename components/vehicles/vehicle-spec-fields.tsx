@@ -82,7 +82,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           <Input
             value={form.stock_number}
             onChange={(e) => onChange({ stock_number: e.target.value })}
-            placeholder="JCT-V-1001"
+            placeholder="V-1001"
           />
         </div>
         <div className="space-y-0.5">

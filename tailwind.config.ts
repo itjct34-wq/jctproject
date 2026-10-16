@@ -70,6 +70,10 @@ const config: Config = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        brand: {
+          DEFAULT: 'hsl(var(--brand))',
+          foreground: 'hsl(var(--brand-foreground))',
+        },
         gold: {
           DEFAULT: 'hsl(var(--gold))',
           foreground: 'hsl(var(--gold-foreground))',
@@ -100,12 +104,21 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'glass-in': {
+          from: { opacity: '0', transform: 'translateY(10px) scale(0.98)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'fade-in': 'fade-in 0.2s ease-out',
+        'fade-in': 'fade-in 0.25s ease-out',
         'slide-up': 'slide-up 0.3s ease-out',
+        'glass-in': 'glass-in 0.35s ease-out',
+      },
+      boxShadow: {
+        glass: 'var(--glass-shadow)',
+        'glass-sm': 'var(--glass-shadow-sm)',
       },
     },
   },

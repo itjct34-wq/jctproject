@@ -4,77 +4,106 @@
 
 @layer base {
   :root {
-    /* JCT ERP: sharper navy + gold (print / public-site CSS stay scoped below). */
-    --background: 210 22% 97%;
-    --foreground: 213 42% 12%;
+    /*
+      Liquid Glass ERP tokens — neutral charcoal + refined brand red.
+      Print / public-site CSS stay scoped below (.public-site, .jct-home, invoice-print).
+      --gold is a legacy alias of --brand for existing Tailwind `gold` utilities.
+    */
+    --background: 220 16% 96%;
+    --foreground: 220 22% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 213 42% 12%;
+    --card-foreground: 220 22% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 213 42% 12%;
-    --primary: 213 70% 13%;
-    --primary-foreground: 42 40% 98%;
-    --secondary: 210 18% 94%;
-    --secondary-foreground: 213 42% 12%;
-    --muted: 210 16% 94%;
-    --muted-foreground: 213 18% 34%;
-    --accent: 42 58% 93%;
-    --accent-foreground: 213 42% 12%;
-    --destructive: 0 74% 40%;
+    --popover-foreground: 220 22% 12%;
+    --primary: 220 18% 16%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220 18% 16%;
+    --muted: 220 12% 93%;
+    --muted-foreground: 220 10% 38%;
+    --accent: 0 70% 96%;
+    --accent-foreground: 0 65% 32%;
+    --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 62% 28%;
+    --success: 152 55% 32%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 95% 38%;
+    --warning: 38 92% 40%;
     --warning-foreground: 0 0% 100%;
-    --info: 213 62% 34%;
+    --info: 199 78% 38%;
     --info-foreground: 0 0% 100%;
-    --border: 213 20% 84%;
-    --input: 213 18% 82%;
-    --ring: 42 72% 40%;
-    --gold: 42 72% 40%;
-    --gold-foreground: 213 42% 10%;
-    --chart-1: 213 70% 13%;
-    --chart-2: 42 72% 40%;
-    --chart-3: 213 50% 34%;
-    --chart-4: 38 95% 42%;
-    --chart-5: 142 62% 28%;
-    --chart-6: 213 14% 46%;
-    --radius: 0.75rem;
+    --border: 220 14% 86%;
+    --input: 220 12% 84%;
+    --ring: 0 72% 48%;
+    --brand: 0 72% 48%;
+    --brand-foreground: 0 0% 100%;
+    --gold: 0 72% 48%;
+    --gold-foreground: 0 0% 100%;
+    --chart-1: 0 72% 48%;
+    --chart-2: 199 78% 42%;
+    --chart-3: 152 55% 36%;
+    --chart-4: 38 92% 46%;
+    --chart-5: 220 14% 46%;
+    --chart-6: 262 40% 52%;
+    --radius: 1rem;
+    /* Glass system */
+    --glass-bg: 0 0% 100% / 0.72;
+    --glass-bg-strong: 0 0% 100% / 0.88;
+    --glass-border: 0 0% 100% / 0.55;
+    --glass-border-muted: 220 14% 70% / 0.35;
+    --glass-blur: 18px;
+    --glass-shadow: 0 8px 32px hsl(220 22% 12% / 0.08), 0 1px 0 hsl(0 0% 100% / 0.6) inset;
+    --glass-shadow-sm: 0 4px 16px hsl(220 22% 12% / 0.06);
+    --shell-glow: radial-gradient(ellipse 80% 50% at 10% -10%, hsl(0 72% 48% / 0.08), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 90% 0%, hsl(199 78% 42% / 0.07), transparent 45%),
+      linear-gradient(165deg, hsl(220 18% 97%) 0%, hsl(220 14% 94%) 48%, hsl(220 16% 96%) 100%);
   }
 
   .dark {
-    --background: 213 36% 7%;
-    --foreground: 42 25% 96%;
-    --card: 213 32% 10%;
-    --card-foreground: 42 25% 96%;
-    --popover: 213 32% 10%;
-    --popover-foreground: 42 25% 96%;
-    --primary: 42 72% 52%;
-    --primary-foreground: 213 42% 8%;
-    --secondary: 213 24% 15%;
-    --secondary-foreground: 42 25% 96%;
-    --muted: 213 24% 14%;
-    --muted-foreground: 210 14% 70%;
-    --accent: 213 26% 15%;
-    --accent-foreground: 42 75% 78%;
-    --destructive: 0 65% 48%;
+    --background: 220 18% 7%;
+    --foreground: 220 14% 96%;
+    --card: 220 16% 11%;
+    --card-foreground: 220 14% 96%;
+    --popover: 220 16% 12%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 0 72% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 16%;
+    --secondary-foreground: 220 14% 96%;
+    --muted: 220 14% 14%;
+    --muted-foreground: 220 10% 68%;
+    --accent: 0 40% 16%;
+    --accent-foreground: 0 80% 78%;
+    --destructive: 0 68% 48%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 55% 44%;
+    --success: 152 50% 44%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 52%;
     --warning-foreground: 0 0% 10%;
-    --info: 213 72% 64%;
-    --info-foreground: 213 36% 8%;
-    --border: 213 20% 20%;
-    --input: 213 20% 20%;
-    --ring: 42 72% 52%;
-    --gold: 42 72% 52%;
-    --gold-foreground: 213 42% 8%;
-    --chart-1: 42 72% 52%;
-    --chart-2: 213 72% 64%;
-    --chart-3: 142 55% 44%;
+    --info: 199 78% 56%;
+    --info-foreground: 220 18% 8%;
+    --border: 220 12% 20%;
+    --input: 220 12% 20%;
+    --ring: 0 72% 52%;
+    --brand: 0 72% 52%;
+    --brand-foreground: 0 0% 100%;
+    --gold: 0 72% 52%;
+    --gold-foreground: 0 0% 100%;
+    --chart-1: 0 72% 52%;
+    --chart-2: 199 78% 56%;
+    --chart-3: 152 50% 44%;
     --chart-4: 38 92% 52%;
-    --chart-5: 210 18% 72%;
-    --chart-6: 213 14% 52%;
+    --chart-5: 220 10% 70%;
+    --chart-6: 262 45% 62%;
+    --glass-bg: 220 16% 14% / 0.55;
+    --glass-bg-strong: 220 16% 14% / 0.78;
+    --glass-border: 0 0% 100% / 0.1;
+    --glass-border-muted: 0 0% 100% / 0.06;
+    --glass-blur: 22px;
+    --glass-shadow: 0 12px 40px hsl(0 0% 0% / 0.35), 0 1px 0 hsl(0 0% 100% / 0.06) inset;
+    --glass-shadow-sm: 0 4px 20px hsl(0 0% 0% / 0.25);
+    --shell-glow: radial-gradient(ellipse 70% 45% at 15% -5%, hsl(0 72% 48% / 0.18), transparent 50%),
+      radial-gradient(ellipse 55% 40% at 85% 5%, hsl(199 78% 42% / 0.12), transparent 45%),
+      linear-gradient(165deg, hsl(220 20% 8%) 0%, hsl(220 18% 6%) 100%);
   }
 }
 
@@ -82,7 +111,7 @@
   * { @apply border-border; }
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
     overflow-x: clip;
   }
@@ -109,23 +138,48 @@
     background-color: hsl(var(--border));
     border-radius: 3px;
   }
+  .glass-panel {
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border-muted));
+    box-shadow: var(--glass-shadow-sm);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+  .glass-panel-strong {
+    background: hsl(var(--glass-bg-strong));
+    border: 1px solid hsl(var(--glass-border-muted));
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
 }
 
-/* ERP list chrome — scoped so public marketing / print stay untouched. */
+/* ERP Liquid Glass shell — scoped so public marketing / print stay untouched. */
+.erp-shell {
+  background: var(--shell-glow);
+  background-attachment: fixed;
+}
 .erp-shell .erp-filter-bar {
   @apply flex flex-col gap-2.5 md:flex-row md:items-center;
 }
 .erp-shell .erp-filter-panel {
-  @apply rounded-md border border-border bg-card p-2.5 shadow-sm sm:p-3;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--glass-border-muted));
+  background: hsl(var(--glass-bg-strong));
+  box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  @apply p-2.5 sm:p-3;
 }
 .erp-shell .erp-filter-bar input,
 .erp-shell .erp-filter-panel input,
 .erp-shell .erp-filter-bar button[role='combobox'],
 .erp-shell .erp-filter-panel button[role='combobox'] {
   border-color: hsl(var(--input));
-  border-radius: 0.375rem;
+  border-radius: calc(var(--radius) - 6px);
   min-height: 2.25rem;
   height: 2.25rem;
+  background: hsl(var(--background) / 0.7);
 }
 .erp-shell .erp-filter-search {
   @apply relative min-w-0 flex-1;
@@ -166,38 +220,51 @@
   @apply w-full min-w-0 text-left text-xs;
 }
 .erp-shell .erp-data-table thead {
-  @apply sticky top-0 z-10 bg-primary text-primary-foreground;
+  @apply sticky top-0 z-10;
+  background: hsl(var(--muted) / 0.92);
+  color: hsl(var(--foreground));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid hsl(var(--border));
 }
 .erp-shell .erp-data-table thead tr {
-  @apply text-[10px] uppercase tracking-wide;
+  @apply text-[10px] uppercase tracking-wider;
 }
 .erp-shell .erp-data-table th {
-  @apply px-2 py-1 text-left font-semibold;
+  @apply px-2.5 py-2 text-left font-semibold text-muted-foreground;
 }
 .erp-shell .erp-data-table tbody {
-  @apply divide-y divide-border;
+  @apply divide-y divide-border/60;
 }
 .erp-shell .erp-data-table td {
-  @apply px-2 py-1 align-middle;
+  @apply px-2.5 py-2 align-middle;
+}
+.erp-shell .erp-data-table tbody tr {
+  transition: background-color 0.15s ease;
 }
 .erp-shell .erp-data-table tbody tr:hover {
-  background-color: hsl(var(--muted) / 0.45);
+  background-color: hsl(var(--brand) / 0.04);
 }
 .erp-shell .erp-stat-card {
-  @apply rounded-md border border-border bg-card shadow-sm;
-  border-left: 3px solid hsl(var(--gold));
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--glass-border-muted));
+  background: hsl(var(--glass-bg-strong));
+  box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-left: 3px solid hsl(var(--brand));
 }
 .erp-shell .erp-stat-label {
-  @apply text-[11px] font-bold uppercase tracking-wide text-primary;
+  @apply text-[11px] font-semibold uppercase tracking-wider text-muted-foreground;
 }
 .erp-shell .erp-stat-value {
-  @apply mt-1 text-2xl font-bold leading-none tracking-tight text-primary;
+  @apply mt-1 text-2xl font-bold leading-none tracking-tight text-foreground;
 }
 .erp-shell .erp-empty {
   @apply text-muted-foreground;
 }
 .erp-shell .erp-empty h3 {
-  @apply text-primary;
+  @apply text-foreground;
 }
 
 /* Coarse pointers (phones/tablets): bump primary control hit targets toward 44px. */
@@ -249,7 +316,8 @@
   cursor: pointer;
 }
 .erp-shell input[type='file']:not(.hidden):not([class*='hidden']):hover::file-selector-button {
-  background: hsl(213 70% 10%);
+  background: hsl(var(--brand));
+  filter: brightness(0.92);
 }
 
 /* Public marketing pages share the JCT light navy/red shell. */

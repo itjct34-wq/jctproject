@@ -38,6 +38,27 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
+function ErpMark({ compact }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 ring-1 ring-brand/25">
+        <span className="text-[11px] font-bold tracking-wider text-brand">ERP</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex min-w-0 items-center gap-2.5 px-1">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground shadow-sm">
+        <span className="text-[10px] font-bold tracking-wide">ERP</span>
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold tracking-tight text-foreground">ERP</p>
+        <p className="truncate text-[10px] text-muted-foreground">Operations</p>
+      </div>
+    </div>
+  );
+}
+
 export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,31 +81,29 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   return (
     <aside
       className={cn(
-        'sticky top-0 flex h-[100dvh] flex-col border-r border-border bg-card shadow-[4px_0_20px_rgba(11,31,51,0.05)] transition-all duration-200',
+        'sticky top-0 flex h-[100dvh] flex-col border-r border-border/60 bg-card/80 shadow-glass-sm backdrop-blur-xl transition-all duration-200',
         mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-64'
       )}
     >
       <div
         className={cn(
-          'flex shrink-0 items-center gap-2 border-b-2 border-gold/50 bg-card',
-          collapsed && !mobile ? 'h-[4.5rem] justify-center px-1.5' : 'min-h-[4.5rem] px-2.5 py-2'
+          'flex shrink-0 items-center gap-2 border-b border-border/60',
+          collapsed && !mobile ? 'h-[4.25rem] justify-center px-1.5' : 'min-h-[4.25rem] px-2.5 py-2'
         )}
       >
         {!collapsed || mobile ? (
-          <div className="min-w-0 flex-1 px-1">
-            <p className="text-sm font-semibold text-primary truncate">erp</p>
+          <div className="min-w-0 flex-1">
+            <ErpMark />
           </div>
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-primary/10">
-            <span className="text-[10px] font-bold tracking-wide text-primary">erp</span>
-          </div>
+          <ErpMark compact />
         )}
         {mobile && (
           <button
             type="button"
             onClick={onToggle}
             aria-label="Close navigation menu"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </button>
@@ -120,14 +139,14 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                   onClick={() => toggleGroup(group.label)}
                   aria-expanded={isExpanded}
                   className={cn(
-                    'flex items-center justify-between w-full px-3 text-[11px] font-semibold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors',
+                    'flex w-full items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors',
                     mobile ? 'py-2.5' : 'py-1.5'
                   )}
                 >
                   {group.label}
                   <ChevronDown
                     className={cn(
-                      'w-3.5 h-3.5 transition-transform',
+                      'h-3.5 w-3.5 transition-transform duration-200',
                       isExpanded ? '' : '-rotate-90'
                     )}
                   />
@@ -148,19 +167,22 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                         aria-current={isActive ? 'page' : undefined}
                         title={collapsed ? item.label : undefined}
                         className={cn(
-                          'flex items-center gap-3 rounded-lg px-2.5 text-sm transition-colors',
+                          'relative flex items-center gap-3 rounded-xl px-2.5 text-sm transition-colors duration-150',
                           mobile ? 'py-3' : 'py-2',
                           collapsed && 'justify-center',
                           isActive
-                            ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-                            : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
+                            ? 'bg-brand/12 font-medium text-foreground shadow-sm ring-1 ring-brand/20'
+                            : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                         )}
                       >
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {!collapsed && <span className="truncate">{item.label}</span>}
-                        {isActive && !collapsed && (
-                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold" />
+                        {isActive && (
+                          <span
+                            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-brand"
+                            aria-hidden
+                          />
                         )}
+                        <Icon className={cn('h-4 w-4 shrink-0', isActive && 'text-brand')} />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
                       </Link>
                     );
                   })}
@@ -172,18 +194,18 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
       </nav>
 
       {!mobile && (
-        <div className="border-t border-border p-2 shrink-0">
+        <div className="shrink-0 border-t border-border/60 p-2">
           <button
             type="button"
             onClick={onToggle}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="flex items-center justify-center w-full rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className="flex w-full items-center justify-center rounded-xl px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
           >
             {collapsed ? (
-              <ChevronLeft className="w-4 h-4 rotate-180" />
+              <ChevronLeft className="h-4 w-4 rotate-180" />
             ) : (
               <>
-                <ChevronLeft className="w-4 h-4 mr-2" />
+                <ChevronLeft className="mr-2 h-4 w-4" />
                 <span>Collapse</span>
               </>
             )}

@@ -383,7 +383,7 @@ export function BulkUploadWizard() {
               step === s.n
                 ? 'border-primary bg-primary text-primary-foreground'
                 : step > s.n
-                  ? 'border-gold/50 bg-gold/10 text-foreground'
+                  ? 'border-brand/50 bg-brand/10 text-foreground'
                   : 'border-border bg-card text-muted-foreground'
             )}
           >
@@ -405,7 +405,7 @@ export function BulkUploadWizard() {
                 onClick={() => pickKind(item.id)}
                 className={cn(
                   'group rounded-xl border-2 bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md',
-                  selected ? 'border-gold ring-2 ring-gold/30' : 'border-border hover:border-primary/40'
+                  selected ? 'border-brand ring-2 ring-brand/30' : 'border-border hover:border-primary/40'
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -428,7 +428,7 @@ export function BulkUploadWizard() {
 
       {step === 2 && kindMeta && (
         <Card className="overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-primary via-primary to-gold" />
+          <div className="h-1 bg-gradient-to-r from-brand/80 to-info/50" />
           <CardContent className="space-y-4 p-5">
             <div>
               <p className="text-sm font-semibold">Source for every {kindMeta.title.toLowerCase()} row</p>
@@ -497,7 +497,7 @@ export function BulkUploadWizard() {
 
       {step === 3 && kindMeta && (
         <Card className="overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-primary via-primary to-gold" />
+          <div className="h-1 bg-gradient-to-r from-brand/80 to-info/50" />
           <CardContent className="space-y-4 p-5">
             <div className="rounded-xl border-2 border-dashed border-primary/25 bg-primary/[0.03] p-5 space-y-3">
               <p className="text-sm text-muted-foreground">
@@ -612,9 +612,9 @@ export function BulkUploadWizard() {
 
       {step === 4 && kindMeta && (
         <Card className="overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-primary via-primary to-gold" />
+          <div className="h-1 bg-gradient-to-r from-brand/80 to-info/50" />
           <CardContent className="space-y-4 p-5">
-            <div className="rounded-xl border-2 border-dashed border-gold/40 bg-gold/[0.06] p-5 space-y-3">
+            <div className="rounded-xl border-2 border-dashed border-brand/40 bg-brand/[0.06] p-5 space-y-3">
               <p className="text-sm text-muted-foreground">
                 {isAuction
                   ? 'Photos are optional for auction stock. You can skip this and open Auction Stock.'

@@ -120,12 +120,12 @@ export function SalesDashboard() {
   const currentDate = format(new Date(), 'EEEE, MMMM d, yyyy');
 
   const kpis = [
-    { label: 'My customers', value: String(data.myCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-blue-50 text-blue-600' },
-    { label: 'My reserved stock', value: String(data.myReservedStock), sub: `${data.mySalesOpen} open reservations`, icon: PackageCheck, href: '/vehicles', tone: 'bg-amber-50 text-amber-700' },
-    { label: 'Available to reserve', value: String(data.availableToReserve), sub: 'Browse stock inventory', icon: Car, href: '/vehicles', tone: 'bg-emerald-50 text-emerald-600' },
-    { label: 'My quotations', value: String(data.myQuotations), sub: 'Quotes you created', icon: FileText, href: '/quotations', tone: 'bg-violet-50 text-violet-600' },
-    { label: 'My invoices', value: String(data.myInvoices), sub: moneyLine(data.outstandingByCurrency) !== '—' ? `${moneyLine(data.outstandingByCurrency)} outstanding` : 'Commercial / proforma', icon: Receipt, href: '/invoices', tone: 'bg-cyan-50 text-cyan-600' },
-    { label: 'Auction invoices', value: String(data.myAuctionInvoices), sub: 'Deposit invoices you issued', icon: Landmark, href: '/auction-invoices', tone: 'bg-slate-100 text-slate-700' },
+    { label: 'My customers', value: String(data.myCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-brand/10 text-brand' },
+    { label: 'My reserved stock', value: String(data.myReservedStock), sub: `${data.mySalesOpen} open reservations`, icon: PackageCheck, href: '/vehicles', tone: 'bg-warning/15 text-warning' },
+    { label: 'Available to reserve', value: String(data.availableToReserve), sub: 'Browse stock inventory', icon: Car, href: '/vehicles', tone: 'bg-success/15 text-success' },
+    { label: 'My quotations', value: String(data.myQuotations), sub: 'Quotes you created', icon: FileText, href: '/quotations', tone: 'bg-info/15 text-info' },
+    { label: 'My invoices', value: String(data.myInvoices), sub: moneyLine(data.outstandingByCurrency) !== '—' ? `${moneyLine(data.outstandingByCurrency)} outstanding` : 'Commercial / proforma', icon: Receipt, href: '/invoices', tone: 'bg-info/15 text-info' },
+    { label: 'Auction invoices', value: String(data.myAuctionInvoices), sub: 'Deposit invoices you issued', icon: Landmark, href: '/auction-invoices', tone: 'bg-muted text-foreground' },
   ];
 
   return (
@@ -147,10 +147,10 @@ export function SalesDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
-            <Card className="border-border/60 transition-shadow hover:shadow-md h-full">
+            <Card className="h-full border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-glass">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${kpi.tone}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kpi.tone}`}>
                     <kpi.icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -167,10 +167,10 @@ export function SalesDashboard() {
 
       <div className="grid gap-3 md:grid-cols-2">
         <Link href="/payments">
-          <Card className="border-border/60 h-full hover:shadow-md transition-shadow">
+          <Card className="h-full border-border/50 transition-all duration-200 hover:border-brand/20 hover:shadow-glass">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CreditCard className="h-3.5 w-3.5" /> My tagged T/T (read-only)
+                <CreditCard className="h-3.5 w-3.5 text-brand/80" /> My tagged T/T (read-only)
               </div>
               <p className="mt-2 text-sm font-semibold">{data.taggedPayments} payments · {formatCurrency(data.paymentsJpy, 'JPY')}</p>
               <p className="mt-1 text-xs text-muted-foreground">T/T linked to your customers — view only</p>
@@ -216,8 +216,8 @@ export function SalesDashboard() {
               { label: 'View remittances / T/T', icon: CreditCard, href: '/payments' },
             ].map((action) => (
               <Link key={action.label} href={action.href}>
-                <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors">
-                  <action.icon className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/60">
+                  <action.icon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{action.label}</span>
                 </div>
               </Link>

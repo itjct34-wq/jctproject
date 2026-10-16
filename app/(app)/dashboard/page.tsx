@@ -142,12 +142,12 @@ function OperationsDashboardPage() {
   const currentDate = format(new Date(), 'EEEE, MMMM d, yyyy');
 
   const kpis = [
-    { label: 'Customers', value: String(data.totalCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-primary/10 text-primary' },
-    { label: 'Vehicles in stock', value: String(data.availableVehicles), sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'bg-gold/15 text-gold' },
-    { label: 'Pending auctions', value: String(data.pendingAuctions), sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'bg-primary/10 text-primary' },
-    { label: 'Active shipments', value: String(data.activeShipments), sub: 'In progress', icon: Ship, href: '/shipments', tone: 'bg-gold/15 text-gold' },
-    { label: 'Offices', value: String(data.officeCount), sub: `${data.shiftCount} shifts`, icon: Building2, href: '/offices', tone: 'bg-primary/10 text-primary' },
-    { label: 'Open tasks', value: String(data.pendingTasks), sub: `${data.overdueTasks} overdue`, icon: CheckSquare, href: '/tasks', tone: 'bg-gold/15 text-gold' },
+    { label: 'Customers', value: String(data.totalCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-brand/10 text-brand' },
+    { label: 'Vehicles in stock', value: String(data.availableVehicles), sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'bg-info/15 text-info' },
+    { label: 'Pending auctions', value: String(data.pendingAuctions), sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'bg-warning/15 text-warning' },
+    { label: 'Active shipments', value: String(data.activeShipments), sub: 'In progress', icon: Ship, href: '/shipments', tone: 'bg-info/15 text-info' },
+    { label: 'Offices', value: String(data.officeCount), sub: `${data.shiftCount} shifts`, icon: Building2, href: '/offices', tone: 'bg-success/15 text-success' },
+    { label: 'Open tasks', value: String(data.pendingTasks), sub: `${data.overdueTasks} overdue`, icon: CheckSquare, href: '/tasks', tone: 'bg-brand/10 text-brand' },
   ];
 
   return (
@@ -164,16 +164,16 @@ function OperationsDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
-            <Card className="border-border/60 transition-shadow hover:shadow-md hover:-translate-y-0.5 h-full overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-primary to-gold" />
+            <Card className="h-full overflow-hidden border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-glass">
+              <div className="h-1 bg-gradient-to-r from-brand/80 to-info/60" />
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${kpi.tone}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kpi.tone}`}>
                     <kpi.icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground truncate">{kpi.label}</p>
-                    <p className="text-xl font-bold">{kpi.value}</p>
+                    <p className="truncate text-xs text-muted-foreground">{kpi.label}</p>
+                    <p className="text-xl font-bold tracking-tight tabular-nums">{kpi.value}</p>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">{kpi.sub}</p>
@@ -191,12 +191,12 @@ function OperationsDashboardPage() {
           { label: 'Expenses', value: moneyLine(data.expensesByCurrency), sub: 'Approved + paid', href: '/expenses', icon: DollarSign },
         ].map((row) => (
           <Link key={row.label} href={row.href}>
-            <Card className="border-border/60 h-full hover:shadow-md transition-shadow">
+            <Card className="h-full border-border/50 transition-all duration-200 hover:border-brand/20 hover:shadow-glass">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <row.icon className="h-3.5 w-3.5" /> {row.label}
+                  <row.icon className="h-3.5 w-3.5 text-brand/80" /> {row.label}
                 </div>
-                <p className="mt-2 text-sm font-semibold leading-snug break-words">{row.value}</p>
+                <p className="mt-2 break-words text-sm font-semibold leading-snug">{row.value}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{row.sub}</p>
               </CardContent>
             </Card>
@@ -248,15 +248,15 @@ function OperationsDashboardPage() {
               { label: 'Audit logs', icon: Clock, href: '/audit', module: 'audit' as const },
             ].filter((action) => canView(action.module)).map((action) => (
               <Link key={action.label} href={action.href}>
-                <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors">
-                  <action.icon className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/60">
+                  <action.icon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{action.label}</span>
                 </div>
               </Link>
             ))}
             <Link href="/notifications">
-              <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors">
-                <Bell className="w-4 h-4 text-muted-foreground" />
+              <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/60">
+                <Bell className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Notifications</span>
                 {data.unreadNotifications > 0 && (
                   <Badge className="ml-auto text-[10px]">{data.unreadNotifications}</Badge>
