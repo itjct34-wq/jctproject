@@ -146,7 +146,7 @@ export default function SalesPage() {
     if (pricingPreview && createOpen) {
       setForm((f) => ({
         ...f,
-        sale_price: pricingPreview.sellingPriceUsd.toFixed(2),
+        sale_price: String(Math.round(pricingPreview.sellingPriceUsd)),
         currency: 'USD',
       }));
     }

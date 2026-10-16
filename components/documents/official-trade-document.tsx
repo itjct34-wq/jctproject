@@ -9,7 +9,6 @@ import {
   formatTransmissionLabel,
 } from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
-import { PaymentInformationNotice } from './payment-information-notice';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
 
 export type TradeLine = {
@@ -58,7 +57,6 @@ type Props = {
   notes?: string | null;
   verificationUrl?: string;
   showQr?: boolean;
-  includeBankNotice?: boolean;
   depositMode?: 'ratio' | 'amount';
 };
 
@@ -167,7 +165,6 @@ export function OfficialTradeDocument({
   notes,
   verificationUrl,
   showQr = true,
-  includeBankNotice = false,
   depositMode = 'ratio',
 }: Props) {
   const displayLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
@@ -474,14 +471,6 @@ export function OfficialTradeDocument({
           </div>
         </footer>
       </div>
-
-      {includeBankNotice && (
-        <PaymentInformationNotice
-          customerName={customer?.full_name}
-          reference={printedNo}
-          issueDate={issueDate}
-        />
-      )}
     </div>
   );
 }

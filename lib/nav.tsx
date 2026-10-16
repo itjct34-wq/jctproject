@@ -25,14 +25,17 @@ import {
   Upload,
   Wrench,
   Cog,
+  Shield,
 } from 'lucide-react';
-import type { RoleName, PermissionModule } from '@/lib/types';
+import type { RoleName, PermissionModule, PermissionAction } from '@/lib/types';
 
 export interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   module?: PermissionModule;
+  /** When set, sidebar requires this action on `module` (e.g. import for Bulk upload). Defaults to view. */
+  action?: PermissionAction;
   requiredRoles?: RoleName[];
   /** Hidden when the user is on sales-focused navigation (selling roles without elevated staff roles). */
   salesNavHidden?: boolean;
@@ -89,7 +92,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Inventory & Auctions',
     items: [
-      { label: 'Bulk upload', href: '/bulk-upload', icon: Upload, module: 'vehicles' },
+      { label: 'Bulk upload', href: '/bulk-upload', icon: Upload, module: 'vehicles', action: 'import', salesNavHidden: true },
       { label: 'Cars', href: '/vehicles', icon: Car, module: 'vehicles' },
       { label: 'Machinery', href: '/vehicles?category=machinery', icon: Wrench, module: 'vehicles' },
       { label: 'Parts', href: '/vehicles?category=parts', icon: Cog, module: 'vehicles' },
@@ -104,7 +107,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices' },
       { label: 'Remittances / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
       { label: 'Commissions', href: '/commissions', icon: BadgeDollarSign, module: 'payments' },
-      { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses' },
+      { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses', action: 'view', salesNavHidden: true },
       { label: 'Agent ledger', href: '/ledger', icon: BookOpen, module: 'payments' },
     ],
   },
@@ -124,6 +127,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Reports', href: '/reports', icon: BarChart3, module: 'reports' },
       { label: 'Blog posts', href: '/blog-admin', icon: Newspaper, module: 'settings' },
       { label: 'Users & Teams', href: '/users', icon: UserCog, module: 'users' },
+      { label: 'Permissions', href: '/permissions', icon: Shield, module: 'users', action: 'assign_roles' },
       { label: 'System Config', href: '/settings', icon: Settings, module: 'settings' },
       { label: 'Global Configuration', href: '/configuration', icon: SlidersHorizontal, module: 'settings', requiredRoles: ['super_admin'] },
       { label: 'Auction houses', href: '/configuration#auction-houses', icon: Gavel, module: 'auctions' },

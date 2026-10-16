@@ -2,12 +2,24 @@
 
 ## Model
 
-Two layers operate together:
+Three layers operate together:
 
-1. **Database (canonical for data access)** — RLS policies on Postgres tables use `auth.uid()`, `is_admin_user()`, `has_role(text)`, and `has_permission(module, action)` seeded in migration `001_rbac_core.sql`.
-2. **UI (navigation and buttons)** — `hooks/use-permissions.ts` maps **roles** to module **view / write / delete / approve / export** without calling `has_permission` on every click. Super admin bypasses all UI checks.
+1. **Database (canonical for data access)** — RLS policies use `auth.uid()`, `is_admin_user()`, `has_role(text)`, and `has_permission(module, action)`.
+2. **Role defaults** — `role_permissions` maps each role to `permissions` rows (`module` + `action`).
+3. **User overrides** — `user_permissions` (migration **042**) stores per-user `grant` or `deny`. **Deny wins**, then grant, then role defaults. Managed only by admin/super_admin (RLS).
 
-Permissions in the database are stored as **`module.action`** pairs (e.g. `invoices.create`, `payments.confirm`).
+UI navigation and buttons use `hooks/use-permissions.ts`, which prefers the effective set from RPC **`get_my_permissions()`** (loaded in `AuthProvider`). If the RPC is unavailable, the hook falls back to role maps. Super admin bypasses all UI checks.
+
+Permissions are stored as **`module.action`** pairs (e.g. `invoices.create`, `payments.allocate`).
+
+## Admin UI
+
+| Path | Who | Purpose |
+|------|-----|---------|
+| `/permissions` | Admin / Super Admin | Assign roles, grant/deny user overrides, edit role defaults |
+| `/users` | Admin | Invite users, teams, payroll, office/shift |
+
+Plain-language guide: [user-manual-permissions.md](./user-manual-permissions.md).
 
 ## Roles (seeded)
 
@@ -15,18 +27,32 @@ Permissions in the database are stored as **`module.action`** pairs (e.g. `invoi
 |------|--------|
 | `super_admin` | Full config, roles, global configuration |
 | `admin` | Broad ERP management |
-| `operations` | Yard, auctions, shipments, documents |
-| `manager` | Approvals, team oversight, invoices |
-| `sales_agent` | Customers, quotations, assigned sales |
-| `freelancer` | Limited customer/task access |
+| `operations` | Yard, auctions, shipments, documents, stock ops |
+| `manager` | Approvals, remittances, stock ops, expenses |
+| `sales_agent` | Customers, quotations, reserve stock |
+| `freelancer` | Limited customer/task access + reserve |
 | `accounts` | Payments, expenses, invoice finance actions |
 | `auditor` | Read-only across authorized modules |
 
 Users hold roles via **`user_roles`** (active flag). Self-assignment of roles is blocked by trigger.
 
+## Fine-grained keys (042+)
+
+| Key | Typical holders |
+|-----|-----------------|
+| `payments.create` / `edit` / `allocate` | admin, manager, accounts |
+| `vehicles.import` | admin, operations, manager |
+| `vehicles.reserve` | admin, operations, manager, sales_agent, freelancer |
+| `vehicles.assign` | admin, operations, manager |
+| `vehicles.set_bid_requester` | admin, operations, manager |
+| `vehicles.edit_courier` / `edit_shipping` | admin, operations, manager |
+| `expenses.view` | admin, manager, accounts, operations, auditor |
+
+Sales roles do **not** get remittance mutate, bid requester, courier/shipping edit, bulk upload, or expenses by default. Use a user **Grant** for exceptions.
+
 ## UI module map
 
-`PermissionModule` in `lib/types` drives sidebar visibility via `lib/nav.tsx` and `canView(module)`.
+`PermissionModule` in `lib/types` drives sidebar visibility via `lib/nav.tsx` and `canView(module)` / `can(module, action)`.
 
 | Module | Typical viewers | Typical writers |
 |--------|-----------------|-----------------|
@@ -51,12 +77,7 @@ These are not gated by RLS alone; they use **`requireAdmin`** (`lib/admin-auth.t
 
 ## Sales agent & freelancer navigation
 
-Users with **`sales_agent`** or **`freelancer`** and **no** elevated staff role (`admin`, `operations`, `manager`, `accounts`, `super_admin`) get a **sales-focused sidebar** via `getNavGroupsForRoles()` in `lib/nav.tsx` (`usesSalesFocusedNav()`). Administration, Operations, Export & Shipping, and auction **purchase** links are hidden. **Auction invoices** stay visible under Finance. Direct URLs to admin pages may still exist; RLS remains the data gate.
-
-| Route | Role |
-|-------|------|
-| `/dashboard` | **Sales home** for selling-only roles (`SalesDashboard` KPIs: my customers, reserved stock, quotes/invoices, tagged T/T read-only, stock to reserve). Ops/admin roles see the full ERP dashboard on the same path. |
-| Post-login (`getPostLoginPath`) | Selling-only → `/dashboard`; staff → `/dashboard` (ops view) |
+Users with **`sales_agent`** or **`freelancer`** and **no** elevated staff role (`admin`, `operations`, `manager`, `accounts`, `super_admin`) get a **sales-focused sidebar** via `getNavGroupsForRoles()` in `lib/nav.tsx` (`usesSalesFocusedNav()`). Administration, Operations, and auction **purchase** links are hidden. **Bulk upload** and **Accounts & Expenses** also require `vehicles.import` / `expenses.view`. Direct URLs may still exist; RLS remains the data gate.
 
 Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboard.
 
@@ -65,43 +86,34 @@ Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboa
 | Action | sales_agent | freelancer |
 |--------|-------------|------------|
 | View stock / invoices | Yes | Yes (invoices after migration `024`) |
-| Reserve **available** stock for own customers | Yes (RLS `025`) | Yes (RLS `025`) |
+| Reserve **available** stock for own customers | Yes (`vehicles.reserve` + RLS `025`) | Yes |
 | Record T/T / payments | **No** (UI + RLS) | **No** |
-| View T/T for own customers | Yes (RLS `025` via `sales_agent_id` / customer owner) | Yes |
-| Download vehicle courier docs | Yes (view-only upload) | Yes |
+| View T/T for own customers | Yes (RLS `025`) | Yes |
+| Set bid requester / edit courier / shipping | **No** | **No** |
+| Bulk upload | **No** | **No** |
+| Accounts & Expenses | **No** | **No** |
 | Create invoices / quotations | Yes | Yes (quotations; invoices create via RLS `024`) |
-| Edit invoices (UI + RLS) | Yes (UI); RLS update still manager/accounts/admin | Create only; no invoice update in RLS |
-| Delete reservations (`sales`) | No (UI `can('sales','delete')`; RLS `sales_delete_admin`) | No |
-| Delete quotations | No (UI; RLS `quotations_delete_admin`) | No |
-| Delete invoices (commercial or auction deposit) | No (UI `can('invoices','delete')`; RLS `invoices_delete_admin`) | No |
-| Delete vehicles | No (UI + RLS: admin only; batch undo uses staff API) | No |
-| Add / import vehicles | No (UI + RLS: operations/manager/admin) | No |
-| See / delete bulk upload batches | No (RLS + UI: `vehicles.create` / `auctions.create`) | No |
-| Edit stock specs / pricing | No | No |
-| Edit shipping on vehicles | No | No |
-| Enter commission PKR on own reserved vehicles | Yes | Yes |
-| Mark commission paid | No | No |
-
-Migration **`024_sales_freelancer_stock_invoice_guard.sql`** reaffirms vehicle insert/delete and invoice delete policies and extends invoice read/create for selling roles.
-
-Migration **`025_vehicle_payment_shipping_rls.sql`** adds payment/shipping tracks, payment allocation, sales-scoped payment SELECT, vehicle reservation UPDATE for selling roles, and **`record_attachments`** entity type **`vehicles`**.
+| Delete vehicles / reservations / invoices | No | No |
 
 ## Customer ownership
 
-New customers created in CRM set **`customers.assigned_to`** and **`created_by`** to the creating user (`customers` page). Elevated staff (admin/ops/manager) can reassign any customer; a selling role can hand off a customer they currently own. After reassignment, selling-role SELECT on quotes, invoices, sales, and customer-tagged payments follows **`customers.assigned_to`** (migration **`031`**); `created_by` on those rows stays for audit. Payments inherit **`payments.sales_agent_id`** from `COALESCE(customers.assigned_to, customers.created_by)` when a customer is tagged on the T/T.
+New customers created in CRM set **`customers.assigned_to`** and **`created_by`** to the creating user. Elevated staff can reassign any customer; a selling role can hand off a customer they currently own. After reassignment, selling-role SELECT follows **`customers.assigned_to`** (migration **`031`**).
 
 ## Staff (admin / operations / manager / accounts)
 
 | Action | admin | operations | manager | accounts |
 |--------|-------|------------|---------|----------|
-| Record & edit T/T | Yes | No | Yes | Yes |
-| Allocate payment to reserved vehicle | Yes | No | Yes | Yes |
+| Record & edit T/T | Yes | No* | Yes | Yes |
+| Allocate payment to reserved vehicle | Yes | No* | Yes | Yes |
 | Edit stock | Yes | Yes | Yes | No |
-| Bulk upload history + undo batch | Yes | Yes | Yes | No |
-| Edit vehicle shipping + upload courier docs | Yes | Yes | Yes | No |
+| Bulk upload | Yes | Yes | Yes | No |
+| Edit vehicle shipping + courier | Yes | Yes | Yes | No |
+| Set bid requester | Yes | Yes | Yes | No |
 | Edit user salaries (`user_payroll`) | Yes | No | Yes | No |
 | Mark vehicle commission paid | Yes | No | Yes | Yes |
 
+\*Operations may receive these via a user **Grant**.
+
 ## Enforcement rule
 
-UI hiding a button does **not** grant safety if RLS allows the operation. When adding features, update **both** RLS policies and `use-permissions` maps if the action is role-sensitive.
+UI hiding a button does **not** grant safety if RLS allows the operation. When adding features, update **both** RLS policies (via `has_permission`) and the permission catalog / role seeds if the action is sensitive.

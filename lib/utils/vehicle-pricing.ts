@@ -29,7 +29,8 @@ export function calcFobFromBid(bidJpy: number, expenseJpy = FIXED_EXPENSE_JPY, t
   const tt = Math.max(0.0001, Number(ttRate) || DEFAULT_TT_RATE);
   const markupJpy = bid * BID_MARKUP_RATE;
   const fobJpy = bid + markupJpy + expense;
-  return { bidJpy: bid, markupJpy, expenseJpy: expense, fobJpy, ttRate: tt, fobUsd: fobJpy / tt };
+  // Round FOB USD for display/storage — keep JPY side precise until ÷ TT.
+  return { bidJpy: bid, markupJpy, expenseJpy: expense, fobJpy, ttRate: tt, fobUsd: Math.round(fobJpy / tt) };
 }
 
 export type PriceTerm = 'FOB' | 'C&F' | 'CIF' | 'CNF';
@@ -70,8 +71,8 @@ export function calcVehicleCost(params: {
 
   const markupJpy = bid * markupRate;
   const totalCostJpy = bid + markupJpy + fixed;
-  const costUsd = totalCostJpy / rate;
-  const fobUsd = costUsd + profit;
+  const costUsd = Math.round(totalCostJpy / rate);
+  const fobUsd = Math.round(costUsd + profit);
 
   let priceTerm: PriceTerm = params.priceTerm || 'FOB';
   if (!params.priceTerm) {
@@ -82,9 +83,9 @@ export function calcVehicleCost(params: {
 
   let sellingPriceUsd = fobUsd;
   if (priceTerm === 'C&F' || priceTerm === 'CNF') {
-    sellingPriceUsd = fobUsd + freight;
+    sellingPriceUsd = Math.round(fobUsd + freight);
   } else if (priceTerm === 'CIF') {
-    sellingPriceUsd = fobUsd + freight + insurance;
+    sellingPriceUsd = Math.round(fobUsd + freight + insurance);
   }
 
   return {
@@ -110,11 +111,11 @@ export function formatPricingSummary(b: CostBreakdown): string {
     `+${+(b.markupRate * 100).toFixed(2)}%: ¥${Math.round(b.markupJpy).toLocaleString()}`,
     `Expense: ¥${b.fixedExpenseJpy.toLocaleString()}`,
     `= ¥${Math.round(b.totalCostJpy).toLocaleString()}`,
-    `÷ ${b.exchangeRate} = $${b.costUsd.toFixed(2)}`,
-    `+ profit $${b.profitUsd.toFixed(2)} = FOB $${b.fobUsd.toFixed(2)}`,
-    b.freightUsd > 0 ? `+ freight $${b.freightUsd.toFixed(2)}` : null,
-    b.insuranceUsd > 0 ? `+ insurance $${b.insuranceUsd.toFixed(2)}` : null,
-    `→ ${b.priceTerm} $${b.sellingPriceUsd.toFixed(2)}`,
+    `÷ ${b.exchangeRate} = $${Math.round(b.costUsd).toLocaleString()}`,
+    `+ profit $${Math.round(b.profitUsd).toLocaleString()} = FOB $${Math.round(b.fobUsd).toLocaleString()}`,
+    b.freightUsd > 0 ? `+ freight $${Math.round(b.freightUsd).toLocaleString()}` : null,
+    b.insuranceUsd > 0 ? `+ insurance $${Math.round(b.insuranceUsd).toLocaleString()}` : null,
+    `→ ${b.priceTerm} $${Math.round(b.sellingPriceUsd).toLocaleString()}`,
   ]
     .filter(Boolean)
     .join(' · ');

@@ -19,13 +19,13 @@ export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
   GBP: '£',
 };
 
-/** Default display decimals per currency */
+/** Default display decimals per currency — always whole units (no cents). */
 export const CURRENCY_DECIMALS: Record<SupportedCurrency, number> = {
-  USD: 2,
+  USD: 0,
   JPY: 0,
   PKR: 0,
-  EUR: 2,
-  GBP: 2,
+  EUR: 0,
+  GBP: 0,
 };
 
 export function isSupportedCurrency(c: string | null | undefined): c is SupportedCurrency {
@@ -38,19 +38,19 @@ export function normalizeCurrency(c: string | null | undefined, fallback: Suppor
   return isSupportedCurrency(u) ? u : fallback;
 }
 
-/** Format money with proper decimals for the currency */
+/** Format money rounded to whole units (no cents) for the currency */
 export function formatCurrency(
   value: number | null | undefined,
   currency: string | null | undefined = 'USD',
   opts?: { showCode?: boolean; showSymbol?: boolean }
 ): string {
   const n = Number(value);
-  const safe = Number.isFinite(n) ? n : 0;
+  const safe = Math.round(Number.isFinite(n) ? n : 0);
   const requested = typeof currency === 'string' ? currency.trim().toUpperCase() : '';
   // Respect a configured ISO-4217 code even when it is not in the starter list.
   const code = /^[A-Z]{3}$/.test(requested) ? requested : normalizeCurrency(currency);
   const knownDigits = CURRENCY_DECIMALS[code as SupportedCurrency];
-  const digits = knownDigits ?? new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).resolvedOptions().maximumFractionDigits;
+  const digits = knownDigits ?? 0;
   const formatted = safe.toLocaleString(undefined, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

@@ -17,7 +17,11 @@ Several early files were generated twice or with extra `.sql.sql` suffixes. They
 | Duplicate **014** | `014_avatars_and_profile_link.sql`, `014_inquiries_config_agent_totp.sql`, `014_customer_contact_uniqueness.sql` |
 | Malformed timestamps | `20261010_offices_shifts_avatar.sql`; files ending in `.sql.sql` |
 
-If you need a schema change, add a **new** timestamped file after the highest applied number (033+).
+If you need a schema change, add a **new** timestamped file after the highest applied number (041+).
+
+| # | File | Purpose |
+|---|------|---------|
+| **042** | `20261016240000_042_user_permissions_overrides.sql` | `user_permissions` grant/deny, `has_permission` + `get_my_permissions()`, fine-grained stock/remittance keys, role seed alignment |
 
 ## CLI
 

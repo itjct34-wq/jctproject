@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StockListCard } from '@/components/vehicles/stock-list-card';
+import { StockListFilters, type StockListFiltersValue } from '@/components/stock/stock-list-filters';
+import { StockListPagination } from '@/components/stock/stock-list-pagination';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +32,13 @@ import { VehicleViewInfoDialog } from '@/components/vehicles/vehicle-view-info-d
 import type { VehicleRemittanceRef } from '@/components/vehicles/vehicle-remittance-popover';
 import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
 import { parseStockCategory, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
+import {
+  clampStockPage,
+  DEFAULT_STOCK_PAGE_SIZE,
+  parseStockPage,
+  parseStockPageSize,
+  type StockPageSize,
+} from '@/lib/stock-list-paging';
 import { nextVehicleStockNumber } from '@/lib/utils/stock-number';
 import { mergeEngineIntoNotes, publicEngineFromNotes, stripEngineFromNotes } from '@/lib/public/vehicles';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
@@ -51,9 +59,8 @@ import {
   type VehicleShippingStatus,
 } from '@/lib/vehicle-lifecycle';
 import { makeVehicleAvailable, vehicleCanMakeAvailable } from '@/lib/utils/make-vehicle-available';
-import { Loader2, Plus, Search } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 type VehicleInvoiceRef = { id: string; invoice_code: string };
 type ProfileNameRow = { id: string; full_name: string | null; display_name: string | null; email: string | null };
@@ -73,15 +80,23 @@ type CustomerListRow = Pick<
 >;
 type VehiclePayAgg = { count: number; allocated: number; remittances: VehicleRemittanceRef[] };
 
-const STOCK_FILTER_CHIPS: { id: string; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'available', label: 'Available' },
-  { id: 'reserved', label: 'Reserved' },
-  { id: 'unpaid', label: 'Unpaid' },
-  { id: 'partial_paid', label: 'Partial Paid' },
-  { id: 'paid', label: 'Paid' },
-  { id: 'delivered', label: 'Delivered' },
+const STOCK_STATUS_OPTIONS = [
+  { value: 'available', label: 'Available' },
+  { value: 'reserved', label: 'Reserved' },
+  { value: 'unpaid', label: 'Unpaid' },
+  { value: 'partial_paid', label: 'Partial Paid' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'delivered', label: 'Delivered' },
 ];
+
+const emptyListFilters = (): StockListFiltersValue => ({
+  search: '',
+  status: '',
+  make: '',
+  model: '',
+  customer: '',
+  agent: '',
+});
 
 function profileDisplayName(p: ProfileNameRow | undefined) {
   if (!p) return '';
@@ -128,15 +143,24 @@ function VehiclesPage() {
       : 'car';
   const listCopy = LIST_TITLES[listCategory];
   const { profile } = useAuth();
-  const { can, hasRole, isSellingFocused, isAdmin } = usePermissions();
+  const {
+    can,
+    hasRole,
+    isSellingFocused,
+    isAdmin,
+    canReserveStock: canReserveByPerm,
+    canAssignStock,
+    canSetBidRequester: canSetBidByPerm,
+    canEditCourier: canEditCourierByPerm,
+    canEditShipping: canEditShippingByPerm,
+  } = usePermissions();
   const canCreateVehicle = can('vehicles', 'create');
   const canEditVehicle = can('vehicles', 'edit');
   const canDeleteVehicle = can('vehicles', 'delete');
   const canMakeAvailable = isAdmin();
-  const canReserveStock =
-    can('sales', 'create') ||
-    ((hasRole('sales_agent') || hasRole('freelancer')) && !canEditVehicle);
-  const canEditShipping = canEditVehicle;
+  const canReserveStock = canReserveByPerm();
+  const canEditShipping = canEditShippingByPerm();
+  const canEditCourier = canEditCourierByPerm();
   const canMarkCommissionPaid = isAdmin() || hasRole('manager') || hasRole('accounts');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<CustomerListRow[]>([]);
@@ -148,8 +172,19 @@ function VehiclesPage() {
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch] = useState(() => searchParams.get('q') || '');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [listFilters, setListFilters] = useState<StockListFiltersValue>(() => ({
+    ...emptyListFilters(),
+    search: searchParams.get('q') || '',
+    status: searchParams.get('status') || '',
+    make: searchParams.get('make') || '',
+    model: searchParams.get('model') || '',
+    customer: searchParams.get('customer') || '',
+    agent: searchParams.get('agent') || '',
+  }));
+  const [page, setPage] = useState(() => parseStockPage(searchParams.get('page')));
+  const [pageSize, setPageSize] = useState<StockPageSize>(() =>
+    parseStockPageSize(searchParams.get('pageSize'))
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -223,6 +258,7 @@ function VehiclesPage() {
               'export_certificate',
               'export_certificate_en',
               'auction_sheet',
+              'dhl',
             ])
         : Promise.resolve({ data: [] as Array<{ entity_id: string; doc_kind: string | null }> }),
     ]);
@@ -360,9 +396,42 @@ function VehiclesPage() {
 
   useEffect(() => { loadVehicles(); }, [loadVehicles]);
 
+  const syncListQuery = useCallback(
+    (next: {
+      filters?: StockListFiltersValue;
+      page?: number;
+      pageSize?: StockPageSize;
+    }) => {
+      const filters = next.filters ?? listFilters;
+      const nextPage = next.page ?? page;
+      const nextSize = next.pageSize ?? pageSize;
+      const params = new URLSearchParams();
+      if (listCategory !== 'car') params.set('category', listCategory);
+      if (filters.search.trim()) params.set('q', filters.search.trim());
+      if (filters.status) params.set('status', filters.status);
+      if (filters.make) params.set('make', filters.make);
+      if (filters.model) params.set('model', filters.model);
+      if (filters.customer) params.set('customer', filters.customer);
+      if (filters.agent) params.set('agent', filters.agent);
+      if (nextPage > 1) params.set('page', String(nextPage));
+      if (nextSize !== DEFAULT_STOCK_PAGE_SIZE) params.set('pageSize', String(nextSize));
+      const qs = params.toString();
+      router.replace(qs ? `/vehicles?${qs}` : '/vehicles', { scroll: false });
+    },
+    [listCategory, listFilters, page, pageSize, router]
+  );
+
+  const catalogVehicles = useMemo(
+    () => vehicles.filter((v) => parseStockCategory(v.stock_category) === listCategory),
+    [vehicles, listCategory]
+  );
+
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return vehicles.filter((v) => {
+    const q = listFilters.search.trim().toLowerCase();
+    const statusFilter = listFilters.status || 'all';
+    const makeFilter = listFilters.make.trim().toLowerCase();
+    const modelFilter = listFilters.model.trim().toLowerCase();
+    return catalogVehicles.filter((v) => {
       const pay = effectivePaymentStatus(v);
       const ship = effectiveShippingStatus(v);
       const allocated = vehiclePays[v.id]?.allocated || 0;
@@ -376,16 +445,101 @@ function VehiclesPage() {
       else if (statusFilter !== 'all') {
         matchesStatus = workflowStage(v) === statusFilter || v.status === statusFilter;
       }
-      const matchesCategory = parseStockCategory(v.stock_category) === listCategory;
-      const agent =
-        agentNames[v.reserved_by || v.assigned_agent_id || saleFallback[v.id]?.agentId || ''] || '';
+      const agentId = v.reserved_by || v.assigned_agent_id || saleFallback[v.id]?.agentId || '';
+      const agent = agentNames[agentId] || '';
       const bidRequester = agentNames[v.bid_requester_id || ''] || '';
-      const customer = customers.find((c) => c.id === (v.customer_id || saleFallback[v.id]?.customerId))?.full_name || '';
+      const customerId = v.customer_id || saleFallback[v.id]?.customerId || '';
+      const customer = customers.find((c) => c.id === customerId)?.full_name || '';
       const invoiceCode = vehicleInvoices[v.id]?.invoice_code || '';
-      const matchesSearch = !q || [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model, agent, bidRequester, customer, invoiceCode].filter(Boolean).some((val) => String(val).toLowerCase().includes(q));
-      return matchesStatus && matchesCategory && matchesSearch;
+      const matchesSearch =
+        !q ||
+        [v.stock_number, v.chassis_number, v.part_sku, v.make, v.model, agent, bidRequester, customer, invoiceCode]
+          .filter(Boolean)
+          .some((val) => String(val).toLowerCase().includes(q));
+      const matchesMake = !makeFilter || (v.make || '').trim().toLowerCase() === makeFilter;
+      const matchesModel = !modelFilter || (v.model || '').trim().toLowerCase() === modelFilter;
+      const matchesCustomer = !listFilters.customer || customerId === listFilters.customer;
+      const matchesAgent = !listFilters.agent || agentId === listFilters.agent;
+      return matchesStatus && matchesSearch && matchesMake && matchesModel && matchesCustomer && matchesAgent;
     });
-  }, [vehicles, search, statusFilter, listCategory, agentNames, saleFallback, customers, vehicleInvoices, vehiclePays]);
+  }, [catalogVehicles, listFilters, agentNames, saleFallback, customers, vehicleInvoices, vehiclePays]);
+
+  const safePage = clampStockPage(page, filtered.length, pageSize);
+  const paged = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, safePage, pageSize]);
+
+  useEffect(() => {
+    if (safePage !== page) setPage(safePage);
+  }, [safePage, page]);
+
+  const makeOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of catalogVehicles) {
+      const m = (v.make || '').trim();
+      if (m) set.add(m);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value }));
+  }, [catalogVehicles]);
+
+  const modelOptions = useMemo(() => {
+    const makeFilter = listFilters.make.trim().toLowerCase();
+    const set = new Set<string>();
+    for (const v of catalogVehicles) {
+      if (makeFilter && (v.make || '').trim().toLowerCase() !== makeFilter) continue;
+      const m = (v.model || '').trim();
+      if (m) set.add(m);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b)).map((value) => ({ value, label: value }));
+  }, [catalogVehicles, listFilters.make]);
+
+  const customerOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const v of catalogVehicles) {
+      const id = v.customer_id || saleFallback[v.id]?.customerId;
+      if (!id || byId.has(id)) continue;
+      const name = customers.find((c) => c.id === id)?.full_name;
+      if (name) byId.set(id, name);
+    }
+    return [...byId.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [catalogVehicles, customers, saleFallback]);
+
+  const agentOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const v of catalogVehicles) {
+      const id = v.reserved_by || v.assigned_agent_id || saleFallback[v.id]?.agentId;
+      if (!id || byId.has(id)) continue;
+      const name = agentNames[id];
+      if (name) byId.set(id, name);
+    }
+    return [...byId.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [catalogVehicles, agentNames, saleFallback]);
+
+  const filterSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onListFiltersChange = (next: StockListFiltersValue) => {
+    setListFilters(next);
+    setPage(1);
+    if (filterSyncTimer.current) clearTimeout(filterSyncTimer.current);
+    filterSyncTimer.current = setTimeout(() => {
+      syncListQuery({ filters: next, page: 1 });
+    }, 250);
+  };
+
+  const onPageChange = (nextPage: number) => {
+    setPage(nextPage);
+    syncListQuery({ page: nextPage });
+  };
+
+  const onPageSizeChange = (nextSize: StockPageSize) => {
+    setPageSize(nextSize);
+    setPage(1);
+    syncListQuery({ page: 1, pageSize: nextSize });
+  };
 
   const fillFormFromVehicle = (v: Vehicle) => {
     setForm({
@@ -448,8 +602,8 @@ function VehiclesPage() {
       purchase_price: formState.purchase_price ? Number(formState.purchase_price) : null,
       expense_jpy: formState.expense_jpy === '' ? FIXED_EXPENSE_JPY : Number(formState.expense_jpy) || 0,
       tt_rate: formState.tt_rate === '' ? DEFAULT_TT_RATE : Number(formState.tt_rate) || DEFAULT_TT_RATE,
-      fob_usd: fob ? Number(fob.fobUsd.toFixed(2)) : null,
-      listed_price: fob ? Number(fob.fobUsd.toFixed(2)) : null,
+      fob_usd: fob ? Math.round(fob.fobUsd) : null,
+      listed_price: fob ? Math.round(fob.fobUsd) : null,
       listed_currency: 'USD',
       notes: mergeEngineIntoNotes(formState.notes, formState.engine),
       source_country: origin?.name || 'Japan',
@@ -669,7 +823,8 @@ function VehiclesPage() {
     }
   };
 
-  const canSetBidRequester = canEditVehicle || canReserveStock;
+  // Bid requester / shipping / courier are staff stock ops — not sales Actions.
+  const canSetBidRequester = canSetBidByPerm();
 
   const handleAssigned = ({
     vehicle: updated,
@@ -692,11 +847,14 @@ function VehiclesPage() {
     }
 
     toast.success(`Assigned to ${agentName} — they can reserve from Cars`);
-    const params = new URLSearchParams();
-    if (listCategory !== 'car') params.set('category', listCategory);
-    params.set('q', updated.stock_number);
-    router.replace(`/vehicles?${params.toString()}`);
-    setSearch(updated.stock_number);
+    const nextFilters: StockListFiltersValue = {
+      ...emptyListFilters(),
+      search: updated.stock_number,
+    };
+    if (filterSyncTimer.current) clearTimeout(filterSyncTimer.current);
+    setListFilters(nextFilters);
+    setPage(1);
+    syncListQuery({ filters: nextFilters, page: 1 });
   };
 
   const openReserve = (vehicle?: Vehicle | null) => {
@@ -744,10 +902,6 @@ function VehiclesPage() {
     await loadVehicles();
   };
 
-  const catalogVehicles = useMemo(
-    () => vehicles.filter((v) => parseStockCategory(v.stock_category) === listCategory),
-    [vehicles, listCategory]
-  );
   const stats = {
     total: catalogVehicles.length,
     available: catalogVehicles.filter((v) => effectivePaymentStatus(v) === 'available').length,
@@ -883,31 +1037,17 @@ function VehiclesPage() {
         ))}
       </div>
 
-      <Card><CardContent className="space-y-3 p-4">
-        <div className="erp-filter-bar">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search stock no., chassis, make…" />
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {STOCK_FILTER_CHIPS.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => setStatusFilter(chip.id)}
-              className={cn(
-                'rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors',
-                statusFilter === chip.id
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'
-              )}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      </CardContent></Card>
+      <StockListFilters
+        total={filtered.length}
+        value={listFilters}
+        onChange={onListFiltersChange}
+        statusOptions={STOCK_STATUS_OPTIONS}
+        makeOptions={makeOptions}
+        modelOptions={modelOptions}
+        customerOptions={customerOptions}
+        agentOptions={agentOptions}
+        searchPlaceholder="Search stock ID, chassis, make…"
+      />
 
       {loading ? (
         <Card><div className="flex justify-center p-12"><Loader2 className="h-4 w-4 animate-spin" /></div></Card>
@@ -921,46 +1061,55 @@ function VehiclesPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-4 pr-16">
-          {filtered.map((v) => {
-            const pay = effectivePaymentStatus(v);
-            const pays = vehiclePays[v.id];
-            return (
-              <StockListCard
-                key={v.id}
-                vehicle={v}
-                customerName={rowCustomerName(v)}
-                customerCountry={rowCustomerCountry(v)}
-                agentName={rowAgentName(v)}
-                bidRequesterName={
-                  v.bid_requester_id ? agentNames[v.bid_requester_id] || 'Agent' : ''
-                }
-                invoice={vehicleInvoices[v.id] || null}
-                paymentCount={pays?.count || 0}
-                allocatedUsd={pays?.allocated || 0}
-                remittances={pays?.remittances || []}
-                docKinds={vehicleDocKinds[v.id] || []}
-                onViewInfo={() => setSelected(v)}
-                onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
-                onAssign={canEditVehicle && pay === 'available' ? () => openAssign(v) : undefined}
-                onSetBidRequester={canSetBidRequester ? () => openBidRequester(v) : undefined}
-                onReserve={canReserveStock && pay === 'available' ? () => openReserve(v) : undefined}
-                onMakeAvailable={
-                  canMakeAvailable && vehicleCanMakeAvailable(v)
-                    ? () => openMakeAvailable(v)
-                    : undefined
-                }
-                onShipping={canEditShipping ? () => openShippingEdit(v) : undefined}
-                onCourier={canEditShipping ? () => openCourierEdit(v) : undefined}
-                onDelete={canDeleteVehicle ? () => { setSelected(v); setDeleteOpen(true); } : undefined}
-                onMarkCommissionPaid={
-                  canMarkCommissionPaid && effectiveCommissionStatus(v) === 'due'
-                    ? () => { void markCommissionPaid(v.id); }
-                    : undefined
-                }
-              />
-            );
-          })}
+        <div className="space-y-4">
+          <div className="space-y-4 pr-16">
+            {paged.map((v) => {
+              const pay = effectivePaymentStatus(v);
+              const pays = vehiclePays[v.id];
+              return (
+                <StockListCard
+                  key={v.id}
+                  vehicle={v}
+                  customerName={rowCustomerName(v)}
+                  customerCountry={rowCustomerCountry(v)}
+                  agentName={rowAgentName(v)}
+                  bidRequesterName={
+                    v.bid_requester_id ? agentNames[v.bid_requester_id] || 'Agent' : ''
+                  }
+                  invoice={vehicleInvoices[v.id] || null}
+                  paymentCount={pays?.count || 0}
+                  allocatedUsd={pays?.allocated || 0}
+                  remittances={pays?.remittances || []}
+                  docKinds={vehicleDocKinds[v.id] || []}
+                  onViewInfo={() => setSelected(v)}
+                  onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
+                  onAssign={canAssignStock() && pay === 'available' ? () => openAssign(v) : undefined}
+                  onSetBidRequester={canSetBidRequester ? () => openBidRequester(v) : undefined}
+                  onReserve={canReserveStock && pay === 'available' ? () => openReserve(v) : undefined}
+                  onMakeAvailable={
+                    canMakeAvailable && vehicleCanMakeAvailable(v)
+                      ? () => openMakeAvailable(v)
+                      : undefined
+                  }
+                  onShipping={canEditShipping ? () => openShippingEdit(v) : undefined}
+                  onCourier={canEditCourier ? () => openCourierEdit(v) : undefined}
+                  onDelete={canDeleteVehicle ? () => { setSelected(v); setDeleteOpen(true); } : undefined}
+                  onMarkCommissionPaid={
+                    canMarkCommissionPaid && effectiveCommissionStatus(v) === 'due'
+                      ? () => { void markCommissionPaid(v.id); }
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </div>
+          <StockListPagination
+            page={safePage}
+            pageSize={pageSize}
+            total={filtered.length}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
         </div>
       )}
 

@@ -36,8 +36,8 @@ export default function AllocateRemittancePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { profile } = useAuth();
-  const { can } = usePermissions();
-  const canAllocate = can('payments', 'create') || can('payments', 'edit');
+  const { canAllocateRemittances } = usePermissions();
+  const canAllocate = canAllocateRemittances();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [existing, setExisting] = useState<PaymentAllocation[]>([]);
   const [vehicles, setVehicles] = useState<Stock[]>([]);

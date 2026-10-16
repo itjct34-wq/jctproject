@@ -812,7 +812,6 @@ export function VehicleViewInfoDialog({
                   vehicles={[vehicle]}
                   salesAgent={previewInvoice.sales_agent_name || null}
                   showQr
-                  includeBankNotice={false}
                   variant={previewIsAuction ? 'auction_deposit' : 'commercial'}
                 />
               </div>

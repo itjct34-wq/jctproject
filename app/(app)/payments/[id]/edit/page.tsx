@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 export default function EditRemittancePage() {
   const params = useParams<{ id: string }>();
-  const { can, isElevatedStaff } = usePermissions();
+  const { canMutateRemittances, isElevatedStaff } = usePermissions();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,8 +35,9 @@ export default function EditRemittancePage() {
     };
   }, [params.id]);
 
-  const canEdit = can('payments', 'edit') || isElevatedStaff;
-  if (!canEdit) {
+  const canEdit =
+    canMutateRemittances() || (isElevatedStaff && payment != null && isUnknownRemittance(payment));
+  if (!loading && !canEdit) {
     return <p className="p-8 text-sm text-muted-foreground">You do not have permission to edit remittances.</p>;
   }
   if (loading) {

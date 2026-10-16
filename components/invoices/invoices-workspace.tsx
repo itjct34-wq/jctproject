@@ -106,7 +106,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const isAuction = kind === 'auction';
   const [companySettings, setCompanySettings] = useState<Pick<CompanySettings, 'id' | 'invoice_prefix' | 'invoice_next_number'> | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
-  const [printBankNotice, setPrintBankNotice] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -178,10 +177,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setLineItems(next);
   };
 
-  const calcSubtotal = (items: Array<{ quantity: string; unit_price: string }>) => items.reduce((sum, item) => {
-    const qty = Number(item.quantity) || 0; const price = Number(item.unit_price) || 0;
-    return sum + qty * price;
-  }, 0);
+  const calcSubtotal = (items: Array<{ quantity: string; unit_price: string }>) =>
+    Math.round(
+      items.reduce((sum, item) => {
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.unit_price) || 0;
+        return sum + qty * price;
+      }, 0)
+    );
 
   const loadDetails = async (inv: Invoice) => {
     setSelected(inv);
@@ -323,7 +326,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         discount: isAuction
           ? Number(item.discount) || 0
           : normalizeDepositRatio(Number(item.discount) || 0, Number(item.unit_price) || 0),
-        line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0),
+        line_total: Math.round((Number(item.quantity) || 1) * (Number(item.unit_price) || 0)),
         sort_order: idx,
       }));
 
@@ -339,18 +342,18 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setSubmitting(true);
     const subtotal = calcSubtotal(lineItems);
     const tax = 0;
-    const freight = Number(form.freight_total) || 0;
-    const insurance = Number(form.insurance_total) || 0;
-    const other = Number(form.other_charges) || 0;
-    const discount = Number(form.discount_total) || 0;
-    const total = subtotal + tax + freight + insurance + other - discount;
+    const freight = Math.round(Number(form.freight_total) || 0);
+    const insurance = Math.round(Number(form.insurance_total) || 0);
+    const other = Math.round(Number(form.other_charges) || 0);
+    const discount = Math.round(Number(form.discount_total) || 0);
+    const total = Math.round(subtotal + tax + freight + insurance + other - discount);
     const invoiceCode = form.invoice_code.trim() || nextAutoInvoiceCode();
     const paymentTerms = isAuction
       ? ((form.payment_terms || AUCTION_DEPOSIT_TERMS).toUpperCase().startsWith(AUCTION_DEPOSIT_TERMS)
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: form.payment_status, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, freight_notes: form.freight_notes.trim() || null, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
+    const { data, error } = await supabase.from('invoices').insert({ invoice_code: invoiceCode, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date || new Date().toISOString().split('T')[0], due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, payment_status: form.payment_status, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: freight, freight_notes: form.freight_notes.trim() || null, insurance_total: insurance, other_charges: other, discount_total: discount, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, created_by: profile.id }).select().maybeSingle();
     if (error) { setSubmitting(false); toast.error(`Could not create invoice: ${error.message}`); return; }
     const inv = data as Invoice;
     const itemRows = linePayload(inv.id);
@@ -372,11 +375,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setSubmitting(true);
     const subtotal = calcSubtotal(lineItems);
     const tax = 0;
-    const freight = Number(form.freight_total) || 0;
-    const insurance = Number(form.insurance_total) || 0;
-    const other = Number(form.other_charges) || 0;
-    const discount = Number(form.discount_total) || 0;
-    const total = subtotal + tax + freight + insurance + other - discount;
+    const freight = Math.round(Number(form.freight_total) || 0);
+    const insurance = Math.round(Number(form.insurance_total) || 0);
+    const other = Math.round(Number(form.other_charges) || 0);
+    const discount = Math.round(Number(form.discount_total) || 0);
+    const total = Math.round(subtotal + tax + freight + insurance + other - discount);
     const customerId = await resolveCustomerId();
     if (!customerId) { setSubmitting(false); return; }
     const paymentTerms = isAuction
@@ -384,7 +387,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           ? (form.payment_terms || AUCTION_DEPOSIT_TERMS)
           : `${AUCTION_DEPOSIT_TERMS} — ${form.payment_terms}`)
       : (form.payment_terms || null);
-    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: Number(form.freight_total) || 0, freight_notes: form.freight_notes.trim() || null, insurance_total: Number(form.insurance_total) || 0, other_charges: Number(form.other_charges) || 0, discount_total: Number(form.discount_total) || 0, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, payment_status: form.payment_status, updated_at: new Date().toISOString() }).eq('id', selected.id);
+    const { error } = await supabase.from('invoices').update({ invoice_code: form.invoice_code.trim() || selected.invoice_code, customer_id: customerId, sale_id: form.sale_id || null, invoice_type: form.invoice_type, issue_date: form.issue_date, due_date: form.due_date || null, subtotal, tax, total, currency: form.currency, notes: form.notes.trim() || null, incoterms: form.incoterms || 'FOB', shipment_type: form.shipment_type || 'RORO', container_mode: form.container_mode || (form.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'), port_of_loading: form.port_of_loading || 'Nagoya, Japan', port_of_discharge: form.port_of_discharge || null, vessel_name: form.vessel_name || null, bl_number: form.bl_number || null, freight_total: freight, freight_notes: form.freight_notes.trim() || null, insurance_total: insurance, other_charges: other, discount_total: discount, payment_terms: paymentTerms, bank_details: form.bank_details || null, sales_agent_name: form.sales_agent.trim() || null, payment_status: form.payment_status, updated_at: new Date().toISOString() }).eq('id', selected.id);
     if (error) { setSubmitting(false); toast.error(`Could not update: ${error.message}`); return; }
     const { error: delError } = await supabase.from('invoice_items').delete().eq('invoice_id', selected.id);
     if (delError) { setSubmitting(false); toast.error(`Could not update line items: ${delError.message}`); return; }
@@ -835,11 +838,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <Switch checked={printShowQr} onCheckedChange={setPrintShowQr} />
               QR code {printShowQr ? 'on' : 'off'}
             </label>
-            <label className="flex items-center gap-2">
-              <Switch checked={printBankNotice} onCheckedChange={setPrintBankNotice} />
-              Bank notice page {printBankNotice ? 'on' : 'off'}
-            </label>
-            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page. Keep bank notice off for a single page.</p>
+            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page.</p>
           </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">
@@ -851,7 +850,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   vehicles={vehicles}
                   salesAgent={selected.sales_agent_name || form.sales_agent || null}
                   showQr={printShowQr}
-                  includeBankNotice={printBankNotice}
                   variant={isAuction ? 'auction_deposit' : 'commercial'}
                 />
               </div>

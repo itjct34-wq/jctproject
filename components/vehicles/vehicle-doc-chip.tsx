@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +19,8 @@ type Props = {
   label: string;
   docKinds?: string[];
   className?: string;
+  /** Optional leading icon (e.g. DHL document pill). */
+  icon?: ReactNode;
   /** When no attachment: navigate here instead of only toasting. */
   fallbackHref?: string;
   emptyMessage?: string;
@@ -30,6 +32,7 @@ export function VehicleDocChip({
   label,
   docKinds,
   className,
+  icon,
   fallbackHref,
   emptyMessage,
 }: Props) {
@@ -91,18 +94,25 @@ export function VehicleDocChip({
         <button
           type="button"
           className={cn(
-            'inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded px-1.5 text-[10px] font-bold uppercase',
+            'inline-flex h-6 min-w-[1.75rem] items-center justify-center gap-1 rounded px-1.5 text-[10px] font-bold uppercase',
             'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
             'disabled:opacity-70',
             !className?.includes('text-') && 'text-white',
             className
           )}
-          title={`View ${label}`}
-          aria-label={`View ${label}`}
+          title={`View / download ${label}`}
+          aria-label={`View / download ${label}`}
           disabled={busy}
           onClick={(e) => void onChipClick(e)}
         >
-          {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : label}
+          {busy ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              {icon}
+              {label}
+            </>
+          )}
         </button>
       </PopoverAnchor>
       <PopoverContent className="w-64 p-2" align="center" onOpenAutoFocus={(ev) => ev.preventDefault()}>

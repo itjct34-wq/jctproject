@@ -42,7 +42,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { canView, roleNames } = usePermissions();
+  const { can, canView, roleNames, isAdmin, isSuperAdmin } = usePermissions();
   const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
@@ -102,11 +102,18 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
         className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       >
         {navGroups.map((group) => {
-          const visibleItems = group.items.filter(
-            (item) =>
-              (!item.requiredRoles || item.requiredRoles.some((role) => roleNames.includes(role))) &&
-              (!item.module || canView(item.module))
-          );
+          const visibleItems = group.items.filter((item) => {
+            if (item.requiredRoles && !item.requiredRoles.some((role) => roleNames.includes(role))) {
+              return false;
+            }
+            if (!item.module) return true;
+            if (item.action) {
+              // Permissions page: admins manage grants even without assign_roles in DB seed
+              if (item.href === '/permissions') return isAdmin() || isSuperAdmin();
+              return can(item.module, item.action);
+            }
+            return canView(item.module);
+          });
           if (visibleItems.length === 0) return null;
 
           const isExpanded = expandedGroup === group.label;

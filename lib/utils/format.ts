@@ -1,6 +1,6 @@
 import { formatCurrency, normalizeCurrency } from '@/lib/utils/currencies';
 
-/** Safe number display. When currency is set, uses USD/JPY/PKR/EUR/GBP rules. */
+/** Safe money display. Always rounds to whole units (no cents). */
 export function formatMoney(
   value: number | null | undefined,
   currency?: string | null,
@@ -8,11 +8,11 @@ export function formatMoney(
 ): string {
   if (currency) return formatCurrency(value, currency);
   const n = Number(value);
-  const safe = Number.isFinite(n) ? n : 0;
+  const safe = Math.round(Number.isFinite(n) ? n : 0);
   const digits = opts?.minimumFractionDigits ?? 0;
   return safe.toLocaleString(undefined, {
     minimumFractionDigits: digits,
-    maximumFractionDigits: Math.max(digits, 2),
+    maximumFractionDigits: digits,
   });
 }
 
