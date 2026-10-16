@@ -42,7 +42,7 @@ export function SearchableSelect({
           role="combobox"
           disabled={disabled}
           className={cn(
-            'h-10 w-full justify-between border-input bg-background font-normal hover:bg-background',
+            'h-9 min-h-9 w-full justify-between border-input bg-background font-normal hover:bg-background',
             !selected && 'text-muted-foreground',
           )}
         >

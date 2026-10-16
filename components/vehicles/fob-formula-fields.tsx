@@ -17,7 +17,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
   const hasBid = Number(bidJpy) > 0;
 
   return (
-    <section className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+    <section className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3">
       <div>
         <h3 className="text-sm font-semibold">Bid &amp; FOB</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">

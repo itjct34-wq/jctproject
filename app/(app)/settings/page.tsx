@@ -223,7 +223,7 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-48 w-full" />
           ))}
@@ -267,7 +267,7 @@ export default function SettingsPage() {
           <TabsTrigger value="system"><Sliders className="w-4 h-4 mr-1.5" />System</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile" className="space-y-4">
+        <TabsContent value="profile" className="space-y-3">
           <Card className="border-border/60">
             <CardHeader><CardTitle className="text-base">Profile & photo</CardTitle></CardHeader>
             <CardContent className="space-y-6">
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                   <p className="mt-1">JPG/PNG up to 2MB. Create a public Storage bucket named <code className="text-xs">avatars</code> for best results.</p>
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label>Full name</Label>
                   <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -320,16 +320,16 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="company" className="space-y-4">
+        <TabsContent value="company" className="space-y-3">
           {!settings ? (
             <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">No company settings found. Run the database migration.</CardContent></Card>
           ) : (
             <Card className="border-border/60">
               <CardHeader><CardTitle className="text-base">Company Information</CardTitle></CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Company Name</Label><Input value={settings.company_name} onChange={(e) => update('company_name', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Legal Name</Label><Input value={settings.legal_name || ''} onChange={(e) => update('legal_name', e.target.value)} disabled={!canEdit} /></div>
-                <div className="md:col-span-2 grid sm:grid-cols-2 gap-4 rounded-lg border border-border/60 p-4">
+              <CardContent className="grid md:grid-cols-2 gap-2">
+                <div className="space-y-1"><Label>Company Name</Label><Input value={settings.company_name} onChange={(e) => update('company_name', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Legal Name</Label><Input value={settings.legal_name || ''} onChange={(e) => update('legal_name', e.target.value)} disabled={!canEdit} /></div>
+                <div className="md:col-span-2 grid sm:grid-cols-2 gap-2 rounded-lg border border-border/60 p-3">
                   <div className="space-y-2">
                     <Label>Letterhead logo</Label>
                     <p className="text-xs text-muted-foreground">Used on invoices, auction invoices, and quotations.</p>
@@ -439,40 +439,40 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2"><Label>Address Line 1</Label><Input value={settings.address_line1 || ''} onChange={(e) => update('address_line1', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Address Line 2</Label><Input value={settings.address_line2 || ''} onChange={(e) => update('address_line2', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>City</Label><Input value={settings.city || ''} onChange={(e) => update('city', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Prefecture / State</Label><Input value={settings.prefecture || ''} onChange={(e) => update('prefecture', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Postal Code</Label><Input value={settings.postal_code || ''} onChange={(e) => update('postal_code', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Country</Label><Input value={settings.country || ''} onChange={(e) => update('country', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Phone</Label><Input value={settings.phone || ''} onChange={(e) => update('phone', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Email</Label><Input type="email" value={settings.email || ''} onChange={(e) => update('email', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Website</Label><Input value={settings.website || ''} onChange={(e) => update('website', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Tax ID</Label><Input value={settings.tax_id || ''} onChange={(e) => update('tax_id', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Address Line 1</Label><Input value={settings.address_line1 || ''} onChange={(e) => update('address_line1', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Address Line 2</Label><Input value={settings.address_line2 || ''} onChange={(e) => update('address_line2', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>City</Label><Input value={settings.city || ''} onChange={(e) => update('city', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Prefecture / State</Label><Input value={settings.prefecture || ''} onChange={(e) => update('prefecture', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Postal Code</Label><Input value={settings.postal_code || ''} onChange={(e) => update('postal_code', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Country</Label><Input value={settings.country || ''} onChange={(e) => update('country', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Phone</Label><Input value={settings.phone || ''} onChange={(e) => update('phone', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Email</Label><Input type="email" value={settings.email || ''} onChange={(e) => update('email', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Website</Label><Input value={settings.website || ''} onChange={(e) => update('website', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Tax ID</Label><Input value={settings.tax_id || ''} onChange={(e) => update('tax_id', e.target.value)} disabled={!canEdit} /></div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="invoicing" className="space-y-4">
+        <TabsContent value="invoicing" className="space-y-3">
           {settings && (
             <Card className="border-border/60">
               <CardHeader><CardTitle className="text-base">Invoice & Quotation Numbering</CardTitle></CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Invoice Prefix</Label><Input value={settings.invoice_prefix} onChange={(e) => update('invoice_prefix', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Next Invoice Number</Label><Input type="number" value={settings.invoice_next_number} onChange={(e) => update('invoice_next_number', parseInt(e.target.value) || 1)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Quotation Prefix</Label><Input value={settings.quotation_prefix} onChange={(e) => update('quotation_prefix', e.target.value)} disabled={!canEdit} /></div>
-                <div className="space-y-2"><Label>Next Quotation Number</Label><Input type="number" value={settings.quotation_next_number} onChange={(e) => update('quotation_next_number', parseInt(e.target.value) || 1)} disabled={!canEdit} /></div>
+              <CardContent className="grid md:grid-cols-2 gap-2">
+                <div className="space-y-1"><Label>Invoice Prefix</Label><Input value={settings.invoice_prefix} onChange={(e) => update('invoice_prefix', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Next Invoice Number</Label><Input type="number" value={settings.invoice_next_number} onChange={(e) => update('invoice_next_number', parseInt(e.target.value) || 1)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Quotation Prefix</Label><Input value={settings.quotation_prefix} onChange={(e) => update('quotation_prefix', e.target.value)} disabled={!canEdit} /></div>
+                <div className="space-y-1"><Label>Next Quotation Number</Label><Input type="number" value={settings.quotation_next_number} onChange={(e) => update('quotation_next_number', parseInt(e.target.value) || 1)} disabled={!canEdit} /></div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="finance" className="space-y-4">
+        <TabsContent value="finance" className="space-y-3">
           {settings && (
             <Card className="border-border/60">
               <CardHeader><CardTitle className="text-base">Currency & Payment</CardTitle></CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
+              <CardContent className="grid md:grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label>Default Currency</Label>
                   <CurrencySelect value={settings.default_currency} onValueChange={(v) => update('default_currency', v)} disabled={!canEdit} />
@@ -486,7 +486,7 @@ export default function SettingsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="system" className="space-y-4">
+        <TabsContent value="system" className="space-y-3">
           <Card className="border-border/60">
             <CardHeader><CardTitle className="text-base">Admin sign-in MFA</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
@@ -503,7 +503,7 @@ export default function SettingsPage() {
           {settings && (
             <Card className="border-border/60">
               <CardHeader><CardTitle className="text-base">System Preferences</CardTitle></CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
+              <CardContent className="grid md:grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label>Timezone</Label>
                   <Select value={settings.timezone} onValueChange={(v) => update('timezone', v)} disabled={!canEdit}>

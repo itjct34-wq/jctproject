@@ -435,15 +435,15 @@ function RemittancesPageInner() {
             <table className="w-full min-w-[1100px] text-left text-sm">
               <thead className="bg-primary text-primary-foreground">
                 <tr className="text-[11px] uppercase tracking-wide">
-                  <th className="px-3 py-2.5 font-semibold">ID</th>
-                  <th className="px-3 py-2.5 font-semibold">Customer details</th>
-                  <th className="px-3 py-2.5 font-semibold">Remitter details</th>
-                  <th className="px-3 py-2.5 font-semibold">Remittance details</th>
-                  <th className="px-3 py-2.5 font-semibold">Allocated stock IDs</th>
-                  <th className="px-3 py-2.5 font-semibold">Status</th>
-                  <th className="px-3 py-2.5 font-semibold">Details</th>
+                  <th className="px-2.5 py-1.5 font-semibold">ID</th>
+                  <th className="px-2.5 py-1.5 font-semibold">Customer details</th>
+                  <th className="px-2.5 py-1.5 font-semibold">Remitter details</th>
+                  <th className="px-2.5 py-1.5 font-semibold">Remittance details</th>
+                  <th className="px-2.5 py-1.5 font-semibold">Allocated stock IDs</th>
+                  <th className="px-2.5 py-1.5 font-semibold">Status</th>
+                  <th className="px-2.5 py-1.5 font-semibold">Details</th>
                   {canShowActionsColumn ? (
-                    <th className="px-3 py-2.5 font-semibold">Actions</th>
+                    <th className="px-2.5 py-1.5 font-semibold">Actions</th>
                   ) : null}
                 </tr>
               </thead>
@@ -472,13 +472,13 @@ function RemittancesPageInner() {
                   const showAllocate = canAllocateAction;
                   return (
                     <tr key={p.id} className="align-top hover:bg-muted/40">
-                      <td className="px-3 py-3 text-xs leading-5">
+                      <td className="px-2.5 py-1.5 text-xs leading-5">
                         <p className="font-semibold text-primary">ID: {paymentDisplayId(p.payment_code)}</p>
                         <p>Created: {isoDay(p.created_at)}</p>
                         <p>Remit: {isoDay(p.remit_date || p.payment_date)}</p>
                         <p>Received: {isoDay(p.received_date)}</p>
                       </td>
-                      <td className="px-3 py-3 text-xs leading-5">
+                      <td className="px-2.5 py-1.5 text-xs leading-5">
                         {unknown ? (
                           <>
                             <p className="font-medium text-amber-800">Untagged</p>
@@ -493,19 +493,19 @@ function RemittancesPageInner() {
                           </>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-xs leading-5">
+                      <td className="px-2.5 py-1.5 text-xs leading-5">
                         <p className="font-medium uppercase">{p.remitter_name || '—'}</p>
                         <p>{p.bank_name || '—'}</p>
                       </td>
-                      <td className="px-3 py-3 text-xs leading-5">
+                      <td className="px-2.5 py-1.5 text-xs leading-5">
                         <p>Exchange Rate: {Number(p.exchange_rate || 0)}</p>
                         <p>Instructed Amount: {formatMoney(remittanceInstructed(p), p.currency)}</p>
                         <p>Remit Amount: {formatMoney(remittanceAmount(p), p.currency)}</p>
                         <p>Bank Charges: {formatMoney(Number(p.bank_charges) || 0, p.currency)}</p>
                         <p>Remaining Allocation: {formatMoney(remaining, p.currency)}</p>
                       </td>
-                      <td className="px-3 py-3 text-xs">{stockIds || '—'}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-2.5 py-1.5 text-xs">{stockIds || '—'}</td>
+                      <td className="px-2.5 py-1.5">
                         <span
                           className={
                             unknown
@@ -516,11 +516,11 @@ function RemittancesPageInner() {
                           {status}
                         </span>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2.5 py-1.5">
                         <TtDocumentChip paymentId={p.id} canEdit={canEdit || canManageUnknown} />
                       </td>
                       {canShowActionsColumn ? (
-                        <td className="relative overflow-visible px-3 py-3">
+                        <td className="relative overflow-visible px-2.5 py-1.5">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="sm" variant="outline">
@@ -652,7 +652,7 @@ function RemittancesPageInner() {
           <DialogHeader>
             <DialogTitle>Tag Unknown TT</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Assign customer and sales agent so this remittance appears in the normal list and can be allocated to
               stock.

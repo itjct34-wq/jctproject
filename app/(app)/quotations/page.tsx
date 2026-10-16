@@ -420,7 +420,7 @@ export default function QuotationsPage() {
 
   const formFields = (
     <>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>Customer *</Label>
           <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
@@ -470,7 +470,7 @@ export default function QuotationsPage() {
         </div>
         <div className="space-y-3">
           {lineItems.map((item, idx) => (
-            <div key={idx} className="space-y-2 rounded-md border border-border/60 p-3">
+            <div key={idx} className="space-y-1.5 rounded-md border border-border/60 p-2.5">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label className="text-[11px]">From stock (optional)</Label>
@@ -526,7 +526,7 @@ export default function QuotationsPage() {
           </table>
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>Insurance</Label>
           <Input type="number" value={form.insurance} onChange={(e) => setForm({ ...form, insurance: e.target.value })} />
@@ -620,7 +620,7 @@ export default function QuotationsPage() {
               <button
                 key={q.id}
                 onClick={() => setSelected(q)}
-                className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/40"
+                className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-muted/40"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <FileText className="h-5 w-5" />
@@ -659,7 +659,7 @@ export default function QuotationsPage() {
           <DialogHeader>
             <DialogTitle>New quotation</DialogTitle>
           </DialogHeader>
-          <form onSubmit={submitQuotation} className="space-y-4">
+          <form onSubmit={submitQuotation} className="space-y-3">
             {formFields}
             <DialogFooter>
               <Button type="submit" disabled={submitting || !form.customer_id}>
@@ -682,7 +682,7 @@ export default function QuotationsPage() {
           <DialogHeader>
             <DialogTitle>Edit quotation</DialogTitle>
           </DialogHeader>
-          <form onSubmit={submitEdit} className="space-y-4">
+          <form onSubmit={submitEdit} className="space-y-3">
             {formFields}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
@@ -729,7 +729,7 @@ export default function QuotationsPage() {
                   </Button>
                 )}
               </div>
-              <div className="space-y-4 pt-2">
+              <div className="space-y-3 pt-2">
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground">Status:</span>
                   <Select value={selected.status} onValueChange={(v: Quotation['status']) => updateStatus(v)}>

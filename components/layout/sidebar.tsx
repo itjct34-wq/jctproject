@@ -7,8 +7,6 @@ import { getNavGroupsForRoles } from '@/lib/nav';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase/client';
-import { letterheadName } from '@/lib/jct-official';
 
 function isNavItemActive(
   pathname: string,
@@ -46,7 +44,6 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   const { can, canView, roleNames, isAdmin, isSuperAdmin } = usePermissions();
   const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [brandName, setBrandName] = useState('ERP');
 
   // Accordion: only one group open. Auto-expand the group that contains the active route.
   useEffect(() => {
@@ -55,22 +52,6 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
     );
     if (active) setExpandedGroup(active.label);
   }, [pathname, searchParams, navGroups]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from('company_settings')
-        .select('company_name, legal_name')
-        .limit(1)
-        .maybeSingle();
-      if (cancelled || !data) return;
-      setBrandName(letterheadName(data));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const toggleGroup = (label: string) => {
     setExpandedGroup((prev) => (prev === label ? null : label));
@@ -91,14 +72,11 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
       >
         {!collapsed || mobile ? (
           <div className="min-w-0 flex-1 px-1">
-            <p className="text-sm font-semibold text-primary truncate">{brandName || 'ERP'}</p>
-            <p className="text-[11px] text-muted-foreground truncate">Operations</p>
+            <p className="text-sm font-semibold text-primary truncate">erp</p>
           </div>
         ) : (
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-primary/10">
-            <span className="text-[10px] font-bold tracking-wide text-primary">
-              {(brandName || 'ERP').slice(0, 3).toUpperCase()}
-            </span>
+            <span className="text-[10px] font-bold tracking-wide text-primary">erp</span>
           </div>
         )}
         {mobile && (

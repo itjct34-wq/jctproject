@@ -1027,7 +1027,7 @@ function VehiclesPage() {
         onChange={(patch) => setForm({ ...form, ...patch })}
         disabled={!canEditVehicle && mode === 'edit'}
       />
-      <section className="space-y-3 rounded-xl border border-border/70 p-4">
+      <section className="space-y-2 rounded-xl border border-border/70 p-3">
         <h3 className="text-sm font-semibold">Vehicle specs</h3>
         <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} showPhotos={false} />
         <div className="space-y-1">
@@ -1043,7 +1043,7 @@ function VehiclesPage() {
         </div>
         <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
       </section>
-      <section className="space-y-3 rounded-xl border border-border/70 p-4">
+      <section className="space-y-2 rounded-xl border border-border/70 p-3">
         <h3 className="text-sm font-semibold">Photos</h3>
         <MultiImageUpload
           folder={chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number)}
@@ -1092,8 +1092,8 @@ function VehiclesPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-4">
-          <div className="space-y-4 pr-16">
+        <div className="space-y-3">
+          <div className="space-y-3 pr-16">
             {paged.map((v) => {
               const pay = effectivePaymentStatus(v);
               const pays = vehiclePays[v.id];
@@ -1150,7 +1150,7 @@ function VehiclesPage() {
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen>
         <DialogHeader><DialogTitle>Add {stockCategoryLabel(listCategory).toLowerCase()}</DialogTitle></DialogHeader>
-        <form onSubmit={submitCreate} className="space-y-4">
+        <form onSubmit={submitCreate} className="space-y-3">
           {workflowFormSections('create')}
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Save'}</Button></DialogFooter>
         </form>
@@ -1158,7 +1158,7 @@ function VehiclesPage() {
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen>
         <DialogHeader><DialogTitle>Edit stock</DialogTitle></DialogHeader>
-        <form onSubmit={submitEdit} className="space-y-4">
+        <form onSubmit={submitEdit} className="space-y-3">
           {workflowFormSections('edit')}
           <DialogFooter><Button type="submit" disabled={submitting}>Save</Button></DialogFooter>
         </form>

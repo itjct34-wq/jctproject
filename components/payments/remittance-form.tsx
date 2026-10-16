@@ -49,7 +49,7 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <Label className="text-sm font-medium">
         {label} - {ja}
         {required ? <RequiredMark /> : null}
@@ -293,8 +293,8 @@ export function RemittanceForm({ payment, unknown = false }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {isUnknownMode ? (
           <Field label="Customer" ja="お客様">
             <Input value="Unknown — tag later" readOnly className="bg-muted" />

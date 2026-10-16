@@ -178,7 +178,7 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
         <DialogHeader>
           <DialogTitle>Edit Shipping Info</DialogTitle>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Ship Company - 船舶会社" required>
               <Input value={form.shipping_line} onChange={(e) => set('shipping_line', e.target.value)} />

@@ -495,10 +495,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   };
 
   const lineItemForm = (isOpen: boolean, onClose: () => void, onSubmit: (e: React.FormEvent) => void, title: string) => (
-    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-3 rounded-md border border-border/60 p-3">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-3">
+        <div className="space-y-2 rounded-md border border-border/60 p-2.5">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
               <Label>Customer source</Label>
               <Select
                 value={form.customer_mode}
@@ -511,7 +511,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Sale (optional)</Label>
               <Select value={form.sale_id} onValueChange={(v) => setForm({ ...form, sale_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Link to sale" /></SelectTrigger>
@@ -520,8 +520,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
           </div>
           {form.customer_mode === 'existing' ? (
-            <div className="space-y-3">
-              <div className="space-y-2">
+            <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>Customer *</Label>
                 <Select
                   value={form.customer_id}
@@ -545,10 +545,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 </Select>
               </div>
               {selectedCustomer && (
-                <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Consignee (from customer)</p>
-                  <p className="mt-1 font-medium">{selectedCustomer.full_name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Contact: {selectedCustomer.phone || '—'}</p>
+                <div className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-sm leading-snug">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Consignee (from customer)</p>
+                  <p className="mt-0.5 font-medium">{selectedCustomer.full_name}</p>
+                  <p className="text-xs text-muted-foreground">Contact: {selectedCustomer.phone || '—'}</p>
                   <p className="text-xs text-muted-foreground">Email: {selectedCustomer.email || '—'}</p>
                   <p className="text-xs text-muted-foreground">
                     Address: {[selectedCustomer.address_line1, selectedCustomer.city, selectedCustomer.country].filter(Boolean).join(', ') || '—'}
@@ -568,8 +568,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
           )}
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="space-y-1">
             <Label>Invoice number</Label>
             <Select
               value={form.invoice_code_mode}
@@ -588,7 +588,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-1 sm:col-span-2">
             <Label>{form.invoice_code_mode === 'auto' ? 'Next number (editable)' : 'Enter invoice number'}</Label>
             <Input
               value={form.invoice_code}
@@ -597,8 +597,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             />
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Invoice type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div></div>
-        <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3">
+        <div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Invoice type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div><div className="space-y-1"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div></div>
+        <div className="space-y-1 rounded-md border border-primary/30 bg-primary/5 p-2.5">
           <Label>Payment status</Label>
           <Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -611,8 +611,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">Unpaid is the issued default. Change to partial or paid when T/T is received.</p>
-        </div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div><div className="space-y-2"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div></div>
-        <div className="space-y-2">
+        </div><div className="grid gap-2 sm:grid-cols-2"><div className="space-y-1"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div><div className="space-y-1"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div></div>
+        <div className="space-y-1">
           <Label>Sales agent</Label>
           <Input
             value={form.sales_agent}
@@ -620,14 +620,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             placeholder="Type the sales agent name"
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label>Vehicles</Label>
             <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="mr-1 h-3.5 w-3.5" />Add vehicle</Button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {lineItems.map((item, idx) => (
-              <div key={idx} className="space-y-2 rounded-md border border-border/60 p-3">
+              <div key={idx} className="space-y-1.5 rounded-md border border-border/60 p-2.5">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-[11px]">From stock (optional)</Label>
@@ -708,22 +708,22 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium">Description</th>
-                  <th className="px-3 py-2 text-left font-medium">Currency</th>
-                  <th className="px-3 py-2 text-right font-medium">Amount</th>
+                  <th className="px-2.5 py-1.5 text-left font-medium">Description</th>
+                  <th className="px-2.5 py-1.5 text-left font-medium">Currency</th>
+                  <th className="px-2.5 py-1.5 text-right font-medium">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-t border-border/60">
-                  <td className="px-3 py-2">
+                  <td className="px-2.5 py-1.5">
                     <Input
                       value={form.freight_notes}
                       onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
                       placeholder="Container freight"
                     />
                   </td>
-                  <td className="px-3 py-2 align-middle font-medium">{form.currency}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2.5 py-1.5 align-middle font-medium">{form.currency}</td>
+                  <td className="px-2.5 py-1.5">
                     <Input
                       type="number"
                       className="text-right"
