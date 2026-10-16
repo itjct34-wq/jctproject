@@ -23,11 +23,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { SearchableSelect } from '@/components/payments/searchable-select';
 import { TtDocumentChip } from '@/components/payments/tt-document-chip';
-import { RemittanceInsights } from '@/components/payments/remittance-insights';
 import { supabase } from '@/lib/supabase/client';
 import type { Customer, Payment, PaymentAllocation } from '@/lib/types';
 import {
-  filterRemittancesByDateRange,
   isUnknownRemittance,
   paymentDisplayId,
   remittanceAmount,
@@ -98,10 +96,6 @@ function RemittancesPageInner() {
   const [tagCustomerId, setTagCustomerId] = useState('');
   const [tagAgentId, setTagAgentId] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [officeNames, setOfficeNames] = useState<Record<string, string>>({});
-  const [shiftNames, setShiftNames] = useState<Record<string, string>>({});
-  const [insightsFrom, setInsightsFrom] = useState('');
-  const [insightsTo, setInsightsTo] = useState('');
 
   const setTab = (next: 'all' | 'unknown') => {
     const qs = next === 'unknown' ? '?tab=unknown' : '';
@@ -157,13 +151,11 @@ function RemittancesPageInner() {
     } else {
       setRows((nested.data || []) as PaymentRow[]);
     }
-    const [{ data: profiles }, { data: custAll }, { data: offices }, { data: shifts }] = await Promise.all([
+    const [{ data: profiles }, { data: custAll }] = await Promise.all([
       supabase.from('profiles').select('id, full_name, display_name').eq('is_active', true).limit(250),
       canManageUnknown
         ? supabase.from('customers').select('id, customer_code, full_name, phone, assigned_to').order('full_name').limit(500)
         : Promise.resolve({ data: [] as Customer[] }),
-      supabase.from('offices').select('id, name, code').order('name').limit(200),
-      supabase.from('shifts').select('id, name, code').order('name').limit(200),
     ]);
     const map: Record<string, string> = {};
     const staffRows = (profiles || []) as StaffOpt[];
@@ -173,16 +165,6 @@ function RemittancesPageInner() {
     setAgents(map);
     setStaff(staffRows);
     setCustomers((custAll || []) as Customer[]);
-    const officeMap: Record<string, string> = {};
-    for (const o of offices || []) {
-      officeMap[o.id] = (o.name || o.code || o.id).trim();
-    }
-    setOfficeNames(officeMap);
-    const shiftMap: Record<string, string> = {};
-    for (const s of shifts || []) {
-      shiftMap[s.id] = (s.name || s.code || s.id).trim();
-    }
-    setShiftNames(shiftMap);
     setLoading(false);
   }, [canManageUnknown]);
 
@@ -330,11 +312,6 @@ function RemittancesPageInner() {
     void loadData();
   };
 
-  const insightsPayments = useMemo(
-    () => filterRemittancesByDateRange(rows, insightsFrom, insightsTo),
-    [rows, insightsFrom, insightsTo],
-  );
-
   const customerOptions = customers.map((c) => ({
     value: c.id,
     label: `${c.full_name} (${c.customer_code})`,
@@ -401,21 +378,7 @@ function RemittancesPageInner() {
             </CardContent>
           </Card>
         </div>
-      ) : (
-        <RemittanceInsights
-          payments={insightsPayments}
-          officeNames={officeNames}
-          shiftNames={shiftNames}
-          from={insightsFrom}
-          to={insightsTo}
-          onFromChange={setInsightsFrom}
-          onToChange={setInsightsTo}
-          onResetRange={() => {
-            setInsightsFrom('');
-            setInsightsTo('');
-          }}
-        />
-      )}
+      ) : null}
       <div className="erp-filter-panel">
         <div className="erp-filter-bar">
           <div className="erp-filter-search">

@@ -571,7 +571,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       <form onSubmit={onSubmit} className="erp-invoice-workform">
         <div className="erp-invoice-workform-body">
         {/* 1. Customer + invoice meta */}
-        <section className="space-y-1.5 rounded-md border border-border/60 p-2">
+        <section className="shrink-0 space-y-1.5 rounded-md border border-border/60 p-2">
           <div className="grid gap-1.5 sm:grid-cols-3">
             <div className="space-y-0.5">
               <Label>Customer source</Label>
@@ -689,7 +689,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         </section>
 
         {/* 2. Shipping terms & charges + freight — top, always visible */}
-        <section className="space-y-1.5 rounded-md border border-border/60 p-2">
+        <section className="shrink-0 space-y-1.5 rounded-md border border-border/60 p-2">
           <p className="text-[11px] font-semibold text-muted-foreground">Shipping terms & charges</p>
           <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-0.5"><Label>Shipment mode</Label>
@@ -749,8 +749,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           )}
         </section>
 
-        {/* 3. Vehicles — flex-grow scroll region */}
-        <section className="flex min-h-0 flex-1 flex-col space-y-1.5">
+        {/* 3. Vehicles — header → scrollable lines → fixed summary (no overlap) */}
+        <section className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
           <div className="flex shrink-0 items-center justify-between">
             <Label className="text-xs font-semibold">Vehicles</Label>
             <Button type="button" size="sm" variant="outline" className="h-7 px-2" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button>
@@ -809,27 +809,26 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               </div>
             ))}
           </div>
-        </section>
-
-        {/* 4. Totals strip */}
-        <div className="shrink-0 rounded-md bg-muted/50 px-2 py-1.5 text-xs">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
-            <span className="text-muted-foreground">Vehicles <span className="font-medium text-foreground">{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></span>
-            {isAuction && (
-              <span className="text-muted-foreground">Deposit <span className="font-medium text-foreground">{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></span>
-            )}
-            {freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost && (
-              <span className="text-muted-foreground">{freightPolicy.isRoro ? 'Ocean freight' : 'Freight'} <span className="font-medium text-foreground">{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></span>
-            )}
-            {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
-              <span className="text-muted-foreground">Ins./Other <span className="font-medium text-foreground">{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></span>
-            )}
-            {(Number(form.discount_total)||0) > 0 && (
-              <span className="text-muted-foreground">Discount <span className="font-medium text-foreground">−{form.currency} {(Number(form.discount_total)||0).toLocaleString()}</span></span>
-            )}
-            <span className="ml-auto text-sm font-bold">Total {form.currency} {(calcSubtotal(lineItems) + (freightPolicy.allowFreight ? (Number(form.freight_total)||0) : 0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span>
+          {/* Totals — shrink-0 below scroll area so it never covers vehicle rows */}
+          <div className="shrink-0 rounded-md bg-muted/50 px-2 py-1.5 text-xs">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+              <span className="text-muted-foreground">Vehicles <span className="font-medium text-foreground">{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></span>
+              {isAuction && (
+                <span className="text-muted-foreground">Deposit <span className="font-medium text-foreground">{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></span>
+              )}
+              {freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost && (
+                <span className="text-muted-foreground">{freightPolicy.isRoro ? 'Ocean freight' : 'Freight'} <span className="font-medium text-foreground">{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></span>
+              )}
+              {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
+                <span className="text-muted-foreground">Ins./Other <span className="font-medium text-foreground">{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></span>
+              )}
+              {(Number(form.discount_total)||0) > 0 && (
+                <span className="text-muted-foreground">Discount <span className="font-medium text-foreground">−{form.currency} {(Number(form.discount_total)||0).toLocaleString()}</span></span>
+              )}
+              <span className="ml-auto text-sm font-bold">Total {form.currency} {(calcSubtotal(lineItems) + (freightPolicy.allowFreight ? (Number(form.freight_total)||0) : 0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* 5. Invoice notes — collapsed */}
         <details className="shrink-0 rounded-md border border-border/60">

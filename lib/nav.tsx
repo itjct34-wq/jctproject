@@ -10,6 +10,7 @@ import {
   Wallet,
   CheckSquare,
   BarChart3,
+  PieChart,
   Bell,
   UserCog,
   User,
@@ -27,6 +28,7 @@ import {
   Cog,
   Shield,
   GitBranch,
+  Activity,
 } from 'lucide-react';
 import type { RoleName, PermissionModule, PermissionAction } from '@/lib/types';
 
@@ -108,6 +110,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Invoices', href: '/invoices', icon: Receipt, module: 'invoices' },
       { label: 'Auction invoices', href: '/auction-invoices', icon: Gavel, module: 'invoices' },
       { label: 'Remittances / T/T', href: '/payments', icon: CreditCard, module: 'payments' },
+      { label: 'Remittance insights', href: '/remittance-insights', icon: PieChart, module: 'payments' },
       { label: 'Commissions', href: '/commissions', icon: BadgeDollarSign, module: 'payments' },
       { label: 'Accounts & Expenses', href: '/expenses', icon: Wallet, module: 'expenses', action: 'view', salesNavHidden: true },
       { label: 'Agent ledger', href: '/ledger', icon: BookOpen, module: 'payments' },
@@ -131,6 +134,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Users & Teams', href: '/users', icon: UserCog, module: 'users' },
       { label: 'Permissions', href: '/permissions', icon: Shield, module: 'users', action: 'assign_roles' },
       { label: 'System Config', href: '/settings', icon: Settings, module: 'settings' },
+      { label: 'System monitor', href: '/admin/monitor', icon: Activity, requiredRoles: ['admin', 'super_admin'] },
       { label: 'Global Configuration', href: '/configuration', icon: SlidersHorizontal, module: 'settings', requiredRoles: ['super_admin'] },
       { label: 'Auction houses', href: '/configuration#auction-houses', icon: Gavel, module: 'auctions' },
       { label: 'Audit Logs', href: '/audit', icon: ScrollText, module: 'audit' },

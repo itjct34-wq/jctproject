@@ -19,7 +19,7 @@
 | Finance | `invoices`, `invoice_items`, `payments`, `expenses` |
 | Shipping | `shipments`, `export_documents` (and related from migration 007) |
 | Attachments | `record_attachments` + storage bucket **`record-attachments`** |
-| Config | `system_config`, `company_settings` |
+| Config | `system_config`, `company_settings`, `system_health_pings` (keep-alive cron history; admin SELECT) |
 | Ops | `tasks`, `notifications`, `audit_logs`, `offices`, `shifts` |
 
 ## Vehicle columns (public + ERP)

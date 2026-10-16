@@ -72,8 +72,10 @@ Sales roles do **not** get remittance mutate, bid requester, courier/shipping ed
 |----------|-------------|
 | `POST /api/admin/invite-user` | Admin auth + service role; sets initial password |
 | `POST /api/admin/update-user` | Admin auth; optional password update |
+| `GET` / `POST /api/admin/system-health` | Admin auth; ping history + manual Supabase connectivity check |
+| `GET` / `POST /api/cron/supabase-ping` | `CRON_SECRET` Bearer token (no user session); keep-alive |
 
-These are not gated by RLS alone; they use **`requireAdmin`** (`lib/admin-auth.ts`).
+These admin routes are not gated by RLS alone; they use **`requireAdmin`** (`lib/admin-auth.ts`). The admin UI page is `/admin/monitor` (admin / super_admin only).
 
 ## Sales agent & freelancer navigation
 

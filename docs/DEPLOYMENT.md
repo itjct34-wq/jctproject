@@ -26,8 +26,28 @@ The repository also contains **`netlify.toml`** and `@netlify/plugin-nextjs` for
 | `AGENT_TOTP_SECRET` | Vercel (server) + local | Fallback HMAC for agent codes if a row has no `totp_secret` |
 | `NEXT_PUBLIC_SITE_URL` | Vercel + local | Canonical URL for sitemap / invoice QR |
 | `NEXT_PUBLIC_APP_URL` | Vercel + local | Alternate public origin |
+| `CRON_SECRET` | Vercel (server) | Bearer token for `/api/cron/*` keep-alive routes |
 
 Do not store service role keys in client bundles or public docs. Template: `.env.example`.
+
+## Supabase keep-alive (Vercel Cron)
+
+Free-tier Supabase projects can pause after inactivity. Production uses a Vercel Cron job defined in `vercel.json`:
+
+| Item | Value |
+|------|--------|
+| Path | `/api/cron/supabase-ping` |
+| Schedule | `0 */8 * * *` (every 8 hours) |
+| Auth | `Authorization: Bearer <CRON_SECRET>` |
+
+**Vercel setup**
+
+1. Set `CRON_SECRET` in the Vercel project (Production + Preview if you want preview crons). Use a long random value.
+2. Ensure Crons are enabled for the project (Hobby: at most daily schedules; Pro+ required for sub-daily such as every 8 hours).
+3. Redeploy after adding `vercel.json` so the cron is registered.
+4. Confirm in Vercel → Project → Settings → Cron Jobs that the path appears.
+
+The route runs a lightweight service-role query, writes a row to `system_health_pings`, and updates `system_config.supabase_last_ping`. Admins can inspect status and run a manual check at `/admin/monitor`.
 
 ## Database releases
 

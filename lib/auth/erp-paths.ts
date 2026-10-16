@@ -15,6 +15,7 @@ export const ERP_PATH_PREFIXES = [
   '/invoices',
   '/auction-invoices',
   '/payments',
+  '/remittance-insights',
   '/commissions',
   '/expenses',
   '/ledger',
@@ -29,6 +30,7 @@ export const ERP_PATH_PREFIXES = [
   '/users',
   '/settings',
   '/configuration',
+  '/admin',
   '/audit',
 ] as const;
 
@@ -39,5 +41,7 @@ export function isErpPagePath(pathname: string): boolean {
 export function isProtectedApiPath(pathname: string): boolean {
   if (!pathname.startsWith('/api/')) return false;
   if (pathname.startsWith('/api/public/')) return false;
+  // Cron routes authenticate via CRON_SECRET Bearer token, not session cookies.
+  if (pathname.startsWith('/api/cron/')) return false;
   return true;
 }

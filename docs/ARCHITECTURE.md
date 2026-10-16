@@ -43,7 +43,7 @@ app/(pages) → components → hooks / lib (types, utils, public, jct-official)
 | Sales | `/sales`, `/quotations` | Quotations print via `OfficialTradeDocument` |
 | Inventory | `/vehicles` | Bulk import: `lib/vehicles/import-spreadsheet.ts`, `components/vehicles/vehicles-bulk-import-button.tsx`, ZIP: `lib/utils/vehicle-photo-zip.ts` |
 | Auctions | `/auctions`, `/purchases` | `lib/auction-houses.ts`, `AuctionHouseSelect` |
-| Finance | `/invoices`, `/auction-invoices`, `/payments`, `/expenses` | `components/invoices/invoices-workspace.tsx`, `components/shared/record-attachments.tsx` |
+| Finance | `/invoices`, `/auction-invoices`, `/payments`, `/remittance-insights`, `/expenses` | `components/invoices/invoices-workspace.tsx`, `components/payments/remittance-insights.tsx`, `components/shared/record-attachments.tsx` |
 | Shipping | `/shipments`, `/documents` | Shipment fullscreen forms |
 | Admin | `/users`, `/configuration`, `/settings`, `/audit` | Invite user API, `AuctionHousesPanel`, `system_config` |
 
