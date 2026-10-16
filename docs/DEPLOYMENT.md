@@ -37,7 +37,7 @@ Free-tier Supabase projects can pause after inactivity. Production uses a Vercel
 | Item | Value |
 |------|--------|
 | Path | `/api/cron/supabase-ping` |
-| Schedule | `0 */8 * * *` (every 8 hours) |
+| Schedule | `0 12 * * *` (daily at 12:00 UTC; Hobby-compatible) |
 | Auth | `Authorization: Bearer <CRON_SECRET>` |
 
 **Vercel setup**
