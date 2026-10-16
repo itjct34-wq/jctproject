@@ -67,7 +67,7 @@ Allowed:
 
 Not allowed by default:
 
-- Add / edit / allocate remittances (`payments.create`, `payments.edit`, `payments.allocate`)
+- Remittance **Actions** (edit / allocate / deallocate / delete) — requires `payments.create`, `payments.edit`, and/or `payments.allocate`. Sales keep `payments.view` so they can see remittances tagged to them and open the TT document (Details → TT).
 - Set bid requester, edit courier, edit shipping
 - Bulk upload (`vehicles.import`)
 - Accounts & Expenses (`expenses.view`)
@@ -100,9 +100,9 @@ Allowed (among other ERP rights):
 | `vehicles.set_bid_requester` | Set bid requester |
 | `vehicles.edit_courier` | Edit courier tracking |
 | `vehicles.edit_shipping` | Edit shipping stage |
-| `payments.view` | See remittances / T/T |
-| `payments.create` / `edit` | Add / edit remittances |
-| `payments.allocate` | Allocate / deallocate to stock |
+| `payments.view` | See remittances / T/T and open TT docs (no Actions menu) |
+| `payments.create` / `edit` | Add / edit remittances (Actions menu) |
+| `payments.allocate` | Allocate / deallocate to stock (Actions menu) |
 | `payments.confirm` | Confirm payments |
 | `expenses.view` | Accounts & Expenses nav and list |
 | `expenses.create` / `edit` / `approve` | Expense / payroll actions |

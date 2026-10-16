@@ -22,7 +22,7 @@
 - Optional links: **`invoice_id`**, **`sale_id`**, **`vehicle_id`** (allocate to customer’s reserved vehicle).
 - When **`vehicle_id`** is set and status is `received` or `reconciled`, **`vehicles.payment_status`** recomputes to `partial_paid` or `paid` vs `listed_price`.
 - **Attachments** supported via `record_attachments` (receipts, TT copies).
-- **Sales agent / freelancer**: read-only list of payments where they are the tagged sales agent or own the customer; no create/edit/delete in UI.
+- **Sales agent / freelancer**: read-only list of payments where they are the tagged sales agent or own the customer; can open TT documents. No Actions menu (create/edit/allocate/deallocate/delete) — UI + RLS migration **043**; role defaults lack `payments.create` / `edit` / `allocate`.
 
 ## Expenses
 

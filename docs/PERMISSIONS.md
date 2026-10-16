@@ -40,7 +40,7 @@ Users hold roles via **`user_roles`** (active flag). Self-assignment of roles is
 
 | Key | Typical holders |
 |-----|-----------------|
-| `payments.create` / `edit` / `allocate` | admin, manager, accounts |
+| `payments.create` / `edit` / `allocate` | admin, manager, accounts (Remittance Actions; sales keep `payments.view` only — migration **043**) |
 | `vehicles.import` | admin, operations, manager |
 | `vehicles.reserve` | admin, operations, manager, sales_agent, freelancer |
 | `vehicles.assign` | admin, operations, manager |
@@ -87,8 +87,8 @@ Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboa
 |--------|-------------|------------|
 | View stock / invoices | Yes | Yes (invoices after migration `024`) |
 | Reserve **available** stock for own customers | Yes (`vehicles.reserve` + RLS `025`) | Yes |
-| Record T/T / payments | **No** (UI + RLS) | **No** |
-| View T/T for own customers | Yes (RLS `025`) | Yes |
+| Record T/T / payments / Actions | **No** (UI + RLS **043**) | **No** |
+| View T/T for own customers + open TT | Yes (`payments.view`, RLS `025`) | Yes |
 | Set bid requester / edit courier / shipping | **No** | **No** |
 | Bulk upload | **No** | **No** |
 | Accounts & Expenses | **No** | **No** |

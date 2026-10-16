@@ -79,6 +79,9 @@ function RemittancesPageInner() {
   const canAllocateAction = canAllocateRemittances();
   const canDelete = can('payments', 'delete') || hasRole('accounts');
   const canManageUnknown = isElevatedStaff;
+  /** Actions column: edit / allocate / deallocate / tag / delete — not for view-only sales. */
+  const canShowActionsColumn =
+    canMutate || canAllocateAction || canDelete || canManageUnknown;
   const tab = searchParams.get('tab') === 'unknown' ? 'unknown' : 'all';
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [agents, setAgents] = useState<Record<string, string>>({});
@@ -414,7 +417,9 @@ function RemittancesPageInner() {
                   <th className="px-3 py-2.5 font-semibold">Allocated stock IDs</th>
                   <th className="px-3 py-2.5 font-semibold">Status</th>
                   <th className="px-3 py-2.5 font-semibold">Details</th>
-                  <th className="px-3 py-2.5 font-semibold">Actions</th>
+                  {canShowActionsColumn ? (
+                    <th className="px-3 py-2.5 font-semibold">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
@@ -488,44 +493,46 @@ function RemittancesPageInner() {
                       <td className="px-3 py-3">
                         <TtDocumentChip paymentId={p.id} canEdit={canEdit || canManageUnknown} />
                       </td>
-                      <td className="relative overflow-visible px-3 py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              Actions
-                              <ChevronDown className="ml-1 h-3.5 w-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="z-[100]">
-                            {unknown && canManageUnknown ? (
-                              <DropdownMenuItem onSelect={() => openTag(p)}>Tag customer / agent</DropdownMenuItem>
-                            ) : null}
-                            {canEdit || (unknown && canManageUnknown) ? (
-                              <DropdownMenuItem asChild>
-                                <Link href={`/payments/${p.id}/edit`}>Edit</Link>
-                              </DropdownMenuItem>
-                            ) : null}
-                            {showAllocate ? (
-                              <DropdownMenuItem
-                                onSelect={() => tryAllocate(p)}
-                                disabled={unknown}
-                              >
-                                Allocate
-                              </DropdownMenuItem>
-                            ) : null}
-                            {showDeallocate ? (
-                              <DropdownMenuItem onSelect={() => setDeallocateTarget(p)}>
-                                Deallocate
-                              </DropdownMenuItem>
-                            ) : null}
-                            {canDelete ? (
-                              <DropdownMenuItem className="text-destructive" onSelect={() => setDeleteId(p.id)}>
-                                Delete
-                              </DropdownMenuItem>
-                            ) : null}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+                      {canShowActionsColumn ? (
+                        <td className="relative overflow-visible px-3 py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline">
+                                Actions
+                                <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="z-[100]">
+                              {unknown && canManageUnknown ? (
+                                <DropdownMenuItem onSelect={() => openTag(p)}>Tag customer / agent</DropdownMenuItem>
+                              ) : null}
+                              {canEdit || (unknown && canManageUnknown) ? (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/payments/${p.id}/edit`}>Edit</Link>
+                                </DropdownMenuItem>
+                              ) : null}
+                              {showAllocate ? (
+                                <DropdownMenuItem
+                                  onSelect={() => tryAllocate(p)}
+                                  disabled={unknown}
+                                >
+                                  Allocate
+                                </DropdownMenuItem>
+                              ) : null}
+                              {showDeallocate ? (
+                                <DropdownMenuItem onSelect={() => setDeallocateTarget(p)}>
+                                  Deallocate
+                                </DropdownMenuItem>
+                              ) : null}
+                              {canDelete ? (
+                                <DropdownMenuItem className="text-destructive" onSelect={() => setDeleteId(p.id)}>
+                                  Delete
+                                </DropdownMenuItem>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}
