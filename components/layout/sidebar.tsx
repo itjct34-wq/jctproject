@@ -8,7 +8,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
-import { letterheadLogoUrl, letterheadName } from '@/lib/jct-official';
+import { letterheadName } from '@/lib/jct-official';
 
 function isNavItemActive(
   pathname: string,
@@ -46,7 +46,6 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   const { can, canView, roleNames, isAdmin, isSuperAdmin } = usePermissions();
   const navGroups = useMemo(() => getNavGroupsForRoles(roleNames), [roleNames]);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [brandLogoUrl, setBrandLogoUrl] = useState('');
   const [brandName, setBrandName] = useState('ERP');
 
   // Accordion: only one group open. Auto-expand the group that contains the active route.
@@ -62,11 +61,10 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
     void (async () => {
       const { data } = await supabase
         .from('company_settings')
-        .select('company_name, legal_name, logo_url')
+        .select('company_name, legal_name')
         .limit(1)
         .maybeSingle();
       if (cancelled || !data) return;
-      setBrandLogoUrl(letterheadLogoUrl(data));
       setBrandName(letterheadName(data));
     })();
     return () => {
@@ -93,26 +91,14 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
       >
         {!collapsed || mobile ? (
           <div className="min-w-0 flex-1 px-1">
-            {brandLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={brandLogoUrl} alt={brandName} className="h-10 w-auto max-w-full object-contain object-left" />
-            ) : (
-              <>
-                <p className="text-sm font-semibold text-primary truncate">{brandName || 'ERP'}</p>
-                <p className="text-[11px] text-muted-foreground truncate">Operations</p>
-              </>
-            )}
+            <p className="text-sm font-semibold text-primary truncate">{brandName || 'ERP'}</p>
+            <p className="text-[11px] text-muted-foreground truncate">Operations</p>
           </div>
         ) : (
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-primary/10">
-            {brandLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={brandLogoUrl} alt="" className="h-8 w-8 object-contain" />
-            ) : (
-              <span className="text-[10px] font-bold tracking-wide text-primary">
-                {(brandName || 'ERP').slice(0, 3).toUpperCase()}
-              </span>
-            )}
+            <span className="text-[10px] font-bold tracking-wide text-primary">
+              {(brandName || 'ERP').slice(0, 3).toUpperCase()}
+            </span>
           </div>
         )}
         {mobile && (

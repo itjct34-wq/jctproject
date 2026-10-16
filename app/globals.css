@@ -468,16 +468,16 @@
   overflow: visible;
 }
 .invoice-print-root .invoice-sign-row {
-  min-height: 28mm;
+  min-height: 20mm;
 }
 .invoice-print-root .invoice-hanko-name {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32mm;
-  min-height: 28mm;
-  padding: 6mm 8mm 5mm;
+  min-width: 28mm;
+  min-height: 20mm;
+  padding: 2mm 3mm;
   vertical-align: middle;
 }
 .invoice-print-root .invoice-hanko-director {
@@ -491,9 +491,9 @@
 .invoice-print-root .invoice-hanko-stamp {
   position: absolute;
   left: 50%;
-  top: 42%;
-  width: 28mm !important;
-  height: 28mm !important;
+  top: 45%;
+  width: 30mm !important;
+  height: 30mm !important;
   max-width: none;
   transform: translate(-50%, -50%);
   pointer-events: none;
@@ -576,8 +576,8 @@
     color: #fff !important;
   }
   body.printing-document #print-layer .invoice-hanko-stamp {
-    width: 26mm !important;
-    height: 26mm !important;
+    width: 28mm !important;
+    height: 28mm !important;
     opacity: 0.82 !important;
     mix-blend-mode: multiply !important;
     -webkit-print-color-adjust: exact !important;

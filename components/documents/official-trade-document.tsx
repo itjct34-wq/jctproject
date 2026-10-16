@@ -69,9 +69,9 @@ type Props = {
 };
 
 const LOGO_SIZE_CLASS: Record<NonNullable<Props['logoSize']>, string> = {
-  quotation: 'h-[108px] w-auto max-w-[300px] object-contain object-left shrink-0',
-  invoice: 'h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0',
-  auction: 'h-[188px] w-auto max-w-[540px] object-contain object-left shrink-0',
+  quotation: 'h-[140px] w-auto max-w-[380px] object-contain object-left shrink-0',
+  invoice: 'h-[184px] w-auto max-w-[520px] object-contain object-left shrink-0',
+  auction: 'h-[220px] w-auto max-w-[620px] object-contain object-left shrink-0',
 };
 
 function customerAddress(customer?: Customer | null) {
@@ -467,13 +467,13 @@ export function OfficialTradeDocument({
 
         {notes && <p className="mt-1 text-[8px] text-[#0b1f3a] line-clamp-2">Notes: {notes}</p>}
 
-        <footer className="mt-auto pt-2">
+        <footer className="mt-auto pt-1.5">
           <div className="grid grid-cols-[1fr_96px] items-center gap-2">
-            <div className="invoice-sign-block px-2 text-center">
+            <div className="invoice-sign-block px-1 text-center">
               <p className="text-[10px] font-bold leading-tight tracking-tight text-[#0b1f3a] uppercase">
                 {orgName}
               </p>
-              <div className="invoice-sign-row mt-1 flex items-center justify-center gap-10 text-[#0b1f3a]">
+              <div className="invoice-sign-row mt-0.5 flex items-center justify-center gap-3 text-[#0b1f3a]">
                 <span className="text-[8.5px] font-semibold whitespace-nowrap">
                   {JCT_OFFICIAL.directorTitle}
                 </span>
@@ -482,10 +482,10 @@ export function OfficialTradeDocument({
                   <JctHanko className="invoice-hanko-stamp" src={hankoUrl} alt={`${orgName} seal`} />
                 </span>
               </div>
-              <p className="mt-1 text-[7.5px] leading-snug uppercase">
+              <p className="mt-0.5 text-[7.5px] leading-snug uppercase">
                 2-505-101, DAITOURO, NAKAGAWA-KU, NAGOYA-SHI, AICHI-KEN 454-0943 JAPAN
               </p>
-              <p className="text-[7.5px] uppercase">PHONE :+81 52-717-4476</p>
+              <p className="text-[7.5px] leading-snug uppercase">PHONE :+81 52-717-4476</p>
             </div>
             <div className="flex justify-end">
               {showQr && verificationUrl ? (
