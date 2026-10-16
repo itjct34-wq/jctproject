@@ -51,8 +51,8 @@ function FilterSelect({
     <Select value={value || ALL} onValueChange={(v) => onValueChange(v === ALL ? '' : v)}>
       <SelectTrigger
         className={cn(
-          'h-10 min-w-0 flex-1 border-border/80 bg-background text-sm text-muted-foreground data-[placeholder]:text-muted-foreground',
-          value && value !== ALL ? 'text-foreground' : '',
+          'h-9 min-w-0 flex-1 rounded-md border-border bg-background text-sm font-medium text-muted-foreground data-[placeholder]:font-semibold data-[placeholder]:text-muted-foreground',
+          value && value !== ALL ? 'font-medium text-foreground' : '',
           className
         )}
       >
@@ -90,11 +90,11 @@ export function StockListFilters({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm font-semibold text-primary">
         {totalLabel}{' '}
-        <span className="font-semibold text-foreground">{total.toLocaleString()}</span>
+        <span className="font-bold text-foreground">{total.toLocaleString()}</span>
       </p>
-      <div className="erp-filter-bar rounded-lg border border-border/70 bg-card p-3 shadow-sm">
+      <div className="erp-filter-panel">
         <div
           className={cn(
             'grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3',
@@ -102,9 +102,9 @@ export function StockListFilters({
           )}
         >
           <div className="relative min-w-0">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="h-10 border-border/80 pl-9"
+              className="h-9 rounded-md border-border pl-9 placeholder:font-medium placeholder:text-muted-foreground"
               value={value.search}
               onChange={(e) => patch({ search: e.target.value })}
               placeholder={searchPlaceholder}

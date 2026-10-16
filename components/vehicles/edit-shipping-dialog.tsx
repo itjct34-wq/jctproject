@@ -66,7 +66,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <Label className="text-xs font-medium leading-snug">
+      <Label className="leading-snug">
         {label}
         {required ? <span className="text-destructive"> *</span> : null}
       </Label>

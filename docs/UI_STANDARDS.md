@@ -22,9 +22,11 @@
 ## Tables and lists
 
 - Master-detail pattern: list in **Card** + **Sheet** or side panel for selected row (invoices, payments, documents).
-- Search and filter bars at top of module pages.
+- Search and filter bars use **`.erp-filter-panel`** / **`.erp-filter-bar`** (shared chrome in `globals.css`).
+- Stat tiles use **`.erp-stat-card`** / **`.erp-stat-label`** / **`.erp-stat-value`** (gold left accent).
+- Empty / zero-results lists use **`ErpEmptyState`** (`components/shared/erp-empty-state.tsx`).
 - Badge styling for status enums (consistent pastel border/text classes per module).
-- Vehicle stock list tints the **entire row** (not only badges): available emerald, unpaid reserved amber, partial paid orange, paid blue, booked sky, shipped cyan, delivered slate (`vehicleListRowClass`). Text stays dark on those tints. Commission **due** adds a fuchsia corner and Due badge; **Commission paid** is a green label.
+- Vehicle stock list uses a soft row tint plus a **thick left accent** (`vehicleListRowClass`) and a text **payment status pill** (not color alone). Commission **due** adds a fuchsia inset ring; **Commission paid** is a green label.
 
 ## Print
 
@@ -40,7 +42,9 @@
 ## Accessibility
 
 - Dialog `aria-modal` on mobile nav; loading states use `role="status"`.
-- Form labels via Radix **Label**; prefer visible labels over placeholder-only fields on ERP forms.
+- Form labels via Radix **Label** (`requiredMark` for required *); prefer visible labels over placeholder-only fields on ERP forms.
+- Fullscreen dialog close control is at least ~44×44px; coarse-pointer ERP controls bump toward 44px via `globals.css`.
+- Prefer `prefers-reduced-motion` (ERP + workforms respect it).
 
 ## State handling
 

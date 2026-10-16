@@ -489,16 +489,16 @@ export default function QuotationsPage() {
           <Input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} />
         </div>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold">Vehicles</Label>
           <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, emptyQuoteLine()])}>
             <Plus className="mr-1 h-3.5 w-3.5" />Add
           </Button>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {lineItems.map((item, idx) => (
-            <div key={idx} className="space-y-1 rounded-md border border-border/60 p-1.5">
+            <div key={idx} className="space-y-1.5 rounded-md border border-border/60 p-2.5">
               <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
                 <div className="space-y-0.5 sm:col-span-2">
                   <Label>From stock</Label>
@@ -591,10 +591,10 @@ export default function QuotationsPage() {
           { label: 'Accepted', value: stats.accepted },
           { label: 'Pipeline value', value: stats.value.toLocaleString() },
         ].map((s) => (
-          <Card key={s.label} className="border-border/60">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold">{s.value}</p>
+          <Card key={s.label} className="erp-stat-card rounded-md shadow-sm">
+            <CardContent className="p-3.5 sm:p-4">
+              <p className="erp-stat-label">{s.label}</p>
+              <p className="erp-stat-value">{s.value}</p>
             </CardContent>
           </Card>
         ))}

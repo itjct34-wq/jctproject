@@ -50,8 +50,8 @@ function Field({
 }) {
   return (
     <div className="space-y-0.5">
-      <Label className="text-[11px] font-medium leading-tight">
-        {label} <span className="text-muted-foreground">· {ja}</span>
+      <Label className="leading-tight">
+        {label} <span className="font-medium text-muted-foreground">· {ja}</span>
         {required ? <RequiredMark /> : null}
       </Label>
       {children}

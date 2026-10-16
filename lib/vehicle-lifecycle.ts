@@ -187,18 +187,29 @@ export function freightModeListLabel(mode: Vehicle['freight_mode'] | '' | undefi
   return '';
 }
 
-/** Full-row ERP list tint from payment_status (shipping stays in the right rail). */
+/**
+ * Soft row tint + thick left accent from payment_status (shipping stays in the right rail).
+ * Status is also shown as text on the payment pill — color is not the only cue.
+ */
 export function vehicleListRowClass(vehicle: Vehicle): string {
   const pay = effectivePaymentStatus(vehicle);
-  if (pay === 'paid') return 'border-2 border-green-600 bg-green-300 text-green-950';
-  if (pay === 'partial_paid') return 'border-2 border-amber-500 bg-amber-200 text-amber-950';
-  if (pay === 'reserved') return 'border-2 border-sky-500 bg-sky-200 text-sky-950';
-  return 'border-2 border-emerald-300 bg-white text-emerald-950';
+  if (pay === 'paid') {
+    return 'border border-emerald-600/35 border-l-[5px] border-l-emerald-700 bg-emerald-50 text-slate-900';
+  }
+  if (pay === 'partial_paid') {
+    return 'border border-amber-500/40 border-l-[5px] border-l-amber-600 bg-amber-50 text-slate-900';
+  }
+  if (pay === 'reserved') {
+    return 'border border-sky-500/40 border-l-[5px] border-l-sky-600 bg-sky-50 text-slate-900';
+  }
+  return 'border border-emerald-200 border-l-[5px] border-l-emerald-500 bg-white text-slate-900';
 }
 
 /** Extra list cue when the vehicle is paid/delivered but commission is still due. */
 export function vehicleCommissionDueClass(vehicle: Pick<Vehicle, 'commission_status'>): string {
-  return effectiveCommissionStatus(vehicle) === 'due' ? 'ring-1 ring-inset ring-fuchsia-400' : '';
+  return effectiveCommissionStatus(vehicle) === 'due'
+    ? 'ring-2 ring-inset ring-fuchsia-500/70 shadow-[inset_0_0_0_1px_rgba(192,38,211,0.25)]'
+    : '';
 }
 
 /** Legacy public listing uses vehicles.status in_stock | reserved */

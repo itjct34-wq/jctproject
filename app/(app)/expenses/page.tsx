@@ -19,6 +19,7 @@ import type { Expense, Office, Profile, UserPayroll, Vehicle } from '@/lib/types
 import { CheckCircle2, ChevronRight, Loader2, Pencil, Plus, Receipt, Search, Trash2, Wallet, XCircle } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ErpEmptyState } from '@/components/shared/erp-empty-state';
 import { toast } from 'sonner';
 import { AttachmentCountBadge, RecordAttachments, useAttachmentCounts } from '@/components/shared/record-attachments';
 import { currentPayrollPeriod, lastDayOfPayrollPeriod, OFFICE_EXPENSE_CATEGORIES, payrollPeriodOptions } from '@/lib/office-expenses';
@@ -537,64 +538,62 @@ export default function ExpensesPage() {
           { label: 'Approved', value: stats.approved },
           { label: 'Total amount', value: stats.totalAmount.toLocaleString() },
         ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-              <p className="erp-stat-value mt-0.5">{s.value}</p>
+          <Card key={s.label} className="erp-stat-card rounded-md shadow-sm">
+            <CardContent className="p-3.5 sm:p-4">
+              <p className="erp-stat-label">{s.label}</p>
+              <p className="erp-stat-value">{s.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card>
-        <CardContent className="p-4">
-          <div className="erp-filter-bar">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search code, vendor, category..." />
-            </div>
-            {!lockedOfficeId ? (
-              <Select value={officeFilter} onValueChange={setOfficeFilter}>
-                <SelectTrigger className="w-full md:w-44">
-                  <SelectValue placeholder="Office" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All offices</SelectItem>
-                  {offices.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Category" />
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search code, vendor, category..." />
+          </div>
+          {!lockedOfficeId ? (
+            <Select value={officeFilter} onValueChange={setOfficeFilter}>
+              <SelectTrigger className="w-full md:w-44">
+                <SelectValue placeholder="Office" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
+                <SelectItem value="all">All offices</SelectItem>
+                {offices.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+          ) : null}
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full md:w-40">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <Card className="overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
@@ -602,11 +601,11 @@ export default function ExpensesPage() {
             Loading expenses...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <Wallet className="mb-3 h-10 w-10 text-muted-foreground/50" />
-            <h3 className="font-semibold text-primary">No expenses found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Record an office bill or adjust your filters.</p>
-          </div>
+          <ErpEmptyState
+            icon={Wallet}
+            title="No expenses found"
+            description="Record an office bill or adjust your filters."
+          />
         ) : (
           <div className="divide-y divide-border">
             {filtered.map((e) => (

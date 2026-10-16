@@ -325,8 +325,19 @@ export function StockListCard({
   const etdEtaLine = etd || eta ? `ETD ${etd || '—'} · ETA ${eta || '—'}` : '';
   const containerLabel = (v.shipping_container_number || '').trim();
 
+  const statusAria = [
+    PAYMENT_STATUS_PILL_LABELS[pay],
+    SHIPPING_STATUS_SHORT[ship],
+    freight || null,
+    commStatus === 'due' ? 'Commission due' : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <div
+      role="article"
+      aria-label={`${v.stock_number || 'Vehicle'}: ${statusAria}`}
       className={cn(
         'overflow-visible rounded-xl border px-4 py-4 shadow-sm sm:px-5 sm:py-5',
         vehicleListRowClass(v),
@@ -608,6 +619,7 @@ export function StockListCard({
         {/* Right rail — status, actions, View Info (available layout matches ERP reference) */}
         <div className="flex w-full min-w-0 flex-col items-stretch gap-2 md:col-span-4 xl:col-span-1 xl:w-auto xl:min-w-[10.5rem]">
           <span
+            role="status"
             className={cn(
               'inline-flex w-full items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide',
               pay === 'available' ? 'rounded-full' : 'rounded-md',

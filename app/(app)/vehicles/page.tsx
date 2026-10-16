@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/utils/format';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ErpEmptyState } from '@/components/shared/erp-empty-state';
 import { type GalleryImage, MultiImageUpload } from '@/components/shared/multi-image-upload';
 import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images';
 import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
@@ -59,7 +60,7 @@ import {
   type VehicleShippingStatus,
 } from '@/lib/vehicle-lifecycle';
 import { makeVehicleAvailable, vehicleCanMakeAvailable } from '@/lib/utils/make-vehicle-available';
-import { Loader2, Plus } from 'lucide-react';
+import { CarFront, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 type VehicleInvoiceRef = { id: string; invoice_code: string };
@@ -1062,7 +1063,12 @@ function VehiclesPage() {
 
       <div className="grid grid-cols-3 gap-3">
         {[{ l: 'Total', v: stats.total }, { l: 'Available', v: stats.available }, { l: 'Reserved', v: stats.reserved }].map((s) => (
-          <Card key={s.l}><CardContent className="p-4"><p className="text-xs font-medium text-muted-foreground">{s.l}</p><p className="erp-stat-value mt-0.5">{s.v}</p></CardContent></Card>
+          <Card key={s.l} className="erp-stat-card rounded-md shadow-sm">
+            <CardContent className="p-3.5 sm:p-4">
+              <p className="erp-stat-label">{s.l}</p>
+              <p className="erp-stat-value">{s.v}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -1082,12 +1088,15 @@ function VehiclesPage() {
         <Card><div className="flex justify-center p-12"><Loader2 className="h-4 w-4 animate-spin" /></div></Card>
       ) : filtered.length === 0 ? (
         <Card>
-          <div className="p-12 text-center text-muted-foreground">
-            <p>No {listCopy.title.toLowerCase()} in this list yet.</p>
-            {isSellingFocused ? (
-              <p className="mt-2 text-sm">You see available stock plus vehicles you reserved. Other agents&apos; reserved units stay hidden.</p>
-            ) : null}
-          </div>
+          <ErpEmptyState
+            icon={CarFront}
+            title={`No ${listCopy.title.toLowerCase()} in this list yet`}
+            description={
+              isSellingFocused
+                ? 'You see available stock plus vehicles you reserved. Other agents’ reserved units stay hidden.'
+                : 'Add stock or adjust your filters.'
+            }
+          />
         </Card>
       ) : (
         <div className="space-y-3">

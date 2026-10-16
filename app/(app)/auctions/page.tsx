@@ -296,7 +296,14 @@ function AuctionsPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
         { label: 'Total listings', value: stats.total }, { label: 'Pending', value: stats.pending },
         { label: 'Won', value: stats.won }, { label: 'Total bids', value: stats.bids },
-      ].map((s) => <Card key={s.label} className="border-border/60"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.label}</p><p className="text-xl font-bold">{s.value}</p></CardContent></Card>)}</div>
+      ].map((s) => (
+        <Card key={s.label} className="erp-stat-card rounded-md shadow-sm">
+          <CardContent className="p-3.5 sm:p-4">
+            <p className="erp-stat-label">{s.label}</p>
+            <p className="erp-stat-value">{s.value}</p>
+          </CardContent>
+        </Card>
+      ))}</div>
       <StockListFilters
         total={filtered.length}
         totalLabel="Total stocks"

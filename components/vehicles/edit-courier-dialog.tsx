@@ -57,7 +57,7 @@ type Props = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <Label className="text-xs font-medium leading-snug">{label}</Label>
+      <Label className="leading-snug">{label}</Label>
       {children}
     </div>
   );

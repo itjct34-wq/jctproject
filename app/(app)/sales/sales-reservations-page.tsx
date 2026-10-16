@@ -443,10 +443,10 @@ export default function SalesPage() {
           { label: 'Delivered', value: stats.delivered, tone: 'bg-emerald-50 text-emerald-600' },
           { label: 'Revenue', value: stats.revenue.toLocaleString(), tone: 'bg-cyan-50 text-cyan-600' },
         ].map((s) => (
-          <Card key={s.label} className="border-border/60">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold">{s.value}</p>
+          <Card key={s.label} className="erp-stat-card rounded-md shadow-sm">
+            <CardContent className="p-3.5 sm:p-4">
+              <p className="erp-stat-label">{s.label}</p>
+              <p className="erp-stat-value">{s.value}</p>
             </CardContent>
           </Card>
         ))}

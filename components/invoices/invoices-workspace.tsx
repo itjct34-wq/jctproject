@@ -553,9 +553,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   };
 
   const lineItemForm = (isOpen: boolean, onClose: () => void, onSubmit: (e: React.FormEvent) => void, title: string) => (
-    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-2.5">
+    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-3">
         {/* Customer + invoice meta */}
-        <section className="space-y-1.5 rounded-md border border-border/60 p-2">
+        <section className="space-y-2 rounded-md border border-border/60 p-2.5">
           <div className="grid gap-1.5 sm:grid-cols-3">
             <div className="space-y-0.5">
               <Label>Customer source</Label>
@@ -665,14 +665,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         </section>
 
         {/* Vehicles */}
-        <section className="space-y-1.5">
+        <section className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-semibold">Vehicles</Label>
             <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {lineItems.map((item, idx) => (
-              <div key={idx} className="space-y-1 rounded-md border border-border/60 p-1.5">
+              <div key={idx} className="space-y-1.5 rounded-md border border-border/60 p-2.5">
                 <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
                   <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
                     <Label>From stock</Label>

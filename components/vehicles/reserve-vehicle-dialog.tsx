@@ -93,7 +93,7 @@ function Field({
 }) {
   return (
     <div className={className || 'space-y-0.5'}>
-      <Label className="text-xs font-medium">
+      <Label>
         {label}
         {required ? <span className="text-destructive"> *</span> : null}
       </Label>
@@ -578,7 +578,7 @@ export function ReserveVehicleDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-2.5">
-          <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+          <section className="space-y-1.5 rounded-md border border-border/70 p-2.5">
             <h3 className="text-xs font-semibold text-primary">Selling Detail</h3>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Customer" required>
@@ -704,7 +704,7 @@ export function ReserveVehicleDialog({
               </p>
             )}
 
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Reservation pricing (USD FOB)
               </p>
@@ -796,7 +796,7 @@ export function ReserveVehicleDialog({
             </Field>
           </section>
 
-          <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+          <section className="space-y-1.5 rounded-md border border-border/70 p-2.5">
             <h3 className="text-xs font-semibold text-primary">Consignee Detail</h3>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Name" required><Input value={consigneeName} onChange={(e) => setConsigneeName(e.target.value)} /></Field>
@@ -826,7 +826,7 @@ export function ReserveVehicleDialog({
             ) : null}
           </section>
 
-          <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
+          <section className="space-y-1.5 rounded-md border border-border/70 p-2.5">
             <h3 className="text-xs font-semibold text-primary">Invoice Detail</h3>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Invoice date" required>

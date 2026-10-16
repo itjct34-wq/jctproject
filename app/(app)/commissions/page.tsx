@@ -163,17 +163,16 @@ export default function CommissionsPage() {
           { label: 'Paid', value: paidCount },
           { label: 'Due PKR', value: formatMoney(duePkr, 'PKR') },
         ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-              <p className="erp-stat-value mt-0.5">{s.value}</p>
+          <Card key={s.label} className="erp-stat-card rounded-md shadow-sm">
+            <CardContent className="p-3.5 sm:p-4">
+              <p className="erp-stat-label">{s.label}</p>
+              <p className="erp-stat-value">{s.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card>
-        <CardContent className="p-4">
-          <div className="erp-filter-bar">
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
           <Select value={agentFilter} onValueChange={setAgentFilter}>
             <SelectTrigger className="w-full md:w-52">
               <SelectValue placeholder="Agent" />
@@ -210,9 +209,8 @@ export default function CommissionsPage() {
               <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       <Card className="overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">

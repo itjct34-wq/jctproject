@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Office, Profile, Role, Shift, Team } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export type UserFormValues = {
   email: string;
@@ -73,9 +73,11 @@ export function UserFormDialog({
   onSubmit,
 }: Props) {
   const [form, setForm] = useState<UserFormValues>(emptyForm);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setShowPassword(false);
     if (mode === 'edit' && user) {
       setForm({
         email: user.email || '',
@@ -147,27 +149,43 @@ export function UserFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user_password">
-                {mode === 'create' ? 'Password *' : 'New password'}
+              <Label htmlFor="user_password" requiredMark={mode === 'create'}>
+                {mode === 'create' ? 'Password' : 'New password'}
               </Label>
-              <Input
-                id="user_password"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder={mode === 'create' ? 'At least 8 characters' : 'Leave blank to keep current'}
-                required={mode === 'create'}
-                minLength={MIN_PASSWORD_LENGTH}
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <Input
+                  id="user_password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder={mode === 'create' ? 'At least 8 characters' : 'Leave blank to keep current'}
+                  required={mode === 'create'}
+                  minLength={MIN_PASSWORD_LENGTH}
+                  autoComplete="new-password"
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-0 top-0 flex h-8 w-11 items-center justify-center rounded-r-md text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {mode === 'create' ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Min {MIN_PASSWORD_LENGTH} characters. Share it securely; ask the user to change it on first login.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user_confirm_password">
-                {mode === 'create' ? 'Confirm password *' : 'Confirm new password'}
+              <Label htmlFor="user_confirm_password" requiredMark={mode === 'create'}>
+                {mode === 'create' ? 'Confirm password' : 'Confirm new password'}
               </Label>
               <Input
                 id="user_confirm_password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={form.confirm_password}
                 onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
                 placeholder="Re-enter password"
@@ -178,9 +196,13 @@ export function UserFormDialog({
               {form.confirm_password.length > 0 && form.password !== form.confirm_password && (
                 <p className="text-xs text-destructive">Passwords do not match</p>
               )}
-              {mode === 'edit' && form.password.length > 0 && form.password.length < MIN_PASSWORD_LENGTH && (
-                <p className="text-xs text-destructive">Password must be at least {MIN_PASSWORD_LENGTH} characters</p>
-              )}
+              {(mode === 'create' || editPasswordTouched) &&
+                form.password.length > 0 &&
+                form.password.length < MIN_PASSWORD_LENGTH && (
+                  <p className="text-xs text-destructive">
+                    Password must be at least {MIN_PASSWORD_LENGTH} characters
+                  </p>
+                )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="user_full_name">Full name</Label>
