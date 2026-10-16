@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { VehicleDocChip } from '@/components/vehicles/vehicle-doc-chip';
+import { invoiceOpenHrefByCode } from '@/lib/invoice-links';
 import {
   VehicleRemittancePopover,
   VehicleTtChip,
@@ -232,7 +233,7 @@ function StockListCardActionsMenu({
           ) : null}
           {invoice ? (
             <DropdownMenuItem asChild>
-              <Link href={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}>Open invoice</Link>
+              <Link href={invoiceOpenHrefByCode(invoice)}>Open invoice</Link>
             </DropdownMenuItem>
           ) : null}
         </>
@@ -671,7 +672,8 @@ export function StockListCard({
                         entityId={invoice.id}
                         label="INV"
                         className="bg-red-600 hover:bg-red-700 focus-visible:ring-red-600/40"
-                        fallbackHref={`/invoices?q=${encodeURIComponent(invoice.invoice_code)}`}
+                        preferHref
+                        fallbackHref={invoiceOpenHrefByCode(invoice)}
                         emptyMessage={`No file on ${invoice.invoice_code}`}
                       />
                     ) : null}

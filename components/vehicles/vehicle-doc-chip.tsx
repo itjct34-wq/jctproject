@@ -23,6 +23,11 @@ type Props = {
   icon?: ReactNode;
   /** When no attachment: navigate here instead of only toasting. */
   fallbackHref?: string;
+  /**
+   * When true with fallbackHref: navigate immediately (e.g. INV → invoice workspace)
+   * instead of listing attachments first.
+   */
+  preferHref?: boolean;
   emptyMessage?: string;
 };
 
@@ -34,6 +39,7 @@ export function VehicleDocChip({
   className,
   icon,
   fallbackHref,
+  preferHref = false,
   emptyMessage,
 }: Props) {
   const router = useRouter();
@@ -55,6 +61,12 @@ export function VehicleDocChip({
       setPopoverOpen(false);
       return;
     }
+
+    if (preferHref && fallbackHref) {
+      router.push(fallbackHref);
+      return;
+    }
+
     if (files.length > 1) {
       setPopoverOpen(true);
       return;
@@ -100,8 +112,8 @@ export function VehicleDocChip({
             !className?.includes('text-') && 'text-white',
             className
           )}
-          title={`View / download ${label}`}
-          aria-label={`View / download ${label}`}
+          title={preferHref && fallbackHref ? `Open ${label}` : `View / download ${label}`}
+          aria-label={preferHref && fallbackHref ? `Open ${label}` : `View / download ${label}`}
           disabled={busy}
           onClick={(e) => void onChipClick(e)}
         >

@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -44,17 +44,15 @@ import { formatCurrency } from '@/lib/utils/currencies';
 import { sumByCurrency } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  invoiceOpenHref,
+  isAuctionDepositInvoice,
+} from '@/lib/invoice-links';
 
 export type InvoiceWorkspaceKind = 'commercial' | 'auction';
+export { invoiceOpenHref, invoiceOpenHrefByCode, isAuctionDepositInvoice } from '@/lib/invoice-links';
 
 const AUCTION_DEPOSIT_TERMS = 'AUCTION DEPOSIT';
-
-export function isAuctionDepositInvoice(inv: Pick<Invoice, 'payment_terms' | 'invoice_code'>) {
-  return (
-    (inv.payment_terms || '').toUpperCase().startsWith(AUCTION_DEPOSIT_TERMS) ||
-    /AD\d/i.test(inv.invoice_code || '')
-  );
-}
 
 const statusChipClass: Record<Invoice['payment_status'], string> = {
   unpaid: 'erp-chip-danger',
@@ -106,6 +104,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const canCreateInvoice = can('invoices', 'create');
   const canEditInvoice = can('invoices', 'edit');
   const canDeleteInvoice = can('invoices', 'delete');
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -114,7 +114,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const searchParams = useSearchParams();
   const [search, setSearch] = useState(() => searchParams.get('q') || '');
   const [statusFilter, setStatusFilter] = useState('all');
   const [createOpen, setCreateOpen] = useState(false);
@@ -129,6 +128,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     'id' | 'invoice_prefix' | 'invoice_next_number' | 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'
   > | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
+  const deepLinkHandled = useRef<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -160,6 +160,12 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Keep search box in sync when arriving via ?q= from stock / deep links.
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q != null) setSearch(q);
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -241,6 +247,32 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setPrintOpen(true);
     await fetchInvoiceItems(inv);
   };
+
+  // Stock INV chip / "Open invoice" links use ?id= to open print preview for that invoice.
+  useEffect(() => {
+    if (loading) return;
+    const id = searchParams.get('id');
+    if (!id || deepLinkHandled.current === id) return;
+
+    const inv = invoices.find((i) => i.id === id);
+    if (!inv) {
+      if (invoices.length > 0) {
+        deepLinkHandled.current = id;
+        toast.error('Invoice not found or not visible with your permissions');
+      }
+      return;
+    }
+
+    if (isAuctionDepositInvoice(inv) !== isAuction) {
+      deepLinkHandled.current = id;
+      router.replace(invoiceOpenHref(inv));
+      return;
+    }
+
+    deepLinkHandled.current = id;
+    setSearch(inv.invoice_code);
+    void openPrintPreview(inv);
+  }, [loading, invoices, searchParams, isAuction, router]);
 
   const openCreate = () => {
     setForm({
@@ -571,15 +603,15 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       <form onSubmit={onSubmit} className="erp-invoice-workform">
         <div className="erp-invoice-workform-body">
         {/* 1. Customer + invoice meta */}
-        <section className="shrink-0 space-y-1.5 rounded-md border border-border/60 p-2">
-          <div className="grid gap-1.5 sm:grid-cols-3">
+        <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
+          <div className="grid gap-1 sm:grid-cols-3">
             <div className="space-y-0.5">
               <Label>Customer source</Label>
               <Select
                 value={form.customer_mode}
                 onValueChange={(v: 'existing' | 'manual') => setForm({ ...form, customer_mode: v, customer_id: v === 'manual' ? '' : form.customer_id })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="existing">From database</SelectItem>
                   <SelectItem value="manual">Enter details</SelectItem>
@@ -589,7 +621,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <div className="space-y-0.5">
               <Label>Sale (optional)</Label>
               <Select value={form.sale_id} onValueChange={(v) => setForm({ ...form, sale_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Link to sale" /></SelectTrigger>
+                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue placeholder="Link to sale" /></SelectTrigger>
                 <SelectContent>{sales.map((s) => <SelectItem key={s.id} value={s.id}>{s.sale_code}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -613,19 +645,19 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                     });
                   }}
                 >
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                  <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
                   <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}{c.customer_code ? ` · ${c.customer_code}` : ''}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             ) : (
               <div className="space-y-0.5">
                 <Label>Consignee Name *</Label>
-                <Input value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Consignee name" required />
+                <Input className="h-8 min-h-8 text-xs" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Consignee name" required />
               </div>
             )}
           </div>
           {form.customer_mode === 'existing' && selectedCustomer && (
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p className="truncate text-[11px] leading-tight text-muted-foreground">
               {selectedCustomer.full_name}
               {selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}
               {selectedCustomer.email ? ` · ${selectedCustomer.email}` : ''}
@@ -634,16 +666,16 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </p>
           )}
           {form.customer_mode === 'manual' && (
-            <div className="grid gap-1.5 sm:grid-cols-3">
-              <div className="space-y-0.5"><Label>Company</Label><Input value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Optional" /></div>
-              <div className="space-y-0.5"><Label>Contact *</Label><Input value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone" required /></div>
-              <div className="space-y-0.5"><Label>Email *</Label><Input type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email" required /></div>
-              <div className="space-y-0.5"><Label>Country</Label><Input value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} /></div>
-              <div className="space-y-0.5"><Label>City</Label><Input value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} /></div>
-              <div className="space-y-0.5"><Label>Address *</Label><Input value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
+            <div className="grid gap-1 sm:grid-cols-3">
+              <div className="space-y-0.5"><Label>Company</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Optional" /></div>
+              <div className="space-y-0.5"><Label>Contact *</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone" required /></div>
+              <div className="space-y-0.5"><Label>Email *</Label><Input className="h-8 min-h-8 text-xs" type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email" required /></div>
+              <div className="space-y-0.5"><Label>Country</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} /></div>
+              <div className="space-y-0.5"><Label>City</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} /></div>
+              <div className="space-y-0.5"><Label>Address *</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
             </div>
           )}
-          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-0.5">
               <Label>Invoice #</Label>
               <Select
@@ -656,7 +688,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   })
                 }
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="auto">Automatic</SelectItem>
                   <SelectItem value="manual">Manual</SelectItem>
@@ -666,32 +698,33 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <div className="space-y-0.5">
               <Label>{form.invoice_code_mode === 'auto' ? 'Next number' : 'Number'}</Label>
               <Input
+                className="h-8 min-h-8 text-xs"
                 value={form.invoice_code}
                 onChange={(e) => setForm({ ...form, invoice_code: e.target.value, invoice_code_mode: 'manual' })}
                 placeholder="INV0003"
               />
             </div>
-            <div className="space-y-0.5"><Label>Type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div>
-            <div className="space-y-0.5"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div>
+            <div className="space-y-0.5"><Label>Type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div>
+            <div className="space-y-0.5"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} className="h-8 min-h-8 text-xs" /></div>
             <div className="space-y-0.5"><Label>FOB term</Label>
               <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{['FOB','C&F','CFR','CIF','EXW','FCA','CPT','CIP','DAP','DDP'].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
+            <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
           </div>
-          <div className="grid gap-1.5 sm:grid-cols-3">
-            <div className="min-w-0 space-y-0.5"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div>
-            <div className="min-w-0 space-y-0.5"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
-            <div className="min-w-0 space-y-0.5"><Label>Sales agent</Label><Input value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Sales agent name" /></div>
+          <div className="grid gap-1 sm:grid-cols-3">
+            <div className="min-w-0 space-y-0.5"><Label>Issue date</Label><Input className="h-8 min-h-8 text-xs" type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div>
+            <div className="min-w-0 space-y-0.5"><Label>Due date</Label><Input className="h-8 min-h-8 text-xs" type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
+            <div className="min-w-0 space-y-0.5"><Label>Sales agent</Label><Input className="h-8 min-h-8 text-xs" value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Sales agent name" /></div>
           </div>
         </section>
 
-        {/* 2. Shipping terms & charges + freight — top, always visible */}
-        <section className="shrink-0 space-y-1.5 rounded-md border border-border/60 p-2">
-          <p className="text-[11px] font-semibold text-muted-foreground">Shipping terms & charges</p>
-          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+        {/* 2. Shipping terms & charges + freight — always visible */}
+        <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
+          <p className="text-[11px] font-semibold leading-tight text-muted-foreground">Shipping terms & charges</p>
+          <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-0.5"><Label>Shipment mode</Label>
               <Select
                 value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
@@ -702,7 +735,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   })
                 }
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="RORO">RORO</SelectItem>
                   <SelectItem value="20ft Container">Container 20ft</SelectItem>
@@ -710,13 +743,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-0.5"><Label>Port of loading</Label><Input value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Port of discharge</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Port of loading</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Port of discharge</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
             {freightPolicy.allowFreight ? (
               <>
                 <div className="space-y-0.5 lg:col-span-2">
                   <Label>Freight description{freightPolicy.requireFreight ? ' *' : ''}</Label>
                   <Input
+                    className="h-8 min-h-8 text-xs"
                     value={form.freight_notes}
                     onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
                     placeholder={freightPolicy.defaultFreightLabel}
@@ -725,6 +759,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 <div className="space-y-0.5">
                   <Label>Freight ({form.currency}){freightPolicy.requireFreight ? ' *' : ''}</Label>
                   <Input
+                    className="h-8 min-h-8 text-xs"
                     type="number"
                     value={form.freight_total}
                     onChange={(e) => setForm({ ...form, freight_total: e.target.value })}
@@ -735,34 +770,34 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               </>
             ) : (
               <div className="flex items-end sm:col-span-3 lg:col-span-3">
-                <p className="w-full rounded-md border border-border/60 bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground">
+                <p className="w-full rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-[11px] leading-tight text-muted-foreground">
                   FOB — vehicle cost only; freight not on this invoice.
                 </p>
               </div>
             )}
-            <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Other charges</Label><Input type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Discount</Label><Input type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Insurance</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Other charges</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Discount</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
           </div>
           {freightPolicy.requireFreight && (
-            <p className="text-[10px] text-amber-700">Container shipments must include freight.</p>
+            <p className="text-[10px] leading-tight text-amber-700">Container shipments must include freight.</p>
           )}
         </section>
 
-        {/* 3. Vehicles — header → scrollable lines → fixed summary (no overlap) */}
-        <section className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
-          <div className="flex shrink-0 items-center justify-between">
+        {/* 3. Vehicles — document flow; workform body scrolls (no nested list scroll) */}
+        <section className="space-y-1">
+          <div className="flex items-center justify-between gap-2">
             <Label className="text-xs font-semibold">Vehicles</Label>
-            <Button type="button" size="sm" variant="outline" className="h-7 px-2" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button>
+            <Button type="button" size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="h-3.5 w-3.5" />Add</Button>
           </div>
-          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+          <div className="space-y-1">
             {lineItems.map((item, idx) => (
-              <div key={idx} className="rounded-md border border-border/60 p-2">
-                <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+              <div key={idx} className="rounded-md border border-border/60 p-1.5">
+                <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
                   <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
                     <Label>From stock</Label>
                     <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyVehicle(idx, v === 'none' ? '' : v)}>
-                      <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                      <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Enter manually</SelectItem>
                         {vehicles.map((v) => (
@@ -771,23 +806,23 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-0.5"><Label>Chassis</Label><Input value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis" /></div>
-                  <div className="space-y-0.5"><Label>Stock no.</Label><Input value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" /></div>
-                  <div className="space-y-0.5"><Label>Make</Label><Input value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" /></div>
-                  <div className="space-y-0.5"><Label>Model</Label><Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" /></div>
-                  <div className="space-y-0.5"><Label>Vehicle cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} placeholder="0" /></div>
-                  <div className="space-y-0.5"><Label>Year</Label><Input value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="2016" /></div>
-                  <div className="space-y-0.5"><Label>Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" /></div>
-                  <div className="space-y-0.5"><Label>Engine</Label><Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" /></div>
-                  <div className="space-y-0.5"><Label>Transmission</Label><Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="AT" /></div>
-                  <div className="space-y-0.5"><Label>Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
+                  <div className="space-y-0.5"><Label>Chassis</Label><Input className="h-8 min-h-8 text-xs" value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis" /></div>
+                  <div className="space-y-0.5"><Label>Stock no.</Label><Input className="h-8 min-h-8 text-xs" value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" /></div>
+                  <div className="space-y-0.5"><Label>Make</Label><Input className="h-8 min-h-8 text-xs" value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" /></div>
+                  <div className="space-y-0.5"><Label>Model</Label><Input className="h-8 min-h-8 text-xs" value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" /></div>
+                  <div className="space-y-0.5"><Label>Vehicle cost</Label><Input className="h-8 min-h-8 text-xs" type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} placeholder="0" /></div>
+                  <div className="space-y-0.5"><Label>Year</Label><Input className="h-8 min-h-8 text-xs" value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="2016" /></div>
+                  <div className="space-y-0.5"><Label>Colour</Label><Input className="h-8 min-h-8 text-xs" value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" /></div>
+                  <div className="space-y-0.5"><Label>Engine</Label><Input className="h-8 min-h-8 text-xs" value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" /></div>
+                  <div className="space-y-0.5"><Label>Transmission</Label><Input className="h-8 min-h-8 text-xs" value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="AT" /></div>
+                  <div className="space-y-0.5"><Label>Qty</Label><Input className="h-8 min-h-8 text-xs" type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
                   <div className="space-y-0.5">
                     <Label>{isAuction ? 'Deposit amt' : 'Deposit %'}</Label>
                     {isAuction ? (
-                      <Input type="number" value={item.discount} onChange={(e) => updateLine(idx, { discount: e.target.value })} placeholder="Amount" />
+                      <Input className="h-8 min-h-8 text-xs" type="number" value={item.discount} onChange={(e) => updateLine(idx, { discount: e.target.value })} placeholder="Amount" />
                     ) : (
                       <Select value={item.discount || '30'} onValueChange={(v) => updateLine(idx, { discount: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {DEPOSIT_RATIOS.map((ratio) => (
                             <SelectItem key={ratio} value={String(ratio)}>{ratio}%</SelectItem>
@@ -798,10 +833,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   </div>
                   <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
                     <Label>Line note</Label>
-                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional" />
+                    <Input className="h-8 min-h-8 text-xs" value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional" />
                   </div>
                   <div className="flex items-end justify-end">
-                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove vehicle">
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove vehicle">
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -809,9 +844,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               </div>
             ))}
           </div>
-          {/* Totals — shrink-0 below scroll area so it never covers vehicle rows */}
-          <div className="shrink-0 rounded-md bg-muted/50 px-2 py-1.5 text-xs">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+          <div className="rounded-md bg-muted/50 px-2 py-1 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               <span className="text-muted-foreground">Vehicles <span className="font-medium text-foreground">{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></span>
               {isAuction && (
                 <span className="text-muted-foreground">Deposit <span className="font-medium text-foreground">{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></span>
@@ -835,13 +869,18 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           <summary className="cursor-pointer select-none px-2 py-1 text-[11px] font-semibold text-muted-foreground">
             Notes{form.notes.trim() ? ' · set' : ''}
           </summary>
-          <div className="border-t border-border/60 px-2 py-1.5">
-            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Optional invoice notes" className="min-h-[2.5rem]" />
+          <div className="border-t border-border/60 px-2 py-1">
+            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Optional invoice notes" className="min-h-[2.5rem] text-xs" />
           </div>
         </details>
         </div>
 
-        <DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={submitting || !canSaveInvoice}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : title.includes('Edit') ? 'Save changes' : 'Create invoice'}</Button></DialogFooter>
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" size="sm" className="h-8" onClick={onClose}>Cancel</Button>
+          <Button type="submit" size="sm" className="h-8" disabled={submitting || !canSaveInvoice}>
+            {submitting ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Saving...</> : title.includes('Edit') ? 'Save changes' : 'Create invoice'}
+          </Button>
+        </DialogFooter>
       </form>
     </DialogContent></Dialog>
   );

@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
@@ -97,9 +98,10 @@ function emptyQuoteLine(): LineDraft {
   };
 }
 
-export default function QuotationsPage() {
+function QuotationsPageInner() {
   const { profile } = useAuth();
   const { can, isSellingFocused } = usePermissions();
+  const searchParams = useSearchParams();
   const canDeleteQuotation = can('sales', 'delete');
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -119,6 +121,7 @@ export default function QuotationsPage() {
     Array<{ description: string; quantity: number; unit_price: number; line_total: number; vehicle_id?: string | null }>
   >([]);
   const [companyLetterhead, setCompanyLetterhead] = useState<CompanyLetterheadSettings | null>(null);
+  const deepLinkHandled = useRef<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -400,9 +403,10 @@ export default function QuotationsPage() {
     toast.success('Quotation status updated');
   };
 
-  const openPrint = async () => {
-    if (!selected) return;
-    const { data } = await supabase.from('quotation_items').select('*').eq('quotation_id', selected.id);
+  /** Load line items and open the commercial quotation print/PDF preview. */
+  const openPrintPreview = async (qt: Quotation) => {
+    setSelected(qt);
+    const { data } = await supabase.from('quotation_items').select('*').eq('quotation_id', qt.id);
     const rows = (data || []) as Array<{
       description: string;
       quantity: number;
@@ -413,19 +417,44 @@ export default function QuotationsPage() {
     if (rows.length > 0) {
       setPrintItems(rows);
     } else {
-      const desc = selected.notes?.split('\n---\n').pop() || `${selected.price_type} quotation`;
+      const desc = qt.notes?.split('\n---\n').pop() || `${qt.price_type} quotation`;
       setPrintItems([
         {
           description: desc,
           quantity: 1,
-          unit_price: selected.subtotal,
-          line_total: selected.subtotal,
+          unit_price: qt.subtotal,
+          line_total: qt.subtotal,
           vehicle_id: null,
         },
       ]);
     }
     setPrintOpen(true);
   };
+
+  const openPrint = async () => {
+    if (!selected) return;
+    await openPrintPreview(selected);
+  };
+
+  // QT chip / "Open quotation" links use ?id= to open print preview for that quotation.
+  useEffect(() => {
+    if (loading) return;
+    const id = searchParams.get('id');
+    if (!id || deepLinkHandled.current === id) return;
+
+    const qt = quotations.find((q) => q.id === id);
+    if (!qt) {
+      if (quotations.length > 0) {
+        deepLinkHandled.current = id;
+        toast.error('Quotation not found or not visible with your permissions');
+      }
+      return;
+    }
+
+    deepLinkHandled.current = id;
+    setSearch(qt.quotation_code);
+    void openPrintPreview(qt);
+  }, [loading, quotations, searchParams]);
 
   const stats = {
     total: quotations.length,
@@ -643,11 +672,11 @@ export default function QuotationsPage() {
                 onClick={() => setSelected(q)}
                 className="erp-list-row"
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <FileText className="h-4 w-4" />
-                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="erp-chip-qt" aria-hidden>
+                      QT
+                    </span>
                     <p className="text-sm font-medium">{q.quotation_code}</p>
                     <Badge variant="outline" className={`text-[10px] ${statusStyles[q.status]}`}>
                       {q.status}
@@ -879,5 +908,19 @@ export default function QuotationsPage() {
         onConfirm={confirmDelete}
       />
     </div>
+  );
+}
+
+export default function QuotationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center p-14 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      }
+    >
+      <QuotationsPageInner />
+    </Suspense>
   );
 }
