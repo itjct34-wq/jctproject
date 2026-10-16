@@ -23,6 +23,7 @@ import { formatMoney } from '@/lib/utils/format';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
 import { cn } from '@/lib/utils';
+import type { VehicleRemittanceRef } from '@/components/vehicles/vehicle-remittance-popover';
 import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
 import {
   commissionAmountPkr,
@@ -98,13 +99,17 @@ type Props = {
   canEditShipping: boolean;
   canDeleteVehicle: boolean;
   canMarkCommissionPaid: boolean;
+  canDeallocateRemittance?: boolean;
   submitting?: boolean;
   onReserve: () => void;
   onEdit: () => void;
   onBooking: () => void;
   onDelete: () => void;
   onMarkCommissionPaid: () => void;
+  onDeallocateRemittance?: (row: VehicleRemittanceRef) => void;
   onDocsChanged?: () => void;
+  /** Bump after external remittance changes so the Remittances tab reloads. */
+  remittanceReloadToken?: number;
 };
 
 function formatHistoryDate(value: string) {
@@ -182,13 +187,16 @@ export function VehicleViewInfoDialog({
   canEditShipping,
   canDeleteVehicle,
   canMarkCommissionPaid,
+  canDeallocateRemittance = false,
   submitting,
   onReserve,
   onEdit,
   onBooking,
   onDelete,
   onMarkCommissionPaid,
+  onDeallocateRemittance,
   onDocsChanged,
+  remittanceReloadToken = 0,
 }: Props) {
   const [tab, setTab] = useState<ViewInfoTab>(VIEW_INFO_DEFAULT_TAB);
   const [historyRows, setHistoryRows] = useState<HistoryRow[]>([]);
@@ -369,7 +377,7 @@ export function VehicleViewInfoDialog({
     if (tab === 'history') void loadHistory(vehicle.id);
     if (tab === 'invoices') void loadInvoices(vehicle.id);
     if (tab === 'remittances') void loadRemittances(vehicle.id);
-  }, [open, vehicle?.id, tab, loadHistory, loadInvoices, loadRemittances]);
+  }, [open, vehicle?.id, tab, loadHistory, loadInvoices, loadRemittances, remittanceReloadToken]);
 
   const openInvoicePreview = async (inv: Invoice) => {
     setPreviewInvoice(inv);
@@ -704,6 +712,9 @@ export function VehicleViewInfoDialog({
                             <TableHead className="text-[11px] uppercase tracking-wide">Allocated</TableHead>
                             <TableHead className="text-[11px] uppercase tracking-wide">Status</TableHead>
                             <TableHead className="text-[11px] uppercase tracking-wide">Date</TableHead>
+                            {canDeallocateRemittance ? (
+                              <TableHead className="text-[11px] uppercase tracking-wide"> </TableHead>
+                            ) : null}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -720,6 +731,28 @@ export function VehicleViewInfoDialog({
                                   ? isoDay(row.paymentDate)
                                   : formatHistoryDate(row.createdAt)}
                               </TableCell>
+                              {canDeallocateRemittance ? (
+                                <TableCell className="text-right">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive"
+                                    disabled={submitting}
+                                    onClick={() =>
+                                      onDeallocateRemittance?.({
+                                        paymentId: row.paymentId,
+                                        paymentCode: row.paymentCode,
+                                        amount: row.allocateAmount,
+                                        currency: row.currency,
+                                        allocationId: row.id,
+                                      })
+                                    }
+                                  >
+                                    Deallocate
+                                  </Button>
+                                </TableCell>
+                              ) : null}
                             </TableRow>
                           ))}
                         </TableBody>

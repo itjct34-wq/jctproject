@@ -129,6 +129,9 @@ export type StockListCardProps = {
   remittances?: VehicleRemittanceRef[];
   /** Doc kinds present for this vehicle (e.g. bl, export_certificate). */
   docKinds?: string[];
+  /** Per-vehicle remittance deallocate (admin/manager/accounts). */
+  canDeallocateRemittance?: boolean;
+  onDeallocateRemittance?: (row: VehicleRemittanceRef) => void;
   onViewInfo: () => void;
   onEdit?: () => void;
   onAssign?: () => void;
@@ -252,6 +255,8 @@ export function StockListCard({
   allocatedUsd,
   remittances = [],
   docKinds = [],
+  canDeallocateRemittance = false,
+  onDeallocateRemittance,
   onViewInfo,
   onEdit,
   onAssign,
@@ -517,6 +522,8 @@ export function StockListCard({
               <VehicleRemittancePopover
                 remittances={remitList}
                 allocatedLabel={listMoney(allocatedUsd, soldCcy)}
+                canDeallocate={canDeallocateRemittance}
+                onDeallocate={onDeallocateRemittance}
               />
             ) : null}
             {(hasDocChips || etdEtaLine) ? (

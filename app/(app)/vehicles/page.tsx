@@ -153,6 +153,7 @@ function VehiclesPage() {
     canSetBidRequester: canSetBidByPerm,
     canEditCourier: canEditCourierByPerm,
     canEditShipping: canEditShippingByPerm,
+    canAllocateRemittances,
   } = usePermissions();
   const canCreateVehicle = can('vehicles', 'create');
   const canEditVehicle = can('vehicles', 'edit');
@@ -162,6 +163,7 @@ function VehiclesPage() {
   const canEditShipping = canEditShippingByPerm();
   const canEditCourier = canEditCourierByPerm();
   const canMarkCommissionPaid = isAdmin() || hasRole('manager') || hasRole('accounts');
+  const canDeallocateRemittance = canAllocateRemittances();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<CustomerListRow[]>([]);
   const [offices, setOffices] = useState<Office[]>([]);
@@ -170,6 +172,8 @@ function VehiclesPage() {
   const [saleFallback, setSaleFallback] = useState<Record<string, { agentId: string; customerId: string }>>({});
   const [vehicleInvoices, setVehicleInvoices] = useState<Record<string, VehicleInvoiceRef>>({});
   const [selected, setSelected] = useState<Vehicle | null>(null);
+  const [deallocRemitTarget, setDeallocRemitTarget] = useState<VehicleRemittanceRef | null>(null);
+  const [remittanceReloadToken, setRemittanceReloadToken] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [listFilters, setListFilters] = useState<StockListFiltersValue>(() => ({
@@ -338,7 +342,7 @@ function VehiclesPage() {
     if (vehicleIds.length) {
       const { data: allocRows } = await supabase
         .from('payment_allocations')
-        .select('vehicle_id, allocate_amount, payments(id, payment_code, amount, currency, status)')
+        .select('id, vehicle_id, allocate_amount, payments(id, payment_code, amount, currency, status)')
         .in('vehicle_id', vehicleIds);
       if (allocRows?.length) {
         for (const a of allocRows) {
@@ -357,12 +361,14 @@ function VehiclesPage() {
           if (!status || status === 'received' || status === 'reconciled' || status === 'pending') {
             row.allocated += amt;
           }
-          if (!row.remittances.some((r) => r.paymentId === pay.id)) {
+          const allocId = (a as { id?: string }).id;
+          if (!row.remittances.some((r) => r.allocationId === allocId || (!allocId && r.paymentId === pay.id))) {
             row.remittances.push({
               paymentId: pay.id,
               paymentCode: pay.payment_code || pay.id.slice(0, 8),
               amount: amt,
               currency: pay.currency || 'USD',
+              allocationId: allocId,
             });
           }
           payMap[a.vehicle_id] = row;
@@ -902,6 +908,31 @@ function VehiclesPage() {
     await loadVehicles();
   };
 
+  const confirmDeallocateRemittance = async () => {
+    if (!deallocRemitTarget?.allocationId) {
+      toast.error('This remittance has no allocation row to remove');
+      return;
+    }
+    if (!canDeallocateRemittance) {
+      toast.error('You do not have permission to deallocate remittances');
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('payment_allocations')
+      .delete()
+      .eq('id', deallocRemitTarget.allocationId);
+    setSubmitting(false);
+    if (error) {
+      toast.error(`Could not deallocate: ${error.message}`);
+      return;
+    }
+    toast.success('Remittance removed from this vehicle — other vehicles on the TT are unchanged');
+    setDeallocRemitTarget(null);
+    setRemittanceReloadToken((n) => n + 1);
+    await loadVehicles();
+  };
+
   const stats = {
     total: catalogVehicles.length,
     available: catalogVehicles.filter((v) => effectivePaymentStatus(v) === 'available').length,
@@ -1081,6 +1112,10 @@ function VehiclesPage() {
                   allocatedUsd={pays?.allocated || 0}
                   remittances={pays?.remittances || []}
                   docKinds={vehicleDocKinds[v.id] || []}
+                  canDeallocateRemittance={canDeallocateRemittance}
+                  onDeallocateRemittance={
+                    canDeallocateRemittance ? (row) => setDeallocRemitTarget(row) : undefined
+                  }
                   onViewInfo={() => setSelected(v)}
                   onEdit={canEditVehicle ? () => { void openEdit(v); } : undefined}
                   onAssign={canAssignStock() && pay === 'available' ? () => openAssign(v) : undefined}
@@ -1152,6 +1187,7 @@ function VehiclesPage() {
         canEditShipping={canEditShipping}
         canDeleteVehicle={canDeleteVehicle}
         canMarkCommissionPaid={canMarkCommissionPaid}
+        canDeallocateRemittance={canDeallocateRemittance}
         submitting={submitting}
         onReserve={() => openReserve()}
         onEdit={() => {
@@ -1162,9 +1198,13 @@ function VehiclesPage() {
         onMarkCommissionPaid={() => {
           if (selected) void markCommissionPaid(selected.id);
         }}
+        onDeallocateRemittance={
+          canDeallocateRemittance ? (row) => setDeallocRemitTarget(row) : undefined
+        }
         onDocsChanged={() => {
           void loadVehicles();
         }}
+        remittanceReloadToken={remittanceReloadToken}
       />
 
       <AssignStockDialog
@@ -1218,6 +1258,20 @@ function VehiclesPage() {
         destructive
         loading={submitting}
         onConfirm={confirmMakeAvailable}
+      />
+      <ConfirmDialog
+        open={Boolean(deallocRemitTarget)}
+        onOpenChange={(open) => !open && setDeallocRemitTarget(null)}
+        title="Deallocate remittance from this vehicle?"
+        description={
+          deallocRemitTarget
+            ? `Removes ${deallocRemitTarget.paymentCode} (${deallocRemitTarget.currency} ${deallocRemitTarget.amount.toLocaleString()}) from this stock only. Other vehicles on the same TT keep their allocations; payment status is recomputed.`
+            : ''
+        }
+        confirmLabel="Deallocate"
+        destructive
+        loading={submitting}
+        onConfirm={confirmDeallocateRemittance}
       />
     </div>
   );

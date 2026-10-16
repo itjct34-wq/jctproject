@@ -16,11 +16,16 @@ export type VehicleRemittanceRef = {
   paymentCode: string;
   amount: number;
   currency: string;
+  /** Present when the row comes from payment_allocations (required for per-vehicle deallocate). */
+  allocationId?: string;
 };
 
 type Props = {
   remittances: VehicleRemittanceRef[];
   allocatedLabel?: string;
+  /** When set, each row with allocationId shows Deallocate (this vehicle only). */
+  canDeallocate?: boolean;
+  onDeallocate?: (row: VehicleRemittanceRef) => void;
 };
 
 async function openPaymentTt(paymentId: string, paymentCode: string) {
@@ -157,7 +162,12 @@ export function VehicleTtChip({ remittances }: { remittances: VehicleRemittanceR
 }
 
 /** Dropdown listing remittance codes; each row opens that payment's TT attachment. */
-export function VehicleRemittancePopover({ remittances, allocatedLabel }: Props) {
+export function VehicleRemittancePopover({
+  remittances,
+  allocatedLabel,
+  canDeallocate = false,
+  onDeallocate,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [files, setFiles] = useState<AttachmentListItem[]>([]);
@@ -197,7 +207,7 @@ export function VehicleRemittancePopover({ remittances, allocatedLabel }: Props)
           <ChevronDown className="h-3 w-3" />
         </button>
       </PopoverAnchor>
-      <PopoverContent className="w-72 p-2" align="end" onOpenAutoFocus={(ev) => ev.preventDefault()}>
+      <PopoverContent className="w-80 p-2" align="end" onOpenAutoFocus={(ev) => ev.preventDefault()}>
         {fileMode ? (
           <>
             <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">TT documents</p>
@@ -226,28 +236,46 @@ export function VehicleRemittancePopover({ remittances, allocatedLabel }: Props)
           </>
         ) : (
           <>
-            <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">Remittances</p>
+            <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">
+              Remittances{canDeallocate ? ' · open TT or deallocate from this stock' : ''}
+            </p>
             <ul className="space-y-1">
               {remittances.map((row) => (
-                <li key={row.paymentId}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
-                    disabled={openingId === row.paymentId}
-                    onClick={() => void openRemit(row)}
-                  >
-                    <span>
-                      <span className="font-semibold text-violet-700">{row.paymentCode}</span>
-                      <span className="ml-1.5 text-muted-foreground">
-                        {row.currency} {row.amount.toLocaleString()}
+                <li key={row.allocationId || row.paymentId} className="rounded-md hover:bg-muted">
+                  <div className="flex items-center gap-1 px-1 py-0.5">
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-xs"
+                      disabled={openingId === row.paymentId}
+                      onClick={() => void openRemit(row)}
+                    >
+                      <span className="min-w-0 truncate">
+                        <span className="font-semibold text-violet-700">{row.paymentCode}</span>
+                        <span className="ml-1.5 text-muted-foreground">
+                          {row.currency} {row.amount.toLocaleString()}
+                        </span>
                       </span>
-                    </span>
-                    {openingId === row.paymentId ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                  </button>
+                      {openingId === row.paymentId ? (
+                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                    </button>
+                    {canDeallocate && row.allocationId && onDeallocate ? (
+                      <button
+                        type="button"
+                        className="shrink-0 rounded px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-destructive hover:bg-destructive/10"
+                        title="Deallocate from this vehicle only"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpen(false);
+                          onDeallocate(row);
+                        }}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>

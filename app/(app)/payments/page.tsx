@@ -91,7 +91,9 @@ function RemittancesPageInner() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  /** Remittance whose stock lines are shown in the per-vehicle deallocate dialog. */
   const [deallocateTarget, setDeallocateTarget] = useState<PaymentRow | null>(null);
+  const [deallocatingAllocId, setDeallocatingAllocId] = useState<string | null>(null);
   const [tagTarget, setTagTarget] = useState<PaymentRow | null>(null);
   const [tagCustomerId, setTagCustomerId] = useState('');
   const [tagAgentId, setTagAgentId] = useState('');
@@ -268,7 +270,30 @@ function RemittancesPageInner() {
     router.push(`/payments/${p.id}/allocate`);
   };
 
-  const confirmDeallocate = async () => {
+  const deallocateOneVehicle = async (allocationId: string) => {
+    if (!deallocateTarget) return;
+    if (!canAllocateAction) {
+      toast.error('You do not have permission to deallocate this remittance');
+      return;
+    }
+    setDeallocatingAllocId(allocationId);
+    const { error } = await supabase.from('payment_allocations').delete().eq('id', allocationId);
+    setDeallocatingAllocId(null);
+    if (error) {
+      toast.error(`Could not deallocate: ${error.message}`);
+      return;
+    }
+    toast.success('Removed allocation from that vehicle — other stock lines kept');
+    const left = (deallocateTarget.payment_allocations || []).filter((a) => a.id !== allocationId);
+    if (left.length === 0) {
+      setDeallocateTarget(null);
+    } else {
+      setDeallocateTarget({ ...deallocateTarget, payment_allocations: left });
+    }
+    void loadData();
+  };
+
+  const deallocateAllVehicles = async () => {
     if (!deallocateTarget) return;
     if (!canAllocateAction) {
       toast.error('You do not have permission to deallocate this remittance');
@@ -284,7 +309,7 @@ function RemittancesPageInner() {
       toast.error(`Could not deallocate: ${error.message}`);
       return;
     }
-    toast.success('Remittance deallocated — stock payment status updated');
+    toast.success('Remittance fully deallocated — stock payment status updated');
     setDeallocateTarget(null);
     void loadData();
   };
@@ -443,7 +468,8 @@ function RemittancesPageInner() {
                     .join(', ');
                   const hasAllocations = remittanceHasAllocations(p);
                   const showDeallocate = hasAllocations && canAllocateAction;
-                  const showAllocate = canAllocateAction && !hasAllocations;
+                  /** Allow allocate/edit even when some lines already exist (multi-vehicle / remaining). */
+                  const showAllocate = canAllocateAction;
                   return (
                     <tr key={p.id} className="align-top hover:bg-muted/40">
                       <td className="px-3 py-3 text-xs leading-5">
@@ -516,12 +542,12 @@ function RemittancesPageInner() {
                                   onSelect={() => tryAllocate(p)}
                                   disabled={unknown}
                                 >
-                                  Allocate
+                                  {hasAllocations ? 'Edit allocation' : 'Allocate'}
                                 </DropdownMenuItem>
                               ) : null}
                               {showDeallocate ? (
                                 <DropdownMenuItem onSelect={() => setDeallocateTarget(p)}>
-                                  Deallocate
+                                  Deallocate…
                                 </DropdownMenuItem>
                               ) : null}
                               {canDelete ? (
@@ -551,16 +577,76 @@ function RemittancesPageInner() {
         loading={submitting}
         onConfirm={confirmDelete}
       />
-      <ConfirmDialog
+      <Dialog
         open={Boolean(deallocateTarget)}
-        onOpenChange={(open) => !open && setDeallocateTarget(null)}
-        title="Deallocate remittance?"
-        description="This clears all stock allocations for this remittance, sets it back to unallocated, and recomputes each vehicle’s payment status (partial / reserved / unpaid as appropriate)."
-        confirmLabel="Deallocate"
-        destructive
-        loading={submitting}
-        onConfirm={confirmDeallocate}
-      />
+        onOpenChange={(open) => {
+          if (!open) setDeallocateTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Deallocate from stock</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Remove this remittance from one vehicle only, or clear every stock line. Each removal
+            recomputes that vehicle&apos;s payment status; other vehicles keep their allocations.
+          </p>
+          <ul className="max-h-64 space-y-2 overflow-y-auto">
+            {(deallocateTarget?.payment_allocations || []).map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{a.vehicles?.stock_number || a.vehicle_id}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatMoney(Number(a.allocate_amount) || 0, deallocateTarget?.currency || 'USD')}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 text-destructive"
+                  disabled={deallocatingAllocId === a.id || submitting}
+                  onClick={() => void deallocateOneVehicle(a.id)}
+                >
+                  {deallocatingAllocId === a.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    'Remove'
+                  )}
+                </Button>
+              </li>
+            ))}
+            {(deallocateTarget?.payment_allocations || []).length === 0 ? (
+              <li className="text-sm text-muted-foreground">No stock lines left.</li>
+            ) : null}
+          </ul>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setDeallocateTarget(null)}>
+              Close
+            </Button>
+            {(deallocateTarget?.payment_allocations || []).length > 1 ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={submitting || Boolean(deallocatingAllocId)}
+                onClick={() => void deallocateAllVehicles()}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Clearing…
+                  </>
+                ) : (
+                  'Deallocate all'
+                )}
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={Boolean(tagTarget)} onOpenChange={(open) => !open && setTagTarget(null)}>
         <DialogContent>
           <DialogHeader>

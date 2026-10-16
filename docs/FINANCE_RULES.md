@@ -57,5 +57,8 @@
 ## Allocations
 
 - Payment-to-invoice linkage via **`invoice_id`** on payment rows.
-- Payment-to-vehicle linkage via **`vehicle_id`** on payment rows (reservation / partial pay workflow).
+- Payment-to-vehicle linkage via **`payment_allocations`** (one row per payment+vehicle; partial amounts may sum to ≤ remit). Legacy **`payments.vehicle_id`** is synced to the first allocation line.
+- **Multi-vehicle**: Remittances → Actions → Allocate / Edit allocation; **Add More** for additional stock lines. Remaining = remit − Σ(allocate_amount); status `allocated` when remaining ≈ 0.
+- **Per-vehicle deallocate**: Remittances → Actions → Deallocate… (Remove one stock line, or Deallocate all); stock card remittance popover **Remove**; vehicle View info → Remittances → Deallocate. Deleting one allocation row leaves other vehicles intact; triggers recompute remittance remaining and that vehicle’s `payment_status`.
+- Mutate/allocate requires admin/manager/accounts (or Grant of `payments.create` / `edit` / `allocate`); sales are view-only.
 - Full double-entry ledger is not implemented as a separate journal table in current schema.

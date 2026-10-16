@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { RemittanceCrumb, RequiredMark } from '@/components/payments/remittance-crumb';
 import { SearchableSelect } from '@/components/payments/searchable-select';
 import { Button } from '@/components/ui/button';
@@ -158,31 +158,61 @@ export default function AllocateRemittancePage() {
       return;
     }
     setSubmitting(true);
-    if (existing.length) {
-      const { error: delErr } = await supabase.from('payment_allocations').delete().eq('payment_id', payment.id);
+    const existingByVehicle = new Map(existing.map((a) => [a.vehicle_id, a]));
+    const keepIds = new Set(ready.map((l) => l.vehicle_id));
+    const toRemove = existing.filter((a) => !keepIds.has(a.vehicle_id));
+    if (toRemove.length) {
+      const { error: delErr } = await supabase
+        .from('payment_allocations')
+        .delete()
+        .in(
+          'id',
+          toRemove.map((a) => a.id),
+        );
       if (delErr) {
         setSubmitting(false);
         toast.error(delErr.message);
         return;
       }
     }
-    const { error } = await supabase.from('payment_allocations').insert(
-      ready.map((line) => {
-        const v = stockById.get(line.vehicle_id);
-        return {
-          payment_id: payment.id,
-          vehicle_id: line.vehicle_id,
-          allocate_amount: Number(line.allocate_amount),
-          sold_price: v ? vehicleSoldPrice(v) : null,
-          created_by: profile.id,
-        };
-      }),
-    );
-    setSubmitting(false);
-    if (error) {
-      toast.error(`Could not allocate: ${error.message}`);
-      return;
+    const toUpdate = ready.filter((l) => existingByVehicle.has(l.vehicle_id));
+    const toInsert = ready.filter((l) => !existingByVehicle.has(l.vehicle_id));
+    for (const line of toUpdate) {
+      const prev = existingByVehicle.get(line.vehicle_id)!;
+      const v = stockById.get(line.vehicle_id);
+      const nextAmt = Number(line.allocate_amount);
+      const nextSold = v ? vehicleSoldPrice(v) : null;
+      if (Number(prev.allocate_amount) === nextAmt && (prev.sold_price ?? null) === nextSold) continue;
+      const { error: updErr } = await supabase
+        .from('payment_allocations')
+        .update({ allocate_amount: nextAmt, sold_price: nextSold })
+        .eq('id', prev.id);
+      if (updErr) {
+        setSubmitting(false);
+        toast.error(`Could not update allocation: ${updErr.message}`);
+        return;
+      }
     }
+    if (toInsert.length) {
+      const { error } = await supabase.from('payment_allocations').insert(
+        toInsert.map((line) => {
+          const v = stockById.get(line.vehicle_id);
+          return {
+            payment_id: payment.id,
+            vehicle_id: line.vehicle_id,
+            allocate_amount: Number(line.allocate_amount),
+            sold_price: v ? vehicleSoldPrice(v) : null,
+            created_by: profile.id,
+          };
+        }),
+      );
+      if (error) {
+        setSubmitting(false);
+        toast.error(`Could not allocate: ${error.message}`);
+        return;
+      }
+    }
+    setSubmitting(false);
     toast.success(sum >= totalAvailable - 0.009 ? 'Remittance allocated' : 'Partial allocation saved');
     router.push('/payments');
     router.refresh();
@@ -258,7 +288,19 @@ export default function AllocateRemittancePage() {
           const already = (otherAlloc[line.vehicle_id] || 0) + thisAmt;
           const balance = v ? Math.round((sold - already) * 100) / 100 : 0;
           return (
-            <div key={line.key} className="grid gap-3 rounded-xl border border-border/60 bg-card p-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div key={line.key} className="relative grid gap-3 rounded-xl border border-border/60 bg-card p-4 sm:grid-cols-2 xl:grid-cols-5">
+              {lines.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-destructive"
+                  title="Remove this stock line"
+                  onClick={() => setLines((rows) => rows.filter((r) => r.key !== line.key))}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              ) : null}
               <div className="space-y-1.5">
                 <Label>
                   Stock ID
