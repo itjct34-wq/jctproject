@@ -12,6 +12,7 @@ import { StockListCard } from '@/components/vehicles/stock-list-card';
 import { StockListFilters, type StockListFiltersValue } from '@/components/stock/stock-list-filters';
 import { StockListPagination } from '@/components/stock/stock-list-pagination';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,17 +51,25 @@ import {
   effectiveCommissionStatus,
   effectivePaymentStatus,
   effectiveShippingStatus,
+  INCOTERMS,
   reservationExclusivityMessage,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUSES,
   SHIPPING_STATUS_LABELS,
   SHIPPING_STATUSES,
   workflowStage,
+  type VehicleIncoterm,
   type VehiclePaymentStatus,
   type VehicleShippingStatus,
 } from '@/lib/vehicle-lifecycle';
+import {
+  isIncompletePayment,
+  parsePaymentQuery,
+  parseShippingQuery,
+} from '@/lib/vehicles/lifecycle-metrics';
 import { makeVehicleAvailable, vehicleCanMakeAvailable } from '@/lib/utils/make-vehicle-available';
-import { CarFront, Loader2, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { CarFront, Loader2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 type VehicleInvoiceRef = { id: string; invoice_code: string };
@@ -114,6 +123,9 @@ const emptyForm = {
   chassis_number: '', stock_number: '', part_sku: '', make: '', model: '', colour: '', model_year: '',
   engine: '', transmission: '',
   purchase_price: '', expense_jpy: String(FIXED_EXPENSE_JPY), tt_rate: String(DEFAULT_TT_RATE),
+  /** Commercial selling amount when reserved/sold; empty for available (FOB is vehicle cost). */
+  sold_price: '',
+  incoterm: 'FOB' as VehicleIncoterm,
   notes: '', primary_image_url: '', source_country_code: 'JP',
   payment_status: 'available' as VehiclePaymentStatus,
   shipping_status: 'not_booked' as VehicleShippingStatus,
@@ -177,6 +189,9 @@ function VehiclesPage() {
   const [remittanceReloadToken, setRemittanceReloadToken] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const paymentFilter = parsePaymentQuery(searchParams.get('payment'));
+  const shippingFilter = parseShippingQuery(searchParams.get('shipping'));
+  const lifecycleAlert = searchParams.get('lifecycleAlert');
   const [listFilters, setListFilters] = useState<StockListFiltersValue>(() => ({
     ...emptyListFilters(),
     search: searchParams.get('q') || '',
@@ -420,12 +435,17 @@ function VehiclesPage() {
       if (filters.model) params.set('model', filters.model);
       if (filters.customer) params.set('customer', filters.customer);
       if (filters.agent) params.set('agent', filters.agent);
+      if (paymentFilter) params.set('payment', paymentFilter);
+      if (shippingFilter) params.set('shipping', shippingFilter);
+      if (lifecycleAlert === 'shipped_unpaid' || lifecycleAlert === 'delivered_unpaid') {
+        params.set('lifecycleAlert', lifecycleAlert);
+      }
       if (nextPage > 1) params.set('page', String(nextPage));
       if (nextSize !== DEFAULT_STOCK_PAGE_SIZE) params.set('pageSize', String(nextSize));
       const qs = params.toString();
       router.replace(qs ? `/vehicles?${qs}` : '/vehicles', { scroll: false });
     },
-    [listCategory, listFilters, page, pageSize, router]
+    [listCategory, listFilters, page, pageSize, router, paymentFilter, shippingFilter, lifecycleAlert]
   );
 
   const catalogVehicles = useMemo(
@@ -452,6 +472,14 @@ function VehiclesPage() {
       else if (statusFilter !== 'all') {
         matchesStatus = workflowStage(v) === statusFilter || v.status === statusFilter;
       }
+      const matchesPayment = !paymentFilter || pay === paymentFilter;
+      const matchesShipping = !shippingFilter || ship === shippingFilter;
+      let matchesLifecycleAlert = true;
+      if (lifecycleAlert === 'shipped_unpaid') {
+        matchesLifecycleAlert = ship === 'shipped' && isIncompletePayment(pay);
+      } else if (lifecycleAlert === 'delivered_unpaid') {
+        matchesLifecycleAlert = ship === 'delivered' && isIncompletePayment(pay);
+      }
       const agentId = v.reserved_by || v.assigned_agent_id || saleFallback[v.id]?.agentId || '';
       const agent = agentNames[agentId] || '';
       const bidRequester = agentNames[v.bid_requester_id || ''] || '';
@@ -467,9 +495,30 @@ function VehiclesPage() {
       const matchesModel = !modelFilter || (v.model || '').trim().toLowerCase() === modelFilter;
       const matchesCustomer = !listFilters.customer || customerId === listFilters.customer;
       const matchesAgent = !listFilters.agent || agentId === listFilters.agent;
-      return matchesStatus && matchesSearch && matchesMake && matchesModel && matchesCustomer && matchesAgent;
+      return (
+        matchesStatus &&
+        matchesPayment &&
+        matchesShipping &&
+        matchesLifecycleAlert &&
+        matchesSearch &&
+        matchesMake &&
+        matchesModel &&
+        matchesCustomer &&
+        matchesAgent
+      );
     });
-  }, [catalogVehicles, listFilters, agentNames, saleFallback, customers, vehicleInvoices, vehiclePays]);
+  }, [
+    catalogVehicles,
+    listFilters,
+    agentNames,
+    saleFallback,
+    customers,
+    vehicleInvoices,
+    vehiclePays,
+    paymentFilter,
+    shippingFilter,
+    lifecycleAlert,
+  ]);
 
   const safePage = clampStockPage(page, filtered.length, pageSize);
   const paged = useMemo(() => {
@@ -563,6 +612,8 @@ function VehiclesPage() {
       purchase_price: v.purchase_price != null ? String(v.purchase_price) : '',
       expense_jpy: v.expense_jpy != null ? String(v.expense_jpy) : String(FIXED_EXPENSE_JPY),
       tt_rate: v.tt_rate != null ? String(v.tt_rate) : String(DEFAULT_TT_RATE),
+      sold_price: v.sold_price != null ? String(v.sold_price) : '',
+      incoterm: (v.incoterm as VehicleIncoterm) || 'FOB',
       notes: stripEngineFromNotes(v.notes),
       primary_image_url: v.primary_image_url || '',
       source_country_code: v.source_country_code || resolveSourceCountry(v.source_country)?.code || 'JP',
@@ -639,6 +690,7 @@ function VehiclesPage() {
       stock_number: form.stock_number.trim() || nextVehicleStockNumber(vehicles.map((v) => v.stock_number)),
       payment_status: form.payment_status,
       shipping_status: form.shipping_status,
+      incoterm: form.incoterm || 'FOB',
       ...(form.status === 'on_hold' || form.status === 'archived' ? { status: form.status } : {}),
     };
     let { data, error } = await supabase.from('vehicles').insert(insertPayload).select().maybeSingle();
@@ -685,16 +737,20 @@ function VehiclesPage() {
       return;
     }
     const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
-    // Omit sale/reserve/booking fields so Edit stock preserves existing DB values
-    // (Reserve Vehicle / Remittances / Edit Shipping / Edit Courier own those).
+    // Booking/courier/customer stay on Edit Shipping / Reserve; term + vehicle cost are editable here.
     const updatePayload: Record<string, unknown> = {
       ...payload,
       primary_image_url: primary,
       stock_number: form.stock_number.trim() || selected.stock_number,
       payment_status: form.payment_status,
       shipping_status: form.shipping_status,
+      incoterm: form.incoterm || 'FOB',
       updated_at: new Date().toISOString(),
     };
+    // Only touch sold_price when reserved/sold — available stock keeps DB value (FOB is vehicle cost).
+    if (form.payment_status !== 'available') {
+      updatePayload.sold_price = form.sold_price.trim() ? Number(form.sold_price) : null;
+    }
     if (form.status === 'on_hold' || form.status === 'archived') {
       updatePayload.status = form.status;
     }
@@ -940,8 +996,57 @@ function VehiclesPage() {
     reserved: catalogVehicles.filter((v) => effectivePaymentStatus(v) !== 'available').length,
   };
 
-  const workflowFormSections = (mode: 'create' | 'edit') => (
+  const workflowFormSections = (mode: 'create' | 'edit') => {
+    const fobPreview = fobFromForm(form);
+    const availableVehicleCost = fobPreview ? Math.round(fobPreview.fobUsd) : null;
+    const showSoldCostField = mode === 'edit' && form.payment_status !== 'available';
+    return (
     <>
+      <section className="space-y-1.5 rounded-xl border-2 border-sky-500/50 bg-sky-50/80 p-2 dark:bg-sky-950/20">
+        <h3 className="text-xs font-semibold tracking-wide text-sky-800 dark:text-sky-200">
+          Vehicle cost &amp; FOB term
+        </h3>
+        <p className="text-[10px] text-muted-foreground">
+          Term and commercial cost stay at the top. Available stock uses FOB as vehicle cost; reserved/sold uses sold price.
+        </p>
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          <div className="space-y-0.5">
+            <Label>FOB term</Label>
+            <Select
+              value={form.incoterm}
+              onValueChange={(v: VehicleIncoterm) => setForm({ ...form, incoterm: v })}
+              disabled={!canEditVehicle && mode === 'edit'}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {INCOTERMS.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-0.5">
+            <Label>Vehicle cost (USD)</Label>
+            {showSoldCostField ? (
+              <Input
+                type="number"
+                inputMode="decimal"
+                disabled={!canEditVehicle}
+                value={form.sold_price}
+                onChange={(e) => setForm({ ...form, sold_price: e.target.value })}
+                placeholder="Sold / quoted amount"
+              />
+            ) : (
+              <Input
+                readOnly
+                disabled
+                value={availableVehicleCost != null ? String(availableVehicleCost) : ''}
+                placeholder="From bid formula below"
+              />
+            )}
+          </div>
+        </div>
+      </section>
       <section className="space-y-1.5 rounded-xl border-2 border-primary/40 bg-primary/5 p-2">
         <h3 className="text-xs font-semibold tracking-wide text-primary">Status</h3>
         <ShippingStepper
@@ -1052,14 +1157,53 @@ function VehiclesPage() {
         />
       </section>
     </>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader title={listCopy.title} description={listCopy.description}
-        actions={canCreateVehicle ? (
-          <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
-        ) : undefined} />
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/vehicles/lifecycle">Stock pipeline</Link>
+            </Button>
+            {canCreateVehicle ? (
+              <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
+            ) : null}
+          </div>
+        } />
+
+      {paymentFilter || shippingFilter || lifecycleAlert ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Pipeline filter:</span>
+          {paymentFilter ? <Badge variant="outline">{PAYMENT_STATUS_LABELS[paymentFilter]}</Badge> : null}
+          {shippingFilter ? <Badge variant="outline">{SHIPPING_STATUS_LABELS[shippingFilter]}</Badge> : null}
+          {lifecycleAlert === 'shipped_unpaid' ? <Badge variant="outline">En route unpaid</Badge> : null}
+          {lifecycleAlert === 'delivered_unpaid' ? <Badge variant="outline">Landed unpaid</Badge> : null}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2"
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (listCategory !== 'car') params.set('category', listCategory);
+              if (listFilters.search.trim()) params.set('q', listFilters.search.trim());
+              if (listFilters.status) params.set('status', listFilters.status);
+              if (listFilters.make) params.set('make', listFilters.make);
+              if (listFilters.model) params.set('model', listFilters.model);
+              if (listFilters.customer) params.set('customer', listFilters.customer);
+              if (listFilters.agent) params.set('agent', listFilters.agent);
+              const qs = params.toString();
+              router.replace(qs ? `/vehicles?${qs}` : '/vehicles', { scroll: false });
+            }}
+          >
+            <X className="mr-1 h-3 w-3" />
+            Clear
+          </Button>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-3 gap-3">
         {[{ l: 'Total', v: stats.total }, { l: 'Available', v: stats.available }, { l: 'Reserved', v: stats.reserved }].map((s) => (

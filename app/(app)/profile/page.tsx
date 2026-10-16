@@ -8,12 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { CurrencySelect } from '@/components/ui/currency-select';
 import { supabase } from '@/lib/supabase/client';
 import type { Office, Shift } from '@/lib/types';
 import { ROLE_COLORS, type RoleName } from '@/lib/types';
-import { SUPPORTED_CURRENCIES, CURRENCY_LABELS } from '@/lib/utils/currencies';
 import { Camera, Loader2, MapPin, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -227,18 +226,7 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label>Preferred currency</Label>
-                <Select value={preferredCurrency} onValueChange={setPreferredCurrency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_CURRENCIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c} — {CURRENCY_LABELS[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CurrencySelect value={preferredCurrency} onValueChange={setPreferredCurrency} />
               </div>
             </div>
           </CardContent>

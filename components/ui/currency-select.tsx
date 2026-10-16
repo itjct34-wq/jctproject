@@ -31,9 +31,14 @@ export function CurrencySelect({ value, onValueChange, placeholder = 'Select cur
     <Select value={value || undefined} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger className={className}><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>
-        {options.map(code => (
-          <SelectItem key={code} value={code}>{code} — {CURRENCY_LABELS[code as keyof typeof CURRENCY_LABELS] || code}</SelectItem>
-        ))}
+        {options.map(code => {
+          const name = CURRENCY_LABELS[code as keyof typeof CURRENCY_LABELS];
+          return (
+            <SelectItem key={code} value={code} title={name || undefined}>
+              {code}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );

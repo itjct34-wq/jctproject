@@ -46,7 +46,7 @@ interface SalesDashboardData {
   myAuctionInvoices: number;
   outstandingByCurrency: Bucket[];
   taggedPayments: number;
-  paymentsJpy: number;
+  paymentsByCurrency: Bucket[];
   recentReservations: Array<{ id: string; sale_code: string; status: string; sale_date: string }>;
 }
 
@@ -77,7 +77,7 @@ export function SalesDashboard() {
         supabase.from('sales').select('id, sale_code, status, sale_date, created_by').order('created_at', { ascending: false }).limit(8),
         supabase.from('quotations').select('id, created_by'),
         supabase.from('invoices').select('id, invoice_code, payment_terms, total, payment_status, currency, created_by'),
-        supabase.from('payments').select('id, amount_jpy, status'),
+        supabase.from('payments').select('id, amount, remit_amount, currency, status'),
       ]);
 
       const failed = [customersRes, vehiclesRes, salesRes].find((r) => r.error);
@@ -89,7 +89,13 @@ export function SalesDashboard() {
       const commercialInvoices = myInvoicesAll.filter((i) => !isAuctionDepositInvoice(i));
       const auctionInvoices = myInvoicesAll.filter((i) => isAuctionDepositInvoice(i));
       const invoiceData = commercialInvoices as Array<{ total: number; payment_status: string; currency: string | null }>;
-      const paymentData = (paymentsRes.data || []) as Array<{ amount_jpy: number; status: string }>;
+      const paymentData = (paymentsRes.data || []) as Array<{
+        amount: number;
+        remit_amount?: number | null;
+        currency: string | null;
+        status: string;
+      }>;
+      const receivedPayments = paymentData.filter((p) => p.status !== 'rejected');
 
       setData({
         myCustomers: customersRes.data?.length || 0,
@@ -106,7 +112,12 @@ export function SalesDashboard() {
             .map((i) => ({ amount: Number(i.total) || 0, currency: i.currency }))
         ),
         taggedPayments: paymentData.length,
-        paymentsJpy: paymentData.filter((p) => p.status !== 'rejected').reduce((sum, p) => sum + (Number(p.amount_jpy) || 0), 0),
+        paymentsByCurrency: sumByCurrency(
+          receivedPayments.map((p) => ({
+            amount: Number(p.remit_amount ?? p.amount) || 0,
+            currency: p.currency,
+          }))
+        ),
         recentReservations: mySales.slice(0, 5) as SalesDashboardData['recentReservations'],
       });
       setLoading(false);
@@ -173,7 +184,10 @@ export function SalesDashboard() {
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CreditCard className="h-3.5 w-3.5 text-brand/80" /> My tagged T/T (read-only)
               </div>
-              <p className="mt-2 text-sm font-semibold">{data.taggedPayments} payments · {formatCurrency(data.paymentsJpy, 'JPY')}</p>
+              <p className="mt-2 text-sm font-semibold">
+                {data.taggedPayments} payments
+                {data.paymentsByCurrency.length > 0 ? ` · ${moneyLine(data.paymentsByCurrency)}` : ''}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">T/T linked to your customers — view only</p>
             </CardContent>
           </Card>

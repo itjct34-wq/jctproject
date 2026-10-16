@@ -19,9 +19,9 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
   return (
     <section className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-2">
       <div>
-        <h3 className="text-xs font-semibold">Bid &amp; FOB</h3>
+        <h3 className="text-xs font-semibold">Bid &amp; vehicle cost (FOB)</h3>
         <p className="text-[10px] text-muted-foreground">
-          FOB JPY = bid + 10% + expense · FOB USD = FOB JPY ÷ TT
+          Vehicle cost (available) = FOB USD · FOB JPY = bid + 10% + expense · FOB USD = FOB JPY ÷ TT
         </p>
       </div>
       <div className="grid gap-1.5 sm:grid-cols-3">
@@ -65,7 +65,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
         <FormulaCell label="Expense" value={`¥${Math.round(preview.expenseJpy).toLocaleString()}`} />
         <FormulaCell label="TT" value={String(preview.ttRate)} />
         <FormulaCell
-          label="FOB USD"
+          label="Vehicle cost"
           value={hasBid ? `$${Math.round(preview.fobUsd).toLocaleString()}` : '—'}
           emphasize
         />

@@ -323,6 +323,19 @@ export function StockListCard({
   const listed = v.listed_price != null ? Number(v.listed_price) : null;
   const showWeb = listed != null && (fobUsd == null || Math.abs(listed - Number(fobUsd)) > 0.5);
   const sold = v.sold_price != null ? Number(v.sold_price) : null;
+  const reservedOrSold = pay !== 'available' || sold != null;
+  /** Commercial vehicle cost: sold/quoted amount when reserved/sold; otherwise FOB/listed. */
+  const vehicleCost =
+    reservedOrSold && sold != null
+      ? sold
+      : fobUsd != null
+        ? Number(fobUsd)
+        : listed != null
+          ? listed
+          : null;
+  const showFobBesideCost =
+    fobUsd != null &&
+    (vehicleCost == null || Math.abs(Number(fobUsd) - vehicleCost) > 0.5);
   const profit = soldProfitUsd(v);
   const due = sold != null ? Math.max(0, sold - allocatedUsd) : null;
   const duePct = sold != null && sold > 0 && due != null ? Math.round((due / sold) * 1000) / 10 : null;
@@ -370,8 +383,10 @@ export function StockListCard({
 
   const statusAria = [
     PAYMENT_STATUS_PILL_LABELS[pay],
+    incoterm || null,
     SHIPPING_STATUS_SHORT[ship],
     freight || null,
+    vehicleCost != null ? `Vehicle cost ${listMoney(vehicleCost, soldCcy)}` : null,
     commStatus === 'due' ? 'Commission due' : null,
   ]
     .filter(Boolean)
@@ -416,7 +431,14 @@ export function StockListCard({
 
         {/* Vehicle identity */}
         <div className="min-w-0">
-          <p className="text-[15px] font-bold leading-tight tracking-tight text-sky-800">{v.stock_number}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-[15px] font-bold leading-tight tracking-tight text-sky-800">{v.stock_number}</p>
+            {incoterm ? (
+              <span className="inline-flex rounded-md bg-lime-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-lime-800 ring-1 ring-lime-300/80">
+                {incoterm}
+              </span>
+            ) : null}
+          </div>
           <p className="text-[13px] font-bold uppercase leading-snug text-slate-900">{title || '—'}</p>
           {v.model_grade ? <p className="text-[12px] leading-snug text-slate-700">{v.model_grade}</p> : null}
           {chips.length ? (
@@ -454,7 +476,7 @@ export function StockListCard({
           ) : null}
         </div>
 
-        {/* Origin / pricing cues */}
+        {/* Origin / pricing cues — Vehicle cost + term lead; bid/buy secondary */}
         <div className="min-w-0 text-[12px] leading-5">
           {place.city || place.country ? (
             <p className="font-semibold uppercase tracking-wide text-slate-800">
@@ -464,6 +486,12 @@ export function StockListCard({
           ) : null}
           {v.location ? <p className="text-slate-600">{v.location}</p> : null}
           {dateLabel ? <p className="text-slate-500">{dateLabel}</p> : null}
+          {vehicleCost != null ? (
+            <p className="mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-sky-700">Vehicle cost </span>
+              <span className="text-[13px] font-bold text-slate-950">{listMoney(vehicleCost, soldCcy)}</span>
+            </p>
+          ) : null}
           {bid != null ? (
             <p>
               <span className="text-[10px] font-semibold uppercase text-slate-500">Bid </span>
@@ -476,10 +504,10 @@ export function StockListCard({
               <span className="font-semibold text-slate-800">{listMoney(buyJpy, 'JPY')}</span>
             </p>
           ) : null}
-          {fobUsd != null ? (
+          {showFobBesideCost ? (
             <p>
               <span className="text-[10px] font-semibold uppercase text-slate-500">FOB </span>
-              <span className="font-bold text-slate-900">{listMoney(Number(fobUsd), soldCcy)}</span>
+              <span className="font-semibold text-slate-800">{listMoney(Number(fobUsd), soldCcy)}</span>
             </p>
           ) : null}
           {showWeb && listed != null ? (
@@ -521,9 +549,7 @@ export function StockListCard({
           <div className="min-w-0 max-w-full space-y-1.5 md:col-span-4 xl:col-span-1 xl:pr-1">
             <div className="flex flex-wrap gap-1.5">
               <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-sky-600">
-                  Sold {incoterm ? <span className="text-lime-600">{incoterm}</span> : null}
-                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wide text-sky-600">Sold</p>
                 <p className="text-[13px] font-bold leading-tight whitespace-nowrap">
                   {sold != null ? listMoney(sold, soldCcy) : '—'}
                 </p>
@@ -679,6 +705,11 @@ export function StockListCard({
             >
               {PAYMENT_STATUS_PILL_LABELS[pay]}
             </span>
+            {incoterm ? (
+              <span className="inline-flex w-full items-center justify-center rounded-md bg-lime-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-lime-900 ring-1 ring-lime-300/80">
+                {incoterm}
+              </span>
+            ) : null}
             <p
               className={cn(
                 'px-0.5 text-center text-[11px] uppercase leading-snug tracking-wide',

@@ -26,6 +26,7 @@ import {
   Wrench,
   Cog,
   Shield,
+  GitBranch,
 } from 'lucide-react';
 import type { RoleName, PermissionModule, PermissionAction } from '@/lib/types';
 
@@ -96,6 +97,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Cars', href: '/vehicles', icon: Car, module: 'vehicles' },
       { label: 'Machinery', href: '/vehicles?category=machinery', icon: Wrench, module: 'vehicles' },
       { label: 'Parts', href: '/vehicles?category=parts', icon: Cog, module: 'vehicles' },
+      { label: 'Stock pipeline', href: '/vehicles/lifecycle', icon: GitBranch, module: 'vehicles' },
       { label: 'Auction', href: '/auctions', icon: Gavel, module: 'auctions', salesNavHidden: true },
       { label: 'Auction Purchases', href: '/purchases', icon: ShoppingCart, module: 'purchases', salesNavHidden: true },
     ],

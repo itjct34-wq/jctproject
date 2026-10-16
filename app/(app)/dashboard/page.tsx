@@ -36,7 +36,7 @@ interface DashboardData {
   totalSales: number;
   salesByCurrency: Bucket[];
   outstandingByCurrency: Bucket[];
-  paymentsJpy: number;
+  paymentsByCurrency: Bucket[];
   expensesByCurrency: Bucket[];
   officeCount: number;
   shiftCount: number;
@@ -76,7 +76,7 @@ function OperationsDashboardPage() {
         supabase.from('auction_listings').select('id, result').eq('result', 'pending'),
         supabase.from('sales').select('id, sale_price, status, currency'),
         supabase.from('invoices').select('id, total, payment_status, currency'),
-        supabase.from('payments').select('id, amount_jpy, status'),
+        supabase.from('payments').select('id, amount, remit_amount, currency, status'),
         supabase.from('expenses').select('id, amount, status, currency'),
         supabase.from('shipments').select('id, status'),
         supabase.from('offices').select('id, is_active'),
@@ -98,7 +98,12 @@ function OperationsDashboardPage() {
 
       const salesData = (salesRes.data || []) as Array<{ sale_price: number; status: string; currency: string | null }>;
       const invoiceData = (invoicesRes.data || []) as Array<{ total: number; payment_status: string; currency: string | null }>;
-      const paymentData = (paymentsRes.data || []) as Array<{ amount_jpy: number; status: string }>;
+      const paymentData = (paymentsRes.data || []) as Array<{
+        amount: number;
+        remit_amount?: number | null;
+        currency: string | null;
+        status: string;
+      }>;
       const expenseData = (expensesRes.data || []) as Array<{ amount: number; status: string; currency?: string | null }>;
 
       setData({
@@ -117,7 +122,14 @@ function OperationsDashboardPage() {
             .filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial')
             .map((i) => ({ amount: Number(i.total) || 0, currency: i.currency }))
         ),
-        paymentsJpy: paymentData.filter((p) => p.status !== 'rejected').reduce((sum, p) => sum + (Number(p.amount_jpy) || 0), 0),
+        paymentsByCurrency: sumByCurrency(
+          paymentData
+            .filter((p) => p.status !== 'rejected')
+            .map((p) => ({
+              amount: Number(p.remit_amount ?? p.amount) || 0,
+              currency: p.currency,
+            }))
+        ),
         expensesByCurrency: sumByCurrency(
           expenseData
             .filter((e) => e.status === 'paid' || e.status === 'approved')
@@ -187,8 +199,16 @@ function OperationsDashboardPage() {
         {[
           { label: 'Sales by currency', value: moneyLine(data.salesByCurrency), sub: `${data.totalSales} sales`, href: '/vehicles', icon: TrendingUp },
           { label: 'Outstanding invoices', value: moneyLine(data.outstandingByCurrency), sub: 'Unpaid + partial, not mixed', href: '/invoices', icon: Receipt },
-          { label: 'Payments received', value: formatCurrency(data.paymentsJpy, 'JPY'), sub: 'JPY ledger', href: '/payments', icon: CreditCard },
           { label: 'Expenses', value: moneyLine(data.expensesByCurrency), sub: 'Approved + paid', href: '/expenses', icon: DollarSign },
+          ...(data.paymentsByCurrency.length === 0
+            ? [{ label: 'Payments received', value: '—', sub: 'No remittances yet', href: '/payments', icon: CreditCard }]
+            : data.paymentsByCurrency.map((bucket) => ({
+                label: `Payments received · ${bucket.currency}`,
+                value: formatCurrency(bucket.total, bucket.currency),
+                sub: `${bucket.currency} ledger`,
+                href: '/payments',
+                icon: CreditCard,
+              }))),
         ].map((row) => (
           <Link key={row.label} href={row.href}>
             <Card className="glass-panel-strong h-full border-border/40 transition-all duration-200 hover:border-brand/25 hover:shadow-glass">
@@ -242,6 +262,7 @@ function OperationsDashboardPage() {
               { label: 'Offices & shifts', icon: MapPin, href: '/offices', module: 'users' as const },
               { label: 'Bulk upload', icon: Upload, href: '/bulk-upload', module: 'vehicles' as const },
               { label: 'Vehicles', icon: Car, href: '/vehicles', module: 'vehicles' as const },
+              { label: 'Stock pipeline', icon: Activity, href: '/vehicles/lifecycle', module: 'vehicles' as const },
               { label: 'New invoice', icon: Receipt, href: '/invoices', module: 'invoices' as const },
               { label: 'Users & teams', icon: Users, href: '/users', module: 'users' as const },
               { label: 'Reports', icon: Activity, href: '/reports', module: 'reports' as const },

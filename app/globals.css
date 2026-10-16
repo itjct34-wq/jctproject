@@ -678,6 +678,27 @@
   max-width: 56rem; /* max-w-4xl */
   margin-inline: auto;
 }
+/* Invoice create/edit — one-screen flex: body scrolls, footer pinned */
+[data-dialog-workform='true'] > form.erp-invoice-workform {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem 1rem 0;
+  max-width: 72rem; /* wider dense 3–6 col meta */
+}
+[data-dialog-workform='true'] > form.erp-invoice-workform > .erp-invoice-workform-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0.5rem;
+}
+[data-dialog-workform='true'] > form.erp-invoice-workform [data-slot='dialog-footer'] {
+  flex-shrink: 0;
+  margin: 0.35rem -1rem 0;
+  padding: 0.45rem 1rem;
+}
 [data-dialog-workform='true'] > div:not([data-slot]) {
   flex: 1 1 auto;
   min-height: 0;

@@ -12,9 +12,14 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/lib/supabase/client';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { exportCommercialInvoiceExcel } from '@/lib/utils/commercial-invoice-excel';
@@ -66,7 +71,7 @@ const typeChipClass: Record<Invoice['invoice_type'], string> = {
 const typeLabels: Record<Invoice['invoice_type'], string> = { proforma: 'Proforma', commercial: 'Commercial', credit_note: 'Credit Note' };
 const emptyForm = {
   customer_mode: 'existing' as 'existing' | 'manual',
-  customer_id: '', sale_id: '', invoice_type: 'commercial' as Invoice['invoice_type'],
+  customer_id: '', sale_id: '', invoice_type: 'proforma' as Invoice['invoice_type'],
   invoice_code_mode: 'auto' as 'auto' | 'manual', invoice_code: '',
   issue_date: '', due_date: '', tax: '', currency: 'USD', notes: '',
   incoterms: 'FOB', shipment_type: 'RORO', container_mode: 'RORO',
@@ -108,7 +113,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(() => searchParams.get('q') || '');
@@ -116,7 +120,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [lineItems, setLineItems] = useState<LineDraft[]>([]);
@@ -220,24 +223,23 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       }, 0)
     );
 
-  const loadDetails = async (inv: Invoice) => {
+  const fetchInvoiceItems = async (inv: Invoice) => {
     setSelected(inv);
-    setDetailSheetOpen(true);
-    setDetailLoading(true);
-    const { data, error } = await supabase.from('invoice_items').select('*').eq('invoice_id', inv.id).order('sort_order', { ascending: true });
+    const { data, error } = await supabase
+      .from('invoice_items')
+      .select('*')
+      .eq('invoice_id', inv.id)
+      .order('sort_order', { ascending: true });
     if (error) toast.error(`Could not load line items: ${error.message}`);
-    setItems((data || []) as InvoiceItem[]); setDetailLoading(false);
+    const loaded = (data || []) as InvoiceItem[];
+    setItems(loaded);
+    return loaded;
   };
 
-  /** Load line items and open the commercial invoice print/PDF preview without opening the edit sheet. */
+  /** Load line items and open the commercial invoice print/PDF preview. */
   const openPrintPreview = async (inv: Invoice) => {
-    setSelected(inv);
-    setDetailLoading(true);
     setPrintOpen(true);
-    const { data, error } = await supabase.from('invoice_items').select('*').eq('invoice_id', inv.id).order('sort_order', { ascending: true });
-    if (error) toast.error(`Could not load line items: ${error.message}`);
-    setItems((data || []) as InvoiceItem[]);
-    setDetailLoading(false);
+    await fetchInvoiceItems(inv);
   };
 
   const openCreate = () => {
@@ -251,36 +253,36 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setLineItems([{ ...emptyLine(kind) }]);
     setCreateOpen(true);
   };
-  const openEdit = () => {
-    if (!selected) return;
+  const openEditForInvoice = async (inv: Invoice) => {
+    const loadedItems = await fetchInvoiceItems(inv);
     const editPolicy = resolveFreightPolicy({
-      incoterm: selected.incoterms || 'FOB',
-      shipmentType: selected.shipment_type || 'RORO',
-      containerMode: selected.container_mode || 'RORO',
+      incoterm: inv.incoterms || 'FOB',
+      shipmentType: inv.shipment_type || 'RORO',
+      containerMode: inv.container_mode || 'RORO',
     });
     setForm({
       customer_mode: 'existing',
       guest_name: '', guest_company: '', guest_email: '', guest_phone: '',
       guest_country: '', guest_city: '', guest_address: '',
-      customer_id: selected.customer_id, sale_id: selected.sale_id || '', invoice_type: selected.invoice_type,
-      invoice_code_mode: 'manual', invoice_code: selected.invoice_code,
-      issue_date: selected.issue_date, due_date: selected.due_date || '', tax: String(selected.tax),
-      currency: selected.currency, notes: selected.notes || '',
-      incoterms: selected.incoterms || 'FOB', shipment_type: selected.shipment_type || 'RORO',
-      container_mode: selected.container_mode === 'RORO Vessel' ? 'RORO' : (selected.container_mode || 'RORO'),
-      port_of_loading: selected.port_of_loading || 'Nagoya, Japan',
-      port_of_discharge: selected.port_of_discharge || '', vessel_name: selected.vessel_name || '',
-      bl_number: selected.bl_number || '',
-      freight_total: String(normalizeFreightAmount(editPolicy, selected.freight_total)),
-      freight_notes: normalizeFreightNotes(editPolicy, selected.freight_notes) || '',
-      insurance_total: String(selected.insurance_total ?? 0),
-      other_charges: String(selected.other_charges ?? 0), discount_total: String(selected.discount_total ?? 0),
-      payment_terms: selected.payment_terms || defaultPaymentTerms(kind),
-      bank_details: selected.bank_details || '',
-      sales_agent: selected.sales_agent_name || '',
-      payment_status: selected.payment_status,
+      customer_id: inv.customer_id, sale_id: inv.sale_id || '', invoice_type: inv.invoice_type,
+      invoice_code_mode: 'manual', invoice_code: inv.invoice_code,
+      issue_date: inv.issue_date, due_date: inv.due_date || '', tax: String(inv.tax),
+      currency: inv.currency, notes: inv.notes || '',
+      incoterms: inv.incoterms || 'FOB', shipment_type: inv.shipment_type || 'RORO',
+      container_mode: inv.container_mode === 'RORO Vessel' ? 'RORO' : (inv.container_mode || 'RORO'),
+      port_of_loading: inv.port_of_loading || 'Nagoya, Japan',
+      port_of_discharge: inv.port_of_discharge || '', vessel_name: inv.vessel_name || '',
+      bl_number: inv.bl_number || '',
+      freight_total: String(normalizeFreightAmount(editPolicy, inv.freight_total)),
+      freight_notes: normalizeFreightNotes(editPolicy, inv.freight_notes) || '',
+      insurance_total: String(inv.insurance_total ?? 0),
+      other_charges: String(inv.other_charges ?? 0), discount_total: String(inv.discount_total ?? 0),
+      payment_terms: inv.payment_terms || defaultPaymentTerms(kind),
+      bank_details: inv.bank_details || '',
+      sales_agent: inv.sales_agent_name || '',
+      payment_status: inv.payment_status,
     });
-    setLineItems(items.map((i) => {
+    setLineItems(loadedItems.map((i) => {
       const v = vehicles.find((x) => x.id === i.vehicle_id);
       const bits = decodeInvoiceVehicle(i.description);
       return {
@@ -299,8 +301,13 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
       };
     }));
-    if (items.length === 0) setLineItems([{ ...emptyLine(kind) }]);
+    if (loadedItems.length === 0) setLineItems([{ ...emptyLine(kind) }]);
     setEditOpen(true);
+  };
+
+  const openDeleteForInvoice = (inv: Invoice) => {
+    setSelected(inv);
+    setDeleteOpen(true);
   };
 
   const resolveCustomerId = async () => {
@@ -412,7 +419,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       if (itemError) toast.error(`Invoice created but line items failed: ${itemError.message}`);
     }
     if (form.invoice_code_mode === 'auto') await bumpInvoiceNumber();
-    setSubmitting(false); toast.success(isAuction ? 'Auction deposit invoice created' : 'Invoice created'); setForm({ ...emptyForm, payment_terms: defaultPaymentTerms(kind) }); setLineItems([{ ...emptyLine(kind) }]); setCreateOpen(false); loadData(); await loadDetails(inv);
+    setSubmitting(false); toast.success(isAuction ? 'Auction deposit invoice created' : 'Invoice created'); setForm({ ...emptyForm, payment_terms: defaultPaymentTerms(kind) }); setLineItems([{ ...emptyLine(kind) }]); setCreateOpen(false); loadData();
   };
 
   const submitEdit = async (e: React.FormEvent) => {
@@ -460,8 +467,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setSubmitting(false);
     const { data: fresh } = await supabase.from('invoices').select('*').eq('id', selected.id).maybeSingle();
     const updated = (fresh || { ...selected, subtotal, tax, total }) as Invoice;
-    setSelected(updated); setInvoices((items) => items.map((i) => i.id === updated.id ? updated : i));
-    await loadDetails(updated); toast.success('Invoice updated'); setEditOpen(false);
+    setSelected(updated); setInvoices((list) => list.map((i) => i.id === updated.id ? updated : i));
+    await fetchInvoiceItems(updated);
+    toast.success('Invoice updated');
+    setEditOpen(false);
   };
 
   const confirmDelete = async () => {
@@ -474,20 +483,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     const { error } = await supabase.from('invoices').delete().eq('id', selected.id);
     setSubmitting(false);
     if (error) { toast.error(`Could not delete: ${error.message}`); return; }
-    toast.success('Invoice deleted'); setDeleteOpen(false); setDetailSheetOpen(false); setSelected(null); loadData();
+    toast.success('Invoice deleted'); setDeleteOpen(false); setSelected(null); setItems([]); loadData();
   };
-
-  const updatePaymentStatus = async (payment_status: Invoice['payment_status']) => {
-    if (!selected) return;
-    const { error } = await supabase.from('invoices').update({ payment_status, updated_at: new Date().toISOString() }).eq('id', selected.id);
-    if (error) { toast.error(error.message); return; }
-    const updated = { ...selected, payment_status }; setSelected(updated);
-    setInvoices((items) => items.map((i) => i.id === updated.id ? updated : i));
-    toast.success('Payment status updated');
-  };
-
-  const isDraft = selected && selected.payment_status === 'unpaid';
-  const hasPayments = selected && (selected.payment_status === 'paid' || selected.payment_status === 'partial');
 
   const handleExport = async () => {
     const rows = filtered.map((i) => ({ code: i.invoice_code, customer: customerName(i.customer_id), type: typeLabels[i.invoice_type], issue: format(new Date(i.issue_date), 'yyyy-MM-dd'), due: i.due_date ? format(new Date(i.due_date), 'yyyy-MM-dd') : '', subtotal: i.subtotal, total: i.total, currency: i.currency, status: i.payment_status }));
@@ -497,11 +494,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     toast.success('Invoices exported');
   };
 
-  const printInvoice = () => { setPrintOpen(true); };
-
   const closePrintPreview = (open: boolean) => {
     setPrintOpen(open);
-    if (!open && !detailSheetOpen) {
+    if (!open && !editOpen && !deleteOpen) {
       setSelected(null);
       setItems([]);
     }
@@ -572,9 +567,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   };
 
   const lineItemForm = (isOpen: boolean, onClose: () => void, onSubmit: (e: React.FormEvent) => void, title: string) => (
-    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader><form onSubmit={onSubmit} className="space-y-3">
-        {/* Customer + invoice meta */}
-        <section className="space-y-2 rounded-md border border-border/60 p-2.5">
+    <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+      <form onSubmit={onSubmit} className="erp-invoice-workform">
+        <div className="erp-invoice-workform-body">
+        {/* 1. Customer + invoice meta */}
+        <section className="space-y-1.5 rounded-md border border-border/60 p-2">
           <div className="grid gap-1.5 sm:grid-cols-3">
             <div className="space-y-0.5">
               <Label>Customer source</Label>
@@ -646,7 +643,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <div className="space-y-0.5"><Label>Address *</Label><Input value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
             </div>
           )}
-          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-7">
+          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-0.5">
               <Label>Invoice #</Label>
               <Select
@@ -666,7 +663,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-0.5 sm:col-span-2">
+            <div className="space-y-0.5">
               <Label>{form.invoice_code_mode === 'auto' ? 'Next number' : 'Number'}</Label>
               <Input
                 value={form.invoice_code}
@@ -684,23 +681,84 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
             <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-1.5 sm:grid-cols-3">
             <div className="min-w-0 space-y-0.5"><Label>Issue date</Label><Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div>
             <div className="min-w-0 space-y-0.5"><Label>Due date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
             <div className="min-w-0 space-y-0.5"><Label>Sales agent</Label><Input value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Sales agent name" /></div>
           </div>
         </section>
 
-        {/* Vehicles */}
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">Vehicles</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button>
+        {/* 2. Shipping terms & charges + freight — top, always visible */}
+        <section className="space-y-1.5 rounded-md border border-border/60 p-2">
+          <p className="text-[11px] font-semibold text-muted-foreground">Shipping terms & charges</p>
+          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="space-y-0.5"><Label>Shipment mode</Label>
+              <Select
+                value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
+                onValueChange={(v) =>
+                  applyShippingPatch({
+                    container_mode: v,
+                    shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RORO">RORO</SelectItem>
+                  <SelectItem value="20ft Container">Container 20ft</SelectItem>
+                  <SelectItem value="40ft Container">Container 40ft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-0.5"><Label>Port of loading</Label><Input value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Port of discharge</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
+            {freightPolicy.allowFreight ? (
+              <>
+                <div className="space-y-0.5 lg:col-span-2">
+                  <Label>Freight description{freightPolicy.requireFreight ? ' *' : ''}</Label>
+                  <Input
+                    value={form.freight_notes}
+                    onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
+                    placeholder={freightPolicy.defaultFreightLabel}
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <Label>Freight ({form.currency}){freightPolicy.requireFreight ? ' *' : ''}</Label>
+                  <Input
+                    type="number"
+                    value={form.freight_total}
+                    onChange={(e) => setForm({ ...form, freight_total: e.target.value })}
+                    placeholder="0"
+                    required={freightPolicy.requireFreight}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-end sm:col-span-3 lg:col-span-3">
+                <p className="w-full rounded-md border border-border/60 bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground">
+                  FOB — vehicle cost only; freight not on this invoice.
+                </p>
+              </div>
+            )}
+            <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Other charges</Label><Input type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Discount</Label><Input type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
           </div>
-          <div className="space-y-2">
+          {freightPolicy.requireFreight && (
+            <p className="text-[10px] text-amber-700">Container shipments must include freight.</p>
+          )}
+        </section>
+
+        {/* 3. Vehicles — flex-grow scroll region */}
+        <section className="flex min-h-0 flex-1 flex-col space-y-1.5">
+          <div className="flex shrink-0 items-center justify-between">
+            <Label className="text-xs font-semibold">Vehicles</Label>
+            <Button type="button" size="sm" variant="outline" className="h-7 px-2" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
             {lineItems.map((item, idx) => (
-              <div key={idx} className="space-y-1.5 rounded-md border border-border/60 p-2.5">
-                <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+              <div key={idx} className="rounded-md border border-border/60 p-2">
+                <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
                   <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
                     <Label>From stock</Label>
                     <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyVehicle(idx, v === 'none' ? '' : v)}>
@@ -722,7 +780,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   <div className="space-y-0.5"><Label>Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" /></div>
                   <div className="space-y-0.5"><Label>Engine</Label><Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" /></div>
                   <div className="space-y-0.5"><Label>Transmission</Label><Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="AT" /></div>
-                  <div className="space-y-0.5 sm:col-span-2"><Label>Notes</Label><Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional description" /></div>
                   <div className="space-y-0.5"><Label>Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
                   <div className="space-y-0.5">
                     <Label>{isAuction ? 'Deposit amt' : 'Deposit %'}</Label>
@@ -739,8 +796,12 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                       </Select>
                     )}
                   </div>
+                  <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
+                    <Label>Line note</Label>
+                    <Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional" />
+                  </div>
                   <div className="flex items-end justify-end">
-                    <Button type="button" size="icon" variant="ghost" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove vehicle">
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove vehicle">
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -750,82 +811,40 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           </div>
         </section>
 
-        {/* Freight + totals — FOB = vehicle cost only; Container non-FOB requires freight */}
-        {freightPolicy.allowFreight ? (
-          <div className="grid gap-1.5 sm:grid-cols-3">
-            <div className="space-y-0.5 sm:col-span-2">
-              <Label>Freight description{freightPolicy.requireFreight ? ' *' : ''}</Label>
-              <Input
-                value={form.freight_notes}
-                onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
-                placeholder={freightPolicy.defaultFreightLabel}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <Label>Freight ({form.currency}){freightPolicy.requireFreight ? ' *' : ''}</Label>
-              <Input
-                type="number"
-                value={form.freight_total}
-                onChange={(e) => setForm({ ...form, freight_total: e.target.value })}
-                placeholder="0"
-                required={freightPolicy.requireFreight}
-              />
-              {freightPolicy.requireFreight && (
-                <p className="text-[10px] text-amber-700">Container shipments must include freight.</p>
-              )}
-            </div>
+        {/* 4. Totals strip */}
+        <div className="shrink-0 rounded-md bg-muted/50 px-2 py-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+            <span className="text-muted-foreground">Vehicles <span className="font-medium text-foreground">{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></span>
+            {isAuction && (
+              <span className="text-muted-foreground">Deposit <span className="font-medium text-foreground">{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></span>
+            )}
+            {freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost && (
+              <span className="text-muted-foreground">{freightPolicy.isRoro ? 'Ocean freight' : 'Freight'} <span className="font-medium text-foreground">{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></span>
+            )}
+            {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
+              <span className="text-muted-foreground">Ins./Other <span className="font-medium text-foreground">{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></span>
+            )}
+            {(Number(form.discount_total)||0) > 0 && (
+              <span className="text-muted-foreground">Discount <span className="font-medium text-foreground">−{form.currency} {(Number(form.discount_total)||0).toLocaleString()}</span></span>
+            )}
+            <span className="ml-auto text-sm font-bold">Total {form.currency} {(calcSubtotal(lineItems) + (freightPolicy.allowFreight ? (Number(form.freight_total)||0) : 0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span>
           </div>
-        ) : (
-          <p className="rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5 text-[11px] text-muted-foreground">
-            FOB — vehicle cost only; freight is not included on this invoice.
-          </p>
-        )}
-        <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs space-y-0.5">
-          <div className="flex justify-between"><span className="text-muted-foreground">Vehicles</span><span>{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></div>
-          {isAuction && (
-            <div className="flex justify-between"><span className="text-muted-foreground">Deposit due</span><span>{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></div>
-          )}
-          {freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost && (
-            <div className="flex justify-between"><span className="text-muted-foreground">{freightPolicy.isRoro ? 'Ocean freight' : 'Freight'}</span><span>{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></div>
-          )}
-          {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
-            <div className="flex justify-between"><span className="text-muted-foreground">Insurance / Other</span><span>{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></div>
-          )}
-          <div className="flex justify-between border-t border-border pt-1 text-sm font-bold"><span>Invoice total</span><span>{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.allowFreight ? (Number(form.freight_total)||0) : 0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span></div>
         </div>
 
-        {/* Shipping / charges — collapsed by default */}
-        <details className="rounded-md border border-border/60 open:pb-1.5">
-          <summary className="cursor-pointer select-none px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">Shipping terms & charges</summary>
-          <div className="grid gap-1.5 border-t border-border/60 px-2.5 pt-1.5 sm:grid-cols-3">
-            <div className="space-y-0.5"><Label>Shipment mode</Label>
-              <Select
-                value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
-                onValueChange={(v) =>
-                  applyShippingPatch({
-                    container_mode: v,
-                    shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
-                  })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RORO">RORO</SelectItem>
-                  <SelectItem value="20ft Container">Container 20ft</SelectItem>
-                  <SelectItem value="40ft Container">Container 40ft</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-0.5"><Label>Port of loading</Label><Input value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Port of discharge</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Other charges</Label><Input type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Discount</Label><Input type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
-            <div className="space-y-0.5 sm:col-span-3"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
+        {/* 5. Invoice notes — collapsed */}
+        <details className="shrink-0 rounded-md border border-border/60">
+          <summary className="cursor-pointer select-none px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+            Notes{form.notes.trim() ? ' · set' : ''}
+          </summary>
+          <div className="border-t border-border/60 px-2 py-1.5">
+            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Optional invoice notes" className="min-h-[2.5rem]" />
           </div>
         </details>
+        </div>
 
-        <DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={submitting || !canSaveInvoice}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : title.includes('Edit') ? 'Save changes' : 'Create invoice'}</Button></DialogFooter></form></DialogContent></Dialog>
+        <DialogFooter><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={submitting || !canSaveInvoice}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : title.includes('Edit') ? 'Save changes' : 'Create invoice'}</Button></DialogFooter>
+      </form>
+    </DialogContent></Dialog>
   );
 
   return (
@@ -884,19 +903,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 </thead>
                 <tbody>
                   {filtered.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      role="button"
-                      tabIndex={0}
-                      className="cursor-pointer"
-                      onClick={() => loadDetails(inv)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          loadDetails(inv);
-                        }
-                      }}
-                    >
+                    <tr key={inv.id}>
                       <td>
                         <div className="flex items-center gap-2">
                           <span className="erp-chip-inv" aria-hidden>
@@ -920,29 +927,42 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                         {inv.currency} {inv.total.toLocaleString()}
                       </td>
                       <td className="text-right">
-                        <div className="inline-flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 gap-1 px-2"
-                            aria-label={`Print or download PDF for ${inv.invoice_code}`}
-                            onClick={() => void openPrintPreview(inv)}
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 gap-1.5 px-2.5"
-                            aria-label={`Actions for ${inv.invoice_code}`}
-                            onClick={() => void loadDetails(inv)}
-                          >
-                            <MoreHorizontal className="h-3.5 w-3.5" />
-                            Actions
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 gap-1.5 px-2.5"
+                              aria-label={`Actions for ${inv.invoice_code}`}
+                            >
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                              Actions
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            {canEditInvoice && (
+                              <DropdownMenuItem onSelect={() => void openEditForInvoice(inv)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {canDeleteInvoice && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => openDeleteForInvoice(inv)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                            {(canEditInvoice || canDeleteInvoice) && <DropdownMenuSeparator />}
+                            <DropdownMenuItem onSelect={() => void openPrintPreview(inv)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Print
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -985,76 +1005,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       {lineItemForm(createOpen, () => setCreateOpen(false), submitCreate, isAuction ? 'New auction deposit invoice' : 'New invoice')}
       {lineItemForm(editOpen, () => setEditOpen(false), submitEdit, isAuction ? 'Edit auction deposit invoice' : 'Edit invoice')}
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete invoice?" description="This will permanently remove the invoice and its line items." onConfirm={confirmDelete} loading={submitting} />
-      <Sheet open={detailSheetOpen} onOpenChange={(o) => { setDetailSheetOpen(o); if (!o && !printOpen) setSelected(null); }}>
-        <SheetContent
-          side="right"
-          className="inset-0 h-[100dvh] w-screen max-w-none border-0 p-4 sm:max-w-none data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
-        >
-          <SheetHeader className="pr-10 text-left">
-            <SheetTitle>{selected?.invoice_code}</SheetTitle>
-            <SheetDescription>{selected && typeLabels[selected.invoice_type]}</SheetDescription>
-          </SheetHeader>
-          {selected && (
-            <>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={printInvoice}><Printer className="mr-1.5 h-4 w-4" />Print</Button>
-                {canEditInvoice && <Button size="sm" variant="outline" onClick={openEdit}><Pencil className="mr-1.5 h-4 w-4" />Edit</Button>}
-                {canDeleteInvoice && <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-1.5 h-4 w-4" />Delete</Button>}
-              </div>
-              <div className="mt-6 space-y-4">
-                {detailLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      <span className={cn(statusChipClass[selected.payment_status], 'capitalize')}>{selected.payment_status}</span>
-                      {(['unpaid', 'partial', 'paid', 'cancelled', 'credited'] as const).map((s) => (
-                        <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s)}>
-                          {s}
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="rounded-lg border border-border/70 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p>
-                      <p className="mt-1 font-medium">{customerName(selected.customer_id)}</p>
-                    </div>
-                    {items.length > 0 && (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Qty</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {items.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.description}</TableCell>
-                              <TableCell className="text-right">{item.quantity}</TableCell>
-                              <TableCell className="text-right">{item.line_total.toLocaleString()}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>{selected.currency} {selected.subtotal.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-border pt-2 text-sm font-bold">
-                        <span>Total</span>
-                        <span>{selected.currency} {selected.total.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
       <Dialog open={printOpen} onOpenChange={closePrintPreview}>
         <DialogContent fullscreen className="print:max-w-none print:shadow-none print:border-0">
           <DialogHeader className="print:hidden">

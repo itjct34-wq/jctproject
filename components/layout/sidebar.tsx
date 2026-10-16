@@ -17,6 +17,8 @@ function isNavItemActive(
   if (pathname !== path && !pathname.startsWith(`${path}/`)) return false;
   if (!query) {
     if (path === '/vehicles') {
+      // Exact stock list only — do not highlight Cars when on /vehicles/lifecycle.
+      if (pathname !== '/vehicles') return false;
       const category = searchParams.get('category');
       return !category || category === 'car';
     }
