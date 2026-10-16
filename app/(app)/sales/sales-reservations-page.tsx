@@ -18,6 +18,10 @@ import { supabase } from '@/lib/supabase/client';
 import type { Sale, Customer, Vehicle } from '@/lib/types';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { calcVehicleCost, formatPricingSummary, type PriceTerm } from '@/lib/utils/vehicle-pricing';
+import {
+  normalizeFreightAmount,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 import { effectivePaymentStatus, freightModeFromShipmentType, reservationExclusivityMessage } from '@/lib/vehicle-lifecycle';
 import { createReservationInvoice } from '@/lib/utils/create-reservation-invoice';
 import { CarFront, ChevronRight, Loader2, Pencil, Plus, Search, Tag, Trash2, Calculator } from 'lucide-react';
@@ -144,13 +148,23 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (pricingPreview && createOpen) {
+      // Vehicle sale price = FOB (bid/cost + profit). Freight is a separate pass-through.
       setForm((f) => ({
         ...f,
-        sale_price: String(Math.round(pricingPreview.sellingPriceUsd)),
+        sale_price: String(Math.round(pricingPreview.fobUsd)),
         currency: 'USD',
       }));
     }
-  }, [pricingPreview?.sellingPriceUsd, createOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pricingPreview?.fobUsd, createOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (form.price_term === 'FOB' && form.freight_usd !== '0') {
+      setForm((f) => ({ ...f, freight_usd: '0' }));
+    }
+    if (form.price_term !== 'CIF' && form.insurance_usd !== '0') {
+      setForm((f) => ({ ...f, insurance_usd: '0' }));
+    }
+  }, [form.price_term]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +199,28 @@ export default function SalesPage() {
       return;
     }
 
-    const salePrice = Number(form.sale_price) || 0;
+    const vehicleSaleUsd = Number(form.sale_price) || 0;
+    const incoterm = form.price_term === 'CNF' ? 'C&F' : form.price_term;
+    const shipmentType =
+      form.shipment_type === 'RORO' || form.shipment_type.toLowerCase().includes('roro')
+        ? 'RORO'
+        : 'Container';
+    const containerMode =
+      form.shipment_type === '20ft'
+        ? '20ft Container'
+        : form.shipment_type === '40ft'
+          ? '40ft Container'
+          : form.container_mode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel');
+    const freightPolicy = resolveFreightPolicy({
+      incoterm,
+      shipmentType,
+      containerMode,
+      freightMode: freightModeFromShipmentType(form.shipment_type),
+    });
+    const freightUsd = normalizeFreightAmount(freightPolicy, form.freight_usd);
+    const insuranceUsd = Number(form.insurance_usd) || 0;
+    // Amount due may include freight/insurance; profit uses vehicle sale − FOB and strips freight.
+    const amountDueUsd = Math.round(vehicleSaleUsd + freightUsd + insuranceUsd);
     const days = Math.max(1, Number(form.reservation_days) || 7);
     const reservedUntil = new Date();
     reservedUntil.setDate(reservedUntil.getDate() + days);
@@ -198,8 +233,9 @@ export default function SalesPage() {
         customer_id: form.customer_id,
         reserved_by: profile.id,
         reserved_until: reservedUntilStr,
-        sold_price: salePrice || null,
-        incoterm: form.price_term === 'CNF' ? 'C&F' : form.price_term,
+        sold_price: amountDueUsd || null,
+        shipping_freight_charges: freightPolicy.allowFreight ? freightUsd || null : null,
+        incoterm,
         freight_mode: freightModeFromShipmentType(form.shipment_type),
         commission_pkr: form.commission_pkr === '' ? null : Number(form.commission_pkr) || 0,
         notes: [
@@ -235,7 +271,7 @@ export default function SalesPage() {
         customer_id: form.customer_id,
         vehicle_id: form.vehicle_id,
         sale_date: form.sale_date || new Date().toISOString().split('T')[0],
-        sale_price: salePrice,
+        sale_price: amountDueUsd,
         currency: form.currency || 'USD',
         deposit_amount: Number(form.deposit_amount) || 0,
         deposit_date: form.deposit_date || null,
@@ -243,8 +279,11 @@ export default function SalesPage() {
         status: 'reserved',
         notes: [
           form.notes.trim(),
-          `Price term: ${form.price_term}`,
-          `Shipment: ${form.shipment_type} / ${form.container_mode}`,
+          `Price term: ${incoterm}`,
+          `Vehicle USD ${vehicleSaleUsd}` +
+            (freightUsd > 0 ? ` · freight USD ${freightUsd} (pass-through, not profit)` : '') +
+            (insuranceUsd > 0 ? ` · insurance USD ${insuranceUsd}` : ''),
+          `Shipment: ${shipmentType} / ${containerMode}`,
           form.port_of_discharge ? `POD: ${form.port_of_discharge}` : '',
           `Reserved by agent: ${profile.full_name || profile.email}`,
           pricingPreview ? formatPricingSummary(pricingPreview) : '',
@@ -267,7 +306,7 @@ export default function SalesPage() {
       vehicle_id: form.vehicle_id,
       from_status: live.status,
       to_status: 'reserved',
-      note: `Sale ${sale.sale_code} · ${form.price_term} · agent ${profile.full_name || profile.email}`,
+      note: `Sale ${sale.sale_code} · ${incoterm} · agent ${profile.full_name || profile.email}`,
       changed_by: profile.id,
     });
 
@@ -277,14 +316,15 @@ export default function SalesPage() {
         saleId: sale.id,
         vehicleId: form.vehicle_id,
         vehicle: live,
-        salePrice,
+        // Vehicle line only — freight/insurance are separate invoice fields (not profit).
+        salePrice: vehicleSaleUsd,
         currency: form.currency || 'USD',
         priceTerm: form.price_term,
-        shipmentType: form.shipment_type,
-        containerMode: form.container_mode,
+        shipmentType,
+        containerMode,
         portOfDischarge: form.port_of_discharge || null,
-        freightUsd: Number(form.freight_usd) || 0,
-        insuranceUsd: Number(form.insurance_usd) || 0,
+        freightUsd,
+        insuranceUsd,
         dueDate: reservedUntilStr,
         createdBy: profile.id,
       });
@@ -544,13 +584,15 @@ export default function SalesPage() {
             </div>
             <div className="rounded-lg border p-3 space-y-3">
               <p className="text-sm font-semibold flex items-center gap-1"><Calculator className="h-4 w-4" /> Price calculator</p>
-              <p className="text-xs text-muted-foreground">(Bid JPY + markup % + expense JPY) ÷ JPY per USD + profit, then freight / insurance by price term.</p>
+              <p className="text-xs text-muted-foreground">
+                (Bid JPY + markup % + expense JPY) ÷ JPY per USD + vehicle profit → FOB. Freight / insurance are pass-through (not profit).
+              </p>
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
                 <div className="space-y-1"><Label>Bid (JPY)</Label><Input type="number" inputMode="decimal" value={form.bid_jpy} onChange={(e) => setForm({ ...form, bid_jpy: e.target.value })} /></div>
                 <div className="space-y-1"><Label>Markup %</Label><Input type="number" inputMode="decimal" step="0.1" value={form.markup_pct} onChange={(e) => setForm({ ...form, markup_pct: e.target.value })} /></div>
                 <div className="space-y-1"><Label>Expense (JPY)</Label><Input type="number" inputMode="decimal" value={form.expense_jpy} onChange={(e) => setForm({ ...form, expense_jpy: e.target.value })} /></div>
                 <div className="space-y-1"><Label>Rate (JPY per USD)</Label><Input type="number" inputMode="decimal" step="0.01" value={form.exchange_rate} onChange={(e) => setForm({ ...form, exchange_rate: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Profit (USD)</Label><Input type="number" inputMode="decimal" value={form.profit_usd} onChange={(e) => setForm({ ...form, profit_usd: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Vehicle profit (USD)</Label><Input type="number" inputMode="decimal" value={form.profit_usd} onChange={(e) => setForm({ ...form, profit_usd: e.target.value })} /></div>
               </div>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-3">
@@ -565,7 +607,17 @@ export default function SalesPage() {
                 </Select>
               </div>
               <div className="space-y-2"><Label>Shipment</Label>
-                <Select value={form.shipment_type} onValueChange={(v) => setForm({ ...form, shipment_type: v })}>
+                <Select
+                  value={form.shipment_type}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      shipment_type: v,
+                      container_mode:
+                        v === '20ft' ? '20ft Container' : v === '40ft' ? '40ft Container' : 'RORO Vessel',
+                    })
+                  }
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="RORO">RORO</SelectItem>
@@ -574,15 +626,27 @@ export default function SalesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Sold price (USD)</Label>
+              <div className="space-y-2"><Label>Vehicle sale (FOB USD)</Label>
                 <Input type="number" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} required />
               </div>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-3">
-              <div className="space-y-2"><Label>Freight USD</Label><Input type="number" value={form.freight_usd} onChange={(e) => setForm({ ...form, freight_usd: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Insurance USD</Label><Input type="number" value={form.insurance_usd} onChange={(e) => setForm({ ...form, insurance_usd: e.target.value })} /></div>
+              <div className="space-y-2">
+                <Label>Freight USD (pass-through)</Label>
+                <Input type="number" value={form.freight_usd} onChange={(e) => setForm({ ...form, freight_usd: e.target.value })} disabled={form.price_term === 'FOB'} />
+              </div>
+              <div className="space-y-2"><Label>Insurance USD</Label><Input type="number" value={form.insurance_usd} onChange={(e) => setForm({ ...form, insurance_usd: e.target.value })} disabled={form.price_term !== 'CIF'} /></div>
               <div className="space-y-2"><Label>Reserve days</Label><Input type="number" value={form.reservation_days} onChange={(e) => setForm({ ...form, reservation_days: e.target.value })} /></div>
             </div>
+            {pricingPreview && (
+              <p className="text-xs text-muted-foreground">
+                Invoice / amount due: {form.price_term} ${Math.round(pricingPreview.sellingPriceUsd).toLocaleString()}
+                {' '}(vehicle FOB ${Math.round(pricingPreview.fobUsd).toLocaleString()}
+                {pricingPreview.freightUsd > 0 ? ` + freight $${Math.round(pricingPreview.freightUsd).toLocaleString()}` : ''}
+                {pricingPreview.insuranceUsd > 0 ? ` + insurance $${Math.round(pricingPreview.insuranceUsd).toLocaleString()}` : ''}
+                ; profit is vehicle only)
+              </p>
+            )}
             <div className="space-y-2"><Label>POD (port of discharge)</Label><Input value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} placeholder="e.g. Mombasa, Karachi" /></div>
             <div className="space-y-2">
               <Label>Commission (PKR)</Label>

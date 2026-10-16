@@ -4,8 +4,11 @@
  * Cycle:
  *  1. Agent wins bid at auction → vehicle enters stock
  *  2. Cost (JPY) = bid + 10% markup + 45,000 JPY fixed expense
- *  3. Cost (USD) = costJPY / exchangeRate + profitUSD
+ *  3. Cost (USD) = costJPY / exchangeRate + profitUSD  ← profit is vehicle margin only
  *  4. That base is FOB. Adding freight → C&F. Adding insurance → CIF.
+ *
+ * Freight / insurance are pass-through on the commercial document — they raise the
+ * invoice total, not profit. Profit stays on the FOB step (quoted/sold vehicle − FOB).
  */
 
 export const FIXED_EXPENSE_JPY = 45_000;

@@ -88,7 +88,7 @@ export default function AgentLedgerPage() {
         .limit(ERP_LIST_LIMIT),
       supabase
         .from('vehicles')
-        .select('id, stock_number, make, model, sold_price, fob_usd, listed_price, listed_currency, commission_pkr, commission_status, reserved_by, customer_id, status, payment_status')
+        .select('id, stock_number, make, model, sold_price, fob_usd, listed_price, listed_currency, shipping_freight_charges, commission_pkr, commission_status, reserved_by, customer_id, status, payment_status')
         .eq('reserved_by', agentId)
         .neq('status', 'archived')
         .limit(ERP_LIST_LIMIT),
@@ -173,7 +173,7 @@ export default function AgentLedgerPage() {
               { label: 'Allocated', value: formatMoney(totals.remittanceAllocated) },
               { label: 'Unallocated', value: formatMoney(totals.remittanceUnallocated) },
               { label: 'Vehicles', value: String(totals.vehicleCount) },
-              { label: 'Total profit', value: formatMoney(totals.totalProfit, 'USD') },
+              { label: 'Total profit (ex freight)', value: formatMoney(totals.totalProfit, 'USD') },
               { label: 'Commission due', value: formatMoney(totals.commissionsDue, 'PKR') },
               { label: 'Commission paid', value: formatMoney(totals.commissionsPaid, 'PKR') },
             ].map((s) => (
@@ -236,7 +236,7 @@ export default function AgentLedgerPage() {
                       <th>Customer</th>
                       <th>Sold</th>
                       <th>FOB</th>
-                      <th>Profit</th>
+                        <th>Profit (ex freight)</th>
                       <th>Balance due</th>
                       <th>Commission</th>
                     </tr>

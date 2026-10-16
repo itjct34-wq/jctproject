@@ -125,11 +125,20 @@ export function freightModeFromShipmentType(shipmentType: string | null | undefi
   return parseFreightMode(shipmentType);
 }
 
-export function soldProfitUsd(vehicle: Pick<Vehicle, 'sold_price' | 'fob_usd' | 'listed_price'>): number | null {
+/**
+ * Vehicle profit = sold/quoted vehicle amount − FOB cost.
+ * Ocean freight (and similar shipping pass-through on the vehicle row) is NOT profit —
+ * `sold_price` is often the invoice/amount-due total (C&F/CIF), so strip freight first.
+ */
+export function soldProfitUsd(
+  vehicle: Pick<Vehicle, 'sold_price' | 'fob_usd' | 'listed_price' | 'shipping_freight_charges'>
+): number | null {
   if (vehicle.sold_price == null) return null;
   const fob = publicFobUsd(vehicle);
   if (fob == null) return null;
-  return Number(vehicle.sold_price) - Number(fob);
+  const freightPassThrough = Math.max(0, Number(vehicle.shipping_freight_charges) || 0);
+  const vehicleSold = Number(vehicle.sold_price) - freightPassThrough;
+  return vehicleSold - Number(fob);
 }
 
 export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {

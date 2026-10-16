@@ -752,7 +752,7 @@ export function ReserveVehicleDialog({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">Freight + charges</p>
+                  <p className="text-[10px] uppercase text-muted-foreground">Freight + charges (not profit)</p>
                   <p className="font-medium">{money(chargeExtras)}</p>
                 </div>
                 <div>
@@ -761,7 +761,7 @@ export function ReserveVehicleDialog({
                 </div>
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground">
-                (Bid + {markupPct}% + expense) ÷ TT → FOB USD · quoted − FOB = profit · quoted + freight/charges − discount = invoice
+                (Bid + {markupPct}% + expense) ÷ TT → FOB USD · quoted − FOB = profit (freight excluded) · quoted + freight/charges − discount = invoice
               </p>
             </div>
 

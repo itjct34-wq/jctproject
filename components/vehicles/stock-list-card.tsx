@@ -574,7 +574,7 @@ export function StockListCard({
                 ) : null}
               </div>
               <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">Profit</p>
+                <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">Profit (ex freight)</p>
                 <p className="text-[13px] font-bold leading-tight whitespace-nowrap text-emerald-800">
                   {profit != null ? listMoney(profit, soldCcy) : '—'}
                 </p>

@@ -28,6 +28,7 @@ type CommissionRow = Pick<
   | 'fob_usd'
   | 'listed_price'
   | 'listed_currency'
+  | 'shipping_freight_charges'
   | 'commission_pkr'
   | 'commission_status'
   | 'payment_status'
@@ -66,7 +67,7 @@ export default function CommissionsPage() {
     setLoading(true);
     let query = supabase
       .from('vehicles')
-      .select('id, stock_number, make, model, customer_id, reserved_by, sold_price, fob_usd, listed_price, listed_currency, commission_pkr, commission_status, payment_status, shipping_status, customers(id, full_name)')
+      .select('id, stock_number, make, model, customer_id, reserved_by, sold_price, fob_usd, listed_price, listed_currency, shipping_freight_charges, commission_pkr, commission_status, payment_status, shipping_status, customers(id, full_name)')
       .in('commission_status', ['due', 'paid'])
       .gt('commission_pkr', 0)
       .order('updated_at', { ascending: false })
@@ -238,7 +239,7 @@ export default function CommissionsPage() {
                         <th>Agent</th>
                         <th>Commission PKR</th>
                         <th>Sold</th>
-                        <th>Profit</th>
+                        <th>Profit (ex freight)</th>
                         <th>Status</th>
                         {canPay ? <th>Action</th> : null}
                       </tr>

@@ -527,7 +527,7 @@ export function VehicleViewInfoDialog({
                     <p className="font-semibold">{detail?.freight || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Profit</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">Profit (ex freight)</p>
                     <p className="font-semibold">
                       {detail?.profit != null ? formatMoney(detail.profit, detail.ccy) : '—'}
                     </p>
@@ -634,7 +634,7 @@ export function VehicleViewInfoDialog({
                     />
                     <SpecCard label="Freight" value={detail?.freight} />
                     <SpecCard
-                      label="Profit"
+                      label="Profit (ex freight)"
                       value={
                         detail?.profit != null ? formatMoney(detail.profit, detail.ccy) : '—'
                       }

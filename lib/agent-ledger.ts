@@ -14,6 +14,7 @@ export type LedgerVehicle = Pick<
   | 'fob_usd'
   | 'listed_price'
   | 'listed_currency'
+  | 'shipping_freight_charges'
   | 'commission_pkr'
   | 'commission_status'
   | 'reserved_by'
