@@ -133,7 +133,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(250),
       supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2').order('full_name').limit(250),
       supabase.from('sales').select('id, sale_code').order('created_at', { ascending: false }).limit(250),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, model_year, transmission').order('created_at', { ascending: false }).limit(250),
+      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, fob_usd, sold_price, model_year, transmission').order('created_at', { ascending: false }).limit(250),
       supabase
         .from('company_settings')
         .select('id, invoice_prefix, invoice_next_number, company_name, legal_name, logo_url, hanko_url')
@@ -192,6 +192,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       setLineItems(next);
       return;
     }
+    const stockCost = v.sold_price ?? v.fob_usd ?? v.listed_price ?? null;
+    const currentCost = Number(next[idx].unit_price);
+    const shouldPrefillCost = !next[idx].unit_price.trim() || !Number.isFinite(currentCost) || currentCost === 0;
     next[idx] = {
       ...next[idx],
       vehicle_id: v.id,
@@ -203,7 +206,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       year: v.model_year != null ? String(v.model_year) : '',
       engine: next[idx].engine || '',
       transmission: formatTransmissionLabel(v.transmission),
-      unit_price: next[idx].unit_price || String(v.listed_price || ''),
+      unit_price: shouldPrefillCost && stockCost != null ? String(stockCost) : next[idx].unit_price,
     };
     setLineItems(next);
   };
@@ -643,7 +646,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <div className="space-y-0.5"><Label>Address *</Label><Input value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
             </div>
           )}
-          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-7">
             <div className="space-y-0.5">
               <Label>Invoice #</Label>
               <Select
@@ -673,6 +676,12 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </div>
             <div className="space-y-0.5"><Label>Type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div>
             <div className="space-y-0.5"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} /></div>
+            <div className="space-y-0.5"><Label>FOB term</Label>
+              <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{['FOB','C&F','CFR','CIF','EXW','FCA','CPT','CIP','DAP','DDP'].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -708,13 +717,13 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   <div className="space-y-0.5"><Label>Stock no.</Label><Input value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" /></div>
                   <div className="space-y-0.5"><Label>Make</Label><Input value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" /></div>
                   <div className="space-y-0.5"><Label>Model</Label><Input value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" /></div>
-                  <div className="space-y-0.5"><Label>Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" /></div>
+                  <div className="space-y-0.5"><Label>Vehicle cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} placeholder="0" /></div>
                   <div className="space-y-0.5"><Label>Year</Label><Input value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="2016" /></div>
+                  <div className="space-y-0.5"><Label>Colour</Label><Input value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" /></div>
                   <div className="space-y-0.5"><Label>Engine</Label><Input value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" /></div>
                   <div className="space-y-0.5"><Label>Transmission</Label><Input value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="AT" /></div>
                   <div className="space-y-0.5 sm:col-span-2"><Label>Notes</Label><Input value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional description" /></div>
                   <div className="space-y-0.5"><Label>Qty</Label><Input type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
-                  <div className="space-y-0.5"><Label>Cost</Label><Input type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} /></div>
                   <div className="space-y-0.5">
                     <Label>{isAuction ? 'Deposit amt' : 'Deposit %'}</Label>
                     {isAuction ? (
@@ -789,12 +798,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         <details className="rounded-md border border-border/60 open:pb-1.5">
           <summary className="cursor-pointer select-none px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">Shipping terms & charges</summary>
           <div className="grid gap-1.5 border-t border-border/60 px-2.5 pt-1.5 sm:grid-cols-3">
-            <div className="space-y-0.5"><Label>Incoterms</Label>
-              <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{['FOB','C&F','CFR','CIF','EXW','FCA','CPT','CIP','DAP','DDP'].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
             <div className="space-y-0.5"><Label>Shipment mode</Label>
               <Select
                 value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
