@@ -2,12 +2,11 @@
 export const COMPANY_NAME_FALLBACK = 'Company';
 
 /**
- * Optional public paths used only when company_settings logo/hanko URLs are empty.
- * Set these (e.g. `/images/company-logo.png`) if you ship neutral assets under public/;
- * leave empty to rely solely on Settings uploads — never hard-code a brand name in UI text.
+ * Public fallbacks when company_settings logo_url / hanko_url are empty,
+ * so invoices & quotations show letterhead/seal immediately.
  */
-export const COMPANY_LOGO_PUBLIC_FALLBACK = '';
-export const COMPANY_HANKO_PUBLIC_FALLBACK = '';
+export const COMPANY_LOGO_PUBLIC_FALLBACK = '/images/company-logo.png';
+export const COMPANY_HANKO_PUBLIC_FALLBACK = '/images/company-hanko.png';
 
 export type CompanyLetterheadSettings = {
   company_name?: string | null;

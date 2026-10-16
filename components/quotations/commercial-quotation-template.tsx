@@ -89,6 +89,7 @@ export function CommercialQuotationTemplate({
       grandTotal={grand}
       notes={quotation.notes}
       verificationUrl={verificationUrl}
+      logoSize="quotation"
       company={toLetterhead(company)}
     />
   );

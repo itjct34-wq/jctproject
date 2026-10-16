@@ -62,8 +62,16 @@ type Props = {
   verificationUrl?: string;
   showQr?: boolean;
   depositMode?: 'ratio' | 'amount';
+  /** Letterhead logo scale: quotations smaller; invoices larger; auction invoices largest. */
+  logoSize?: 'quotation' | 'invoice' | 'auction';
   /** From company_settings; used for letterhead instead of a hard-coded brand name. */
   company?: CompanyLetterheadSettings | null;
+};
+
+const LOGO_SIZE_CLASS: Record<NonNullable<Props['logoSize']>, string> = {
+  quotation: 'h-[108px] w-auto max-w-[300px] object-contain object-left shrink-0',
+  invoice: 'h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0',
+  auction: 'h-[188px] w-auto max-w-[540px] object-contain object-left shrink-0',
 };
 
 function customerAddress(customer?: Customer | null) {
@@ -172,6 +180,7 @@ export function OfficialTradeDocument({
   verificationUrl,
   showQr = true,
   depositMode = 'ratio',
+  logoSize,
   company,
 }: Props) {
   const displayLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
@@ -188,6 +197,8 @@ export function OfficialTradeDocument({
   const hankoUrl = letterheadHankoUrl(company);
   const beneficiaryName = letterheadName(company) || JCT_OFFICIAL.bank.beneficiary;
   const showDeposit = kind === 'invoice';
+  const resolvedLogoSize = logoSize ?? (kind === 'quotation' ? 'quotation' : 'invoice');
+  const logoClass = LOGO_SIZE_CLASS[resolvedLogoSize];
   const vehiclesSum =
     vehiclesTotal ??
     displayLines.reduce(
@@ -213,7 +224,7 @@ export function OfficialTradeDocument({
             <img
               src={logoUrl}
               alt={orgName}
-              className="h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0"
+              className={logoClass}
             />
           ) : (
             <div className="min-w-0">
@@ -458,21 +469,23 @@ export function OfficialTradeDocument({
 
         <footer className="mt-auto pt-2">
           <div className="grid grid-cols-[1fr_96px] items-center gap-2">
-            <div className="px-2 text-center">
-              <p className="text-[10px] font-bold leading-tight tracking-tight text-[#0b1f3a]">
+            <div className="invoice-sign-block px-2 text-center">
+              <p className="text-[10px] font-bold leading-tight tracking-tight text-[#0b1f3a] uppercase">
                 {orgName}
               </p>
-              <p className="mt-0.5 text-[8px] text-[#0b1f3a]">
-                <span className="font-semibold">{JCT_OFFICIAL.directorTitle}</span>{' '}
+              <div className="invoice-sign-row mt-1 flex items-center justify-center gap-10 text-[#0b1f3a]">
+                <span className="text-[8.5px] font-semibold whitespace-nowrap">
+                  {JCT_OFFICIAL.directorTitle}
+                </span>
                 <span className="invoice-hanko-name">
                   <span className="invoice-hanko-director">{JCT_OFFICIAL.director}</span>
                   <JctHanko className="invoice-hanko-stamp" src={hankoUrl} alt={`${orgName} seal`} />
                 </span>
-              </p>
-              <p className="mt-0.5 text-[7.5px] leading-snug">
+              </div>
+              <p className="mt-1 text-[7.5px] leading-snug uppercase">
                 2-505-101, DAITOURO, NAKAGAWA-KU, NAGOYA-SHI, AICHI-KEN 454-0943 JAPAN
               </p>
-              <p className="text-[7.5px]">PHONE :+81 52-717-4476</p>
+              <p className="text-[7.5px] uppercase">PHONE :+81 52-717-4476</p>
             </div>
             <div className="flex justify-end">
               {showQr && verificationUrl ? (

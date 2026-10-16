@@ -15,7 +15,7 @@ export function JctHanko({
     <img
       src={url}
       alt={alt}
-      className={`h-[86px] w-[86px] shrink-0 object-contain ${className}`}
+      className={`pointer-events-none select-none object-contain ${className}`}
     />
   );
 }

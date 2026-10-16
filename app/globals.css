@@ -464,10 +464,20 @@
 .invoice-print-root footer {
   overflow: visible;
 }
+.invoice-print-root .invoice-sign-block {
+  overflow: visible;
+}
+.invoice-print-root .invoice-sign-row {
+  min-height: 28mm;
+}
 .invoice-print-root .invoice-hanko-name {
   position: relative;
-  display: inline-block;
-  padding: 5mm 7mm 4mm;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32mm;
+  min-height: 28mm;
+  padding: 6mm 8mm 5mm;
   vertical-align: middle;
 }
 .invoice-print-root .invoice-hanko-director {
@@ -475,18 +485,20 @@
   z-index: 1;
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .invoice-print-root .invoice-hanko-stamp {
   position: absolute;
   left: 50%;
-  top: 46%;
-  width: 20mm !important;
-  height: 20mm !important;
+  top: 42%;
+  width: 28mm !important;
+  height: 28mm !important;
   max-width: none;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 2;
+  opacity: 0.82;
   mix-blend-mode: multiply;
   object-fit: contain;
   image-rendering: -webkit-optimize-contrast;
@@ -564,8 +576,9 @@
     color: #fff !important;
   }
   body.printing-document #print-layer .invoice-hanko-stamp {
-    width: 18mm !important;
-    height: 18mm !important;
+    width: 26mm !important;
+    height: 26mm !important;
+    opacity: 0.82 !important;
     mix-blend-mode: multiply !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

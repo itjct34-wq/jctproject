@@ -93,6 +93,7 @@ export function CommercialInvoiceTemplate({
       verificationUrl={verifyUrl || undefined}
       showQr={showQr}
       depositMode={variant === 'auction_deposit' ? 'amount' : 'ratio'}
+      logoSize={variant === 'auction_deposit' ? 'auction' : 'invoice'}
       company={toLetterhead(company)}
     />
   );
