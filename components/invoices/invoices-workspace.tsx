@@ -26,7 +26,7 @@ import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Sale, Vehicle, CompanySettings } from '@/lib/types';
-import { ChevronRight, Download, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
+import { Download, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
 import { customerContactErrorMessage, isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
@@ -756,11 +756,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           </p>
         )}
         <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs space-y-0.5">
-          <div className="flex justify-between"><span className="text-muted-foreground">Vehicles</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Vehicles</span><span>{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></div>
           {isAuction && (
             <div className="flex justify-between"><span className="text-muted-foreground">Deposit due</span><span>{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></div>
           )}
-          {freightPolicy.allowFreight && (
+          {freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost && (
             <div className="flex justify-between"><span className="text-muted-foreground">{freightPolicy.isRoro ? 'Ocean freight' : 'Freight'}</span><span>{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></div>
           )}
           {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
@@ -877,7 +877,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <MoreHorizontal className="h-3.5 w-3.5" />
             Actions
           </Button>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </div>
       ))}</div>}</Card>
       {lineItemForm(createOpen, () => setCreateOpen(false), submitCreate, isAuction ? 'New auction deposit invoice' : 'New invoice')}

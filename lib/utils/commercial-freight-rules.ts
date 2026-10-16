@@ -3,9 +3,9 @@
  *
  * Matrix (term × mode → freight):
  *   FOB × any mode              → no freight (vehicle cost only)
- *   C&F/CFR/CNF/CIF × RORO      → freight allowed; show/mention on document
- *   non-FOB × Container 20/40   → freight required; show on document
- *   other non-FOB × RORO/other  → freight allowed; show when present
+ *   C&F/CFR/CNF/CIF × RORO      → freight allowed; rolled into vehicle cost on print
+ *   non-FOB × Container 20/40   → freight required; show as separate line on document
+ *   other non-FOB × other       → freight allowed; show when present
  */
 
 export type CommercialFreightContext = {
@@ -23,14 +23,28 @@ export type CommercialFreightPolicy = {
   allowFreight: boolean;
   /** Freight amount should be entered (Container 20/40 + non-FOB) */
   requireFreight: boolean;
-  /** Print/export should render the freight block */
+  /** Print/export should render a separate freight block / summary line */
   showFreightOnDocument: boolean;
+  /**
+   * RORO non-FOB: hide freight lines on print/export and fold the freight
+   * amount into vehicle unit / line / vehicles total so the grand total stays correct.
+   */
+  rollFreightIntoVehicleCost: boolean;
   /** Default description for freight line */
   defaultFreightLabel: string;
   isFob: boolean;
   isContainer: boolean;
   isRoro: boolean;
   normalizedTerm: string;
+};
+
+export type DocumentFreightDisplay = {
+  /** Freight amount to render as its own line (0 when rolled/hidden) */
+  documentFreight: number;
+  /** Whether to render freight table / Ocean freight summary */
+  showFreightBlock: boolean;
+  /** Amount added into vehicles total / line prices for display */
+  vehiclesFreightAddon: number;
 };
 
 const FOB_ALIASES = new Set(['FOB']);
@@ -114,6 +128,7 @@ export function resolveFreightPolicy(ctx: CommercialFreightContext): CommercialF
       allowFreight: false,
       requireFreight: false,
       showFreightOnDocument: false,
+      rollFreightIntoVehicleCost: false,
       defaultFreightLabel: label,
       isFob: true,
       isContainer: container,
@@ -122,12 +137,13 @@ export function resolveFreightPolicy(ctx: CommercialFreightContext): CommercialF
     };
   }
 
-  // Non-FOB container (20/40): freight must be on the invoice
+  // Non-FOB container (20/40): freight must appear as its own line
   if (sizedContainer) {
     return {
       allowFreight: true,
       requireFreight: true,
       showFreightOnDocument: true,
+      rollFreightIntoVehicleCost: false,
       defaultFreightLabel: label,
       isFob: false,
       isContainer: true,
@@ -136,16 +152,31 @@ export function resolveFreightPolicy(ctx: CommercialFreightContext): CommercialF
     };
   }
 
-  // RORO (or other) with freight-inclusive terms: allow + always mention on print
-  const showAlways = isFreightInclusiveTerm(normalizedTerm) || roro;
+  // RORO: freight allowed in the form/DB, but folded into vehicle cost on documents
+  if (roro) {
+    return {
+      allowFreight: true,
+      requireFreight: false,
+      showFreightOnDocument: false,
+      rollFreightIntoVehicleCost: true,
+      defaultFreightLabel: label,
+      isFob: false,
+      isContainer: false,
+      isRoro: true,
+      normalizedTerm,
+    };
+  }
+
+  // Other non-FOB modes: allow freight; show when term is freight-inclusive
   return {
     allowFreight: true,
     requireFreight: false,
-    showFreightOnDocument: showAlways,
+    showFreightOnDocument: isFreightInclusiveTerm(normalizedTerm),
+    rollFreightIntoVehicleCost: false,
     defaultFreightLabel: label,
     isFob: false,
     isContainer: container,
-    isRoro: roro,
+    isRoro: false,
     normalizedTerm,
   };
 }
@@ -167,7 +198,80 @@ export function normalizeFreightNotes(
   if (!policy.allowFreight) return null;
   const trimmed = (notes || '').trim();
   if (trimmed) return trimmed;
-  return policy.showFreightOnDocument || policy.requireFreight ? policy.defaultFreightLabel : null;
+  return policy.showFreightOnDocument || policy.requireFreight || policy.rollFreightIntoVehicleCost
+    ? policy.defaultFreightLabel
+    : null;
+}
+
+/** How freight should appear on print / preview / Excel / DOCX. */
+export function resolveDocumentFreightDisplay(
+  policy: CommercialFreightPolicy,
+  amount: number | string | null | undefined
+): DocumentFreightDisplay {
+  const freight = normalizeFreightAmount(policy, amount);
+  if (policy.rollFreightIntoVehicleCost) {
+    return {
+      documentFreight: 0,
+      showFreightBlock: false,
+      vehiclesFreightAddon: freight,
+    };
+  }
+  const showFreightBlock =
+    policy.showFreightOnDocument || (policy.allowFreight && freight > 0);
+  return {
+    documentFreight: showFreightBlock ? freight : 0,
+    showFreightBlock,
+    vehiclesFreightAddon: 0,
+  };
+}
+
+type PricedLine = {
+  quantity?: number | null;
+  unit_price: number;
+  line_total: number;
+};
+
+/**
+ * Distribute freight across vehicle lines for document display.
+ * Single-line invoices (typical RORO) get the full amount on unit + line total.
+ */
+export function applyFreightToVehicleLines<T extends PricedLine>(
+  lines: T[],
+  freightAddon: number
+): T[] {
+  const addon = Math.round(Number(freightAddon) || 0);
+  if (!(addon > 0) || !lines.length) return lines;
+
+  const bases = lines.map((line) => {
+    const qty = Number(line.quantity || 0) || 1;
+    const unit = Number(line.unit_price || 0);
+    const total = Number(line.line_total || 0) || qty * unit;
+    return { qty, total: Math.round(total) };
+  });
+  const baseSum = bases.reduce((sum, b) => sum + b.total, 0);
+  let remaining = addon;
+
+  return lines.map((line, idx) => {
+    const isLast = idx === lines.length - 1;
+    let share: number;
+    if (isLast) {
+      share = remaining;
+    } else if (baseSum > 0) {
+      share = Math.round((bases[idx].total / baseSum) * addon);
+      remaining -= share;
+    } else {
+      share = Math.floor(addon / lines.length);
+      remaining -= share;
+    }
+    const qty = bases[idx].qty;
+    const newTotal = bases[idx].total + share;
+    const newUnit = qty === 1 ? newTotal : Math.round(newTotal / qty);
+    return {
+      ...line,
+      unit_price: newUnit,
+      line_total: newTotal,
+    };
+  });
 }
 
 /** Validation message when freight is required but missing; null if OK. */

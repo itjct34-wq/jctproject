@@ -2,8 +2,10 @@ import ExcelJS from 'exceljs';
 import type { Invoice, InvoiceItem, Customer, Quotation } from '@/lib/types';
 import { decodeInvoiceVehicle, extractChassis, formatDepositRatio, formatDocumentNo } from '@/lib/jct-official';
 import {
+  applyFreightToVehicleLines,
   normalizeFreightAmount,
   normalizeFreightNotes,
+  resolveDocumentFreightDisplay,
   resolveFreightPolicy,
 } from '@/lib/utils/commercial-freight-rules';
 
@@ -114,19 +116,20 @@ export async function exportTradeDocumentExcel(opts: {
     shipmentType: opts.shipmentType,
     containerMode: opts.shipmentMode,
   });
-  const freight = freightPolicy.allowFreight ? Number(opts.freight || 0) : 0;
+  const freightDisplay = resolveDocumentFreightDisplay(freightPolicy, opts.freight);
+  const freight = freightDisplay.documentFreight;
   const freightNotes =
     normalizeFreightNotes(freightPolicy, opts.freightNotes) || freightPolicy.defaultFreightLabel;
-  const showFreight =
-    opts.showFreight ??
-    (freightPolicy.showFreightOnDocument || (freightPolicy.allowFreight && freight > 0));
-  const vehiclesTotal = Number(opts.vehiclesTotal || 0);
+  const showFreight = opts.showFreight ?? freightDisplay.showFreightBlock;
+  const vehiclesTotal = Number(opts.vehiclesTotal || 0) + freightDisplay.vehiclesFreightAddon;
   const insurance = Number(opts.insurance || 0);
   const other = Number(opts.other || 0);
   const discount = Number(opts.discount || 0);
-  const grandTotal = freightPolicy.allowFreight
-    ? Number(opts.grandTotal || 0)
-    : vehiclesTotal + insurance + other - discount;
+  // Prefer caller grand total when freight is shown separately or rolled (keeps tax etc.).
+  const grandTotal =
+    !freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost
+      ? vehiclesTotal + insurance + other - discount
+      : Number(opts.grandTotal || 0);
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Vehicle Export ERP';
@@ -209,8 +212,8 @@ export async function exportTradeDocumentExcel(opts: {
   row += 1;
 
   const vehicleHeaders = opts.showDeposit
-    ? ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Deposit', 'Vehicle cost']
-    : ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Vehicle cost'];
+    ? ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Deposit', 'Total']
+    : ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Total'];
   vehicleHeaders.forEach((h, i) => {
     const cell = ws.getCell(row, i + 1);
     cell.value = h;
@@ -219,7 +222,10 @@ export async function exportTradeDocumentExcel(opts: {
   });
   row += 1;
 
-  const lines = opts.lines.length ? opts.lines : [{ chassis: '—', description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  const baseLines = opts.lines.length
+    ? opts.lines
+    : [{ chassis: '—', description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  const lines = applyFreightToVehicleLines(baseLines, freightDisplay.vehiclesFreightAddon);
   lines.forEach((line) => {
     const values = opts.showDeposit
       ? [line.chassis, line.description, line.quantity, money(line.unit_price), line.deposit || '—', money(line.line_total)]

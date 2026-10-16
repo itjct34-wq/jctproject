@@ -66,7 +66,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
     >
       <div
         className={cn(
-          'flex shrink-0 items-center gap-2 border-b-2 border-gold/50 bg-white',
+          'flex shrink-0 items-center gap-2 border-b-2 border-gold/50 bg-card',
           collapsed && !mobile ? 'h-[4.5rem] justify-center px-1.5' : 'min-h-[4.5rem] px-2.5 py-2'
         )}
       >

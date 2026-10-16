@@ -15,8 +15,9 @@ import {
 import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney, letterheadName } from '@/lib/jct-official';
 import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
 import {
-  normalizeFreightAmount,
+  applyFreightToVehicleLines,
   normalizeFreightNotes,
+  resolveDocumentFreightDisplay,
   resolveFreightPolicy,
 } from '@/lib/utils/commercial-freight-rules';
 
@@ -59,30 +60,44 @@ export async function exportCommercialInvoiceDocx(opts: {
     shipmentType: invoice.shipment_type,
     containerMode: invoice.container_mode,
   });
-  const freight = normalizeFreightAmount(freightPolicy, invoice.freight_total);
+  const freightDisplay = resolveDocumentFreightDisplay(freightPolicy, invoice.freight_total);
+  const freight = freightDisplay.documentFreight;
   const freightNotes =
     normalizeFreightNotes(freightPolicy, invoice.freight_notes) || freightPolicy.defaultFreightLabel;
-  const showFreight =
-    freightPolicy.showFreightOnDocument || (freightPolicy.allowFreight && freight > 0);
+  const showFreight = freightDisplay.showFreightBlock;
+  const vehiclesBase = Number(invoice.subtotal || 0);
+  const vehiclesTotal = vehiclesBase + freightDisplay.vehiclesFreightAddon;
   const grand =
-    Number(invoice.subtotal || 0) +
+    vehiclesTotal +
     Number(invoice.tax || 0) +
     freight +
     Number(invoice.insurance_total || 0) +
     Number(invoice.other_charges || 0) -
     Number(invoice.discount_total || 0);
 
-  const vehicleRows = (items.length ? items : []).map((item, idx) => {
+  const pricedItems = applyFreightToVehicleLines(
+    (items.length ? items : []).map((item) => ({
+      ...item,
+      quantity: item.quantity,
+      unit_price: Number(item.unit_price || 0),
+      line_total: Number(item.line_total || 0) || Number(item.quantity || 1) * Number(item.unit_price || 0),
+    })),
+    freightDisplay.vehiclesFreightAddon
+  );
+
+  const vehicleRows = pricedItems.map((item, idx) => {
+    const original = items[idx];
     const vehicle = vehicles.find((v) => v.id === item.vehicle_id);
     const chassis = vehicle?.chassis_number || extractChassis(item.description) || '—';
     const stock = vehicle
       ? [vehicle.stock_number, vehicle.make, vehicle.model].filter(Boolean).join(' · ')
       : item.description;
+    const depositBaseUnit = Number(original?.unit_price ?? item.unit_price);
     return new TableRow({
       children: [
         cell(chassis),
         cell(stock),
-        cell(formatDepositRatio(item.discount, item.unit_price), { align: AlignmentType.CENTER }),
+        cell(formatDepositRatio(item.discount, depositBaseUnit), { align: AlignmentType.CENTER }),
         cell(formatMoney(item.unit_price, invoice.currency), { align: AlignmentType.RIGHT }),
       ],
     });
@@ -181,7 +196,7 @@ export async function exportCommercialInvoiceDocx(opts: {
                   cell('CHASSIS NO', { bold: true, fill: RED, color: 'FFFFFF' }),
                   cell('STOCK INFO', { bold: true, fill: RED, color: 'FFFFFF' }),
                   cell('DEPOSIT RATIO', { bold: true, fill: RED, color: 'FFFFFF' }),
-                  cell('Vehicle Cost', { bold: true, fill: RED, color: 'FFFFFF' }),
+                  cell('Total', { bold: true, fill: RED, color: 'FFFFFF' }),
                 ],
               }),
               ...vehicleRows,
@@ -190,7 +205,7 @@ export async function exportCommercialInvoiceDocx(opts: {
                   cell('VEHICLES TOTAL', { bold: true }),
                   cell(''),
                   cell(''),
-                  cell(formatMoney(Number(invoice.subtotal || 0), invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
+                  cell(formatMoney(vehiclesTotal, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
                 ],
               }),
             ],
@@ -239,7 +254,7 @@ export async function exportCommercialInvoiceDocx(opts: {
               new TableRow({
                 children: [
                   cell('Vehicles total'),
-                  cell(formatMoney(Number(invoice.subtotal || 0), invoice.currency), { align: AlignmentType.RIGHT }),
+                  cell(formatMoney(vehiclesTotal, invoice.currency), { align: AlignmentType.RIGHT }),
                 ],
               }),
               ...(showFreight

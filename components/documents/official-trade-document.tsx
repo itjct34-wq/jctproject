@@ -14,7 +14,11 @@ import {
 } from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
-import { resolveFreightPolicy } from '@/lib/utils/commercial-freight-rules';
+import {
+  applyFreightToVehicleLines,
+  resolveDocumentFreightDisplay,
+  resolveFreightPolicy,
+} from '@/lib/utils/commercial-freight-rules';
 
 export type TradeLine = {
   description: string;
@@ -184,7 +188,14 @@ export function OfficialTradeDocument({
   logoSize,
   company,
 }: Props) {
-  const displayLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  const baseLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  const freightPolicy = resolveFreightPolicy({
+    incoterm: shipmentTerm,
+    shipmentType,
+    containerMode: shipmentMode,
+  });
+  const freightDisplay = resolveDocumentFreightDisplay(freightPolicy, freightAmount);
+  const displayLines = applyFreightToVehicleLines(baseLines, freightDisplay.vehiclesFreightAddon);
   const units = displayLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || displayLines.length;
   const addr = customerAddress(customer);
   const buyerName = customer?.full_name?.trim() || '';
@@ -200,27 +211,26 @@ export function OfficialTradeDocument({
   const showDeposit = kind === 'invoice';
   const resolvedLogoSize = logoSize ?? (kind === 'quotation' ? 'quotation' : 'invoice');
   const logoClass = LOGO_SIZE_CLASS[resolvedLogoSize];
-  const vehiclesSum =
+  const baseVehiclesSum =
     vehiclesTotal ??
-    displayLines.reduce(
+    baseLines.reduce(
       (sum, line) => sum + (Number(line.line_total || 0) || Number(line.quantity || 1) * Number(line.unit_price || 0)),
       0
     );
-  const freightPolicy = resolveFreightPolicy({
-    incoterm: shipmentTerm,
-    shipmentType,
-    containerMode: shipmentMode,
-  });
-  const freight = freightPolicy.allowFreight ? Number(freightAmount || 0) : 0;
+  const vehiclesSum = baseVehiclesSum + freightDisplay.vehiclesFreightAddon;
+  const freight = freightDisplay.documentFreight;
   const insurance = Number(insuranceAmount || 0);
   const other = Number(otherAmount || 0);
   const discount = Number(discountAmount || 0);
   const computedGrand = vehiclesSum + freight + insurance + other - discount;
-  // When FOB strips freight, recompute so print never includes a freight line/total.
+  // When FOB strips freight or RORO rolls it in, recompute so print stays consistent.
   const total =
-    !freightPolicy.allowFreight || !Number.isFinite(grandTotal) ? computedGrand : grandTotal;
-  const showFreightBlock =
-    freightPolicy.showFreightOnDocument || (freightPolicy.allowFreight && freight > 0);
+    !freightPolicy.allowFreight ||
+    freightPolicy.rollFreightIntoVehicleCost ||
+    !Number.isFinite(grandTotal)
+      ? computedGrand
+      : grandTotal;
+  const showFreightBlock = freightDisplay.showFreightBlock;
   const freightLabel =
     freightNotes?.trim() || freightPolicy.defaultFreightLabel || 'Ocean freight';
   const vehicleColSpan = showDeposit ? 5 : 4;
@@ -341,18 +351,19 @@ export function OfficialTradeDocument({
               <th className="px-1.5 py-0.5 text-center">Qty</th>
               <th className="px-1.5 py-0.5 text-right">Unit price</th>
               {showDeposit && <th className="px-1.5 py-0.5 text-center">Deposit</th>}
-              <th className="px-1.5 py-0.5 text-right">Line total</th>
+              <th className="px-1.5 py-0.5 text-right">Total</th>
             </tr>
           </thead>
           <tbody>
             {displayLines.map((line, idx) => {
               const row = resolvedLine(line, vehicles);
+              const depositBaseUnit = Number(baseLines[idx]?.unit_price || 0) || row.unit;
               const deposit =
                 depositMode === 'amount'
                   ? row.discount
                     ? formatMoney(Number(row.discount), currency)
                     : '—'
-                  : formatDepositRatio(row.discount, row.unit);
+                  : formatDepositRatio(row.discount, depositBaseUnit);
               return (
                 <tr key={idx}>
                   <td className="px-1.5 py-0.5 font-mono text-[7.5px] align-top">{row.chassis}</td>

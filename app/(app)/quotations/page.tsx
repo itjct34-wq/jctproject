@@ -558,8 +558,8 @@ export default function QuotationsPage() {
         </div>
       )}
       <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs space-y-0.5">
-        <div className="flex justify-between"><span className="text-muted-foreground">Vehicles</span><span>{form.currency} {calcSubtotal(lineItems).toLocaleString()}</span></div>
-        {quoteFreightPolicy(form.price_type).allowFreight && (
+        <div className="flex justify-between"><span className="text-muted-foreground">Vehicles</span><span>{form.currency} {(calcSubtotal(lineItems) + (quoteFreightPolicy(form.price_type).rollFreightIntoVehicleCost ? (Number(form.freight)||0) : 0)).toLocaleString()}</span></div>
+        {quoteFreightPolicy(form.price_type).allowFreight && !quoteFreightPolicy(form.price_type).rollFreightIntoVehicleCost && (
           <div className="flex justify-between"><span className="text-muted-foreground">Ocean freight</span><span>{form.currency} {(Number(form.freight)||0).toLocaleString()}</span></div>
         )}
         <div className="flex justify-between border-t border-border pt-1 text-sm font-bold"><span>Quotation total</span><span>{form.currency} {(calcSubtotal(lineItems) + (quoteFreightPolicy(form.price_type).allowFreight ? (Number(form.freight)||0) : 0) + (Number(form.insurance)||0) + (Number(form.other_fees)||0)).toLocaleString()}</span></div>
