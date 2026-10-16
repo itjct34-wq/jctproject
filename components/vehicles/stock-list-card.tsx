@@ -159,6 +159,19 @@ type StockListCardActionsMenuProps = Pick<
   | 'onMarkCommissionPaid'
 >;
 
+/** Fixed right-rail control chrome — same width/height so Edit shipping / Actions / View Info align. */
+const RAIL_BTN =
+  'h-9 min-h-9 w-full shrink-0 justify-center rounded-lg px-3 text-[12px] font-semibold shadow-sm';
+const RAIL_BRAND_BTN = cn(
+  RAIL_BTN,
+  'bg-brand text-brand-foreground hover:bg-brand/90 focus-visible:ring-brand/40'
+);
+const RAIL_OUTLINE_BTN = cn(
+  RAIL_BTN,
+  'justify-between border border-slate-300/80 bg-white/90 text-slate-900 shadow-glass-sm backdrop-blur-md',
+  'hover:border-brand/45 hover:bg-white hover:text-slate-950'
+);
+
 function StockListCardActionsMenu({
   invoice,
   onEdit,
@@ -241,6 +254,36 @@ function StockListCardActionsMenu({
         </>
       ) : null}
     </>
+  );
+}
+
+/** Always opens downward with internal scroll — never collision-flipped over the card. */
+function StockListCardActionsDropdown(props: StockListCardActionsMenuProps) {
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={RAIL_OUTLINE_BTN}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>Actions</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-80" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="bottom"
+        align="end"
+        sideOffset={6}
+        avoidCollisions={false}
+        className="z-[80] w-56 max-h-72 overflow-y-auto overscroll-contain"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <StockListCardActionsMenu {...props} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -339,23 +382,23 @@ export function StockListCard({
       role="article"
       aria-label={`${v.stock_number || 'Vehicle'}: ${statusAria}`}
       className={cn(
-        'overflow-visible rounded-xl border px-4 py-4 shadow-sm sm:px-5 sm:py-5',
+        'overflow-visible rounded-xl border py-4 pl-4 pr-5 sm:py-5 sm:pl-5 sm:pr-6',
         vehicleListRowClass(v),
         vehicleCommissionDueClass(v)
       )}
     >
       {/*
         Below xl: stacked sections (no overlapping flex columns).
-        xl+: multi-column grid with minmax so money/actions never collapse under each other.
+        xl+: fixed-width actions rail (12.5rem) so money/chips never collide with buttons.
       */}
       <div
         className={cn(
-          'grid w-full items-start gap-4 overflow-visible sm:gap-5',
+          'grid w-full items-start gap-x-5 gap-y-4 overflow-visible sm:gap-x-6 sm:gap-y-5',
           'grid-cols-1',
           'md:grid-cols-[auto_minmax(12rem,1.2fr)_minmax(7.5rem,0.7fr)_minmax(8rem,0.8fr)]',
           showMoney
-            ? 'xl:grid-cols-[auto_minmax(11rem,1.1fr)_minmax(7rem,0.65fr)_minmax(8rem,0.75fr)_minmax(14rem,1.2fr)_minmax(10.5rem,11.5rem)]'
-            : 'xl:grid-cols-[auto_minmax(11rem,1.1fr)_minmax(7rem,0.65fr)_minmax(8rem,0.75fr)_minmax(10.5rem,11.5rem)]'
+            ? 'xl:grid-cols-[auto_minmax(10.5rem,1.1fr)_minmax(6.5rem,0.6fr)_minmax(7.5rem,0.7fr)_minmax(12.5rem,1.1fr)_12.5rem]'
+            : 'xl:grid-cols-[auto_minmax(10.5rem,1.1fr)_minmax(6.5rem,0.6fr)_minmax(7.5rem,0.7fr)_12.5rem]'
         )}
       >
         {/* Thumb */}
@@ -473,11 +516,11 @@ export function StockListCard({
           {v.source_supplier ? <p className="uppercase text-slate-500">{v.source_supplier}</p> : null}
         </div>
 
-        {/* Money boxes — wrap freely; never truncate balance % */}
+        {/* Money boxes — wrap inside this column only; never spill into the actions rail */}
         {showMoney ? (
-          <div className="min-w-0 space-y-1.5 md:col-span-4 xl:col-span-1">
+          <div className="min-w-0 max-w-full space-y-1.5 md:col-span-4 xl:col-span-1 xl:pr-1">
             <div className="flex flex-wrap gap-1.5">
-              <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
+              <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-sky-600">
                   Sold {incoterm ? <span className="text-lime-600">{incoterm}</span> : null}
                 </p>
@@ -485,7 +528,7 @@ export function StockListCard({
                   {sold != null ? listMoney(sold, soldCcy) : '—'}
                 </p>
               </div>
-              <div className="min-w-[7.5rem] flex-1 basis-[7.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
+              <div className="min-w-[7.5rem] flex-1 basis-[7.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Balance</p>
                 <p
                   className={cn(
@@ -503,7 +546,7 @@ export function StockListCard({
                   <p className="whitespace-nowrap text-[10px] font-semibold text-red-600">{duePct}% due</p>
                 ) : null}
               </div>
-              <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm">
+              <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">Profit</p>
                 <p className="text-[13px] font-bold leading-tight whitespace-nowrap text-emerald-800">
                   {profit != null ? listMoney(profit, soldCcy) : '—'}
@@ -540,7 +583,7 @@ export function StockListCard({
             {(hasDocChips || etdEtaLine) ? (
               <div className="space-y-1 pt-0.5">
                 {hasDocChips ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex max-w-full flex-wrap items-center gap-1.5">
                     {hasBl ? (
                       <VehicleDocChip
                         entityId={v.id}
@@ -616,35 +659,45 @@ export function StockListCard({
           </div>
         ) : null}
 
-        {/* Right rail — status, actions, View Info (available layout matches ERP reference) */}
-        <div className="flex w-full min-w-0 flex-col items-stretch gap-2 md:col-span-4 xl:col-span-1 xl:w-auto xl:min-w-[10.5rem]">
-          <span
-            role="status"
-            className={cn(
-              'inline-flex w-full items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide',
-              pay === 'available' ? 'rounded-full' : 'rounded-md',
-              PAYMENT_STATUS_PILL_STYLES[pay]
-            )}
-          >
-            {PAYMENT_STATUS_PILL_LABELS[pay]}
-          </span>
-          <p
-            className={cn(
-              'text-center text-[11px] uppercase leading-snug',
-              pay === 'available' ? 'font-normal text-slate-600' : 'font-semibold text-slate-600'
-            )}
-          >
-            {SHIPPING_STATUS_SHORT[ship]}
-            {pay !== 'available' && freight ? ` · ${freight}` : ''}
-          </p>
-          {pay === 'available' ? (
-            <>
-              <div className="flex w-full gap-1.5">
+        {/* Right rail — isolated column: status → shipping → controls (never shrinks under money/chips) */}
+        <aside
+          className={cn(
+            'flex w-full flex-col items-stretch',
+            'md:col-span-4',
+            'xl:col-span-1 xl:w-[12.5rem] xl:min-w-[12.5rem] xl:max-w-[12.5rem] xl:shrink-0',
+            'xl:border-l xl:border-black/10 xl:pl-4'
+          )}
+        >
+          <div className="flex flex-col items-stretch gap-1.5">
+            <span
+              role="status"
+              className={cn(
+                'inline-flex w-full items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide shadow-sm',
+                pay === 'available' ? 'rounded-full' : 'rounded-md',
+                PAYMENT_STATUS_PILL_STYLES[pay]
+              )}
+            >
+              {PAYMENT_STATUS_PILL_LABELS[pay]}
+            </span>
+            <p
+              className={cn(
+                'px-0.5 text-center text-[11px] uppercase leading-snug tracking-wide',
+                pay === 'available' ? 'font-normal text-slate-600' : 'font-semibold text-slate-700'
+              )}
+            >
+              {SHIPPING_STATUS_SHORT[ship]}
+              {pay !== 'available' && freight ? ` · ${freight}` : ''}
+            </p>
+          </div>
+
+          <div className="mt-2.5 flex flex-col items-stretch gap-2">
+            {pay === 'available' ? (
+              <>
                 {onReserve ? (
                   <Button
                     type="button"
                     size="sm"
-                    className="h-8 min-w-0 flex-1 bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
+                    className={RAIL_BRAND_BTN}
                     onClick={(e) => {
                       e.stopPropagation();
                       onReserve();
@@ -654,119 +707,63 @@ export function StockListCard({
                   </Button>
                 ) : null}
                 {hasActions ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          'h-8 justify-center gap-1 border-slate-300 bg-white text-xs font-semibold text-slate-900',
-                          onReserve ? 'min-w-0 flex-1' : 'w-full'
-                        )}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Actions <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      side="bottom"
-                      align="end"
-                      sideOffset={4}
-                      collisionPadding={12}
-                      className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <StockListCardActionsMenu
-                        invoice={invoice}
-                        onEdit={onEdit}
-                        onAssign={onAssign}
-                        onSetBidRequester={onSetBidRequester}
-                        onViewInfo={onViewInfo}
-                        onReserve={onReserve}
-                        onMakeAvailable={onMakeAvailable}
-                        onShipping={onShipping}
-                        onCourier={onCourier}
-                        onDelete={onDelete}
-                        onMarkCommissionPaid={onMarkCommissionPaid}
-                      />
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <StockListCardActionsDropdown
+                    invoice={invoice}
+                    onEdit={onEdit}
+                    onAssign={onAssign}
+                    onSetBidRequester={onSetBidRequester}
+                    onViewInfo={onViewInfo}
+                    onReserve={onReserve}
+                    onMakeAvailable={onMakeAvailable}
+                    onShipping={onShipping}
+                    onCourier={onCourier}
+                    onDelete={onDelete}
+                    onMarkCommissionPaid={onMarkCommissionPaid}
+                  />
                 ) : null}
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 w-full bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
-                onClick={onViewInfo}
-              >
-                <ChevronRight className="mr-1 h-3.5 w-3.5 shrink-0" />
-                View Info
-              </Button>
-            </>
-          ) : (
-            <>
-              {onShipping ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onShipping();
-                  }}
-                >
-                  Edit shipping
+                <Button type="button" size="sm" className={RAIL_BRAND_BTN} onClick={onViewInfo}>
+                  View Info
+                  <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
                 </Button>
-              ) : null}
-              {hasActions ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-full justify-between bg-white/80 text-xs"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Actions <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side="bottom"
-                    align="end"
-                    sideOffset={4}
-                    collisionPadding={12}
-                    className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
+              </>
+            ) : (
+              <>
+                {onShipping ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={RAIL_BRAND_BTN}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShipping();
+                    }}
                   >
-                    <StockListCardActionsMenu
-                      invoice={invoice}
-                      onEdit={onEdit}
-                      onAssign={onAssign}
-                      onSetBidRequester={onSetBidRequester}
-                      onViewInfo={onViewInfo}
-                      onReserve={onReserve}
-                      onMakeAvailable={onMakeAvailable}
-                      onShipping={onShipping}
-                      onCourier={onCourier}
-                      onDelete={onDelete}
-                      onMarkCommissionPaid={onMarkCommissionPaid}
-                    />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 w-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-[hsl(213_70%_10%)]"
-                onClick={onViewInfo}
-              >
-                View Info <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
-              </Button>
-            </>
-          )}
-        </div>
+                    Edit shipping
+                  </Button>
+                ) : null}
+                {hasActions ? (
+                  <StockListCardActionsDropdown
+                    invoice={invoice}
+                    onEdit={onEdit}
+                    onAssign={onAssign}
+                    onSetBidRequester={onSetBidRequester}
+                    onViewInfo={onViewInfo}
+                    onReserve={onReserve}
+                    onMakeAvailable={onMakeAvailable}
+                    onShipping={onShipping}
+                    onCourier={onCourier}
+                    onDelete={onDelete}
+                    onMarkCommissionPaid={onMarkCommissionPaid}
+                  />
+                ) : null}
+                <Button type="button" size="sm" className={RAIL_BRAND_BTN} onClick={onViewInfo}>
+                  View Info
+                  <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
+                </Button>
+              </>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );

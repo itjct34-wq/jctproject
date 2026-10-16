@@ -375,10 +375,10 @@ function RemittancesPageInner() {
 
       {tab === 'unknown' ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Card className="border-border/60">
+          <Card className="erp-stat-card">
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Unknown TT</p>
-              <p className="text-xl font-bold text-primary">{unknownCount}</p>
+              <p className="erp-stat-label">Unknown TT</p>
+              <p className="erp-stat-value text-xl">{unknownCount}</p>
             </CardContent>
           </Card>
         </div>
@@ -413,7 +413,7 @@ function RemittancesPageInner() {
           ) : null}
         </div>
       </div>
-      <Card className="overflow-hidden border-border/60">
+      <div className="erp-list-panel">
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-14 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -428,19 +428,19 @@ function RemittancesPageInner() {
                 : 'No remittances found.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="erp-table-scroll overflow-x-auto">
             <table className="erp-data-table min-w-[1100px]">
-              <thead className="bg-primary text-primary-foreground">
-                <tr className="text-[10px] uppercase tracking-wide">
-                  <th className="px-2 py-1 font-semibold">ID</th>
-                  <th className="px-2 py-1 font-semibold">Customer details</th>
-                  <th className="px-2 py-1 font-semibold">Remitter details</th>
-                  <th className="px-2 py-1 font-semibold">Remittance details</th>
-                  <th className="px-2 py-1 font-semibold">Allocated stock IDs</th>
-                  <th className="px-2 py-1 font-semibold">Status</th>
-                  <th className="px-2 py-1 font-semibold">Details</th>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Customer details</th>
+                  <th>Remitter details</th>
+                  <th>Remittance details</th>
+                  <th>Allocated stock IDs</th>
+                  <th>Status</th>
+                  <th>Details</th>
                   {canShowActionsColumn ? (
-                    <th className="px-2 py-1 font-semibold">Actions</th>
+                    <th>Actions</th>
                   ) : null}
                 </tr>
               </thead>
@@ -506,8 +506,10 @@ function RemittancesPageInner() {
                         <span
                           className={
                             unknown
-                              ? 'text-xs font-bold tracking-wide text-amber-800'
-                              : 'text-xs font-bold tracking-wide text-primary'
+                              ? 'erp-chip-warning'
+                              : status === 'ALLOCATED'
+                                ? 'erp-chip-success'
+                                : 'erp-chip-info'
                           }
                         >
                           {status}
@@ -563,7 +565,7 @@ function RemittancesPageInner() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
       <ConfirmDialog
         open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}

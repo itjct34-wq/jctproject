@@ -164,8 +164,8 @@ function OperationsDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
-            <Card className="h-full overflow-hidden border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-glass">
-              <div className="h-1 bg-gradient-to-r from-brand/80 to-info/60" />
+            <Card className="glass-panel-strong h-full overflow-hidden border-border/40 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-glass">
+              <div className="h-1 bg-gradient-to-r from-brand/90 to-info/50" />
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kpi.tone}`}>
@@ -191,7 +191,7 @@ function OperationsDashboardPage() {
           { label: 'Expenses', value: moneyLine(data.expensesByCurrency), sub: 'Approved + paid', href: '/expenses', icon: DollarSign },
         ].map((row) => (
           <Link key={row.label} href={row.href}>
-            <Card className="h-full border-border/50 transition-all duration-200 hover:border-brand/20 hover:shadow-glass">
+            <Card className="glass-panel-strong h-full border-border/40 transition-all duration-200 hover:border-brand/25 hover:shadow-glass">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <row.icon className="h-3.5 w-3.5 text-brand/80" /> {row.label}
@@ -205,7 +205,7 @@ function OperationsDashboardPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2 border-border/60">
+        <Card className="glass-panel-strong lg:col-span-2 border-border/40">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base">Recent tasks</CardTitle>
             <Link href="/tasks"><Button variant="ghost" size="sm" className="text-xs">View all</Button></Link>
@@ -235,7 +235,7 @@ function OperationsDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60">
+        <Card className="glass-panel-strong border-border/40">
           <CardHeader className="pb-3"><CardTitle className="text-base">Quick actions</CardTitle></CardHeader>
           <CardContent className="space-y-1">
             {[
@@ -248,14 +248,14 @@ function OperationsDashboardPage() {
               { label: 'Audit logs', icon: Clock, href: '/audit', module: 'audit' as const },
             ].filter((action) => canView(action.module)).map((action) => (
               <Link key={action.label} href={action.href}>
-                <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/60">
+                <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-brand/[0.06]">
                   <action.icon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{action.label}</span>
                 </div>
               </Link>
             ))}
             <Link href="/notifications">
-              <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/60">
+              <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-brand/[0.06]">
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Notifications</span>
                 {data.unreadNotifications > 0 && (

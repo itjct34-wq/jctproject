@@ -16,6 +16,7 @@ import { JctHanko } from './jct-hanko';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
 import {
   applyFreightToVehicleLines,
+  filterFreightChargeLines,
   resolveDocumentFreightDisplay,
   resolveFreightPolicy,
 } from '@/lib/utils/commercial-freight-rules';
@@ -188,13 +189,15 @@ export function OfficialTradeDocument({
   logoSize,
   company,
 }: Props) {
-  const baseLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  const rawLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
   const freightPolicy = resolveFreightPolicy({
     incoterm: shipmentTerm,
-    shipmentType,
-    containerMode: shipmentMode,
+    shipmentType: shipmentType || 'RORO',
+    containerMode: shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel'),
   });
   const freightDisplay = resolveDocumentFreightDisplay(freightPolicy, freightAmount);
+  // Strip legacy "Ocean freight" invoice_items rows; fold freight into vehicle unit/line totals.
+  const baseLines = filterFreightChargeLines(rawLines, freightPolicy);
   const displayLines = applyFreightToVehicleLines(baseLines, freightDisplay.vehiclesFreightAddon);
   const units = displayLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || displayLines.length;
   const addr = customerAddress(customer);
@@ -234,7 +237,10 @@ export function OfficialTradeDocument({
   const freightLabel =
     freightNotes?.trim() || freightPolicy.defaultFreightLabel || 'Ocean freight';
   const vehicleColSpan = showDeposit ? 5 : 4;
+  // RORO / no separate freight: single "Total" label (not "Vehicles total" + Ocean freight).
+  const vehiclesTotalLabel = showFreightBlock ? 'Vehicles total' : 'Total';
   const totalWord = kind === 'quotation' ? 'Quotation total' : 'Invoice total';
+  const hasExtraCharges = showFreightBlock || insurance > 0 || other > 0 || discount > 0;
 
   return (
     <div className="invoice-print-root bg-white text-[#0b1f3a] max-w-[210mm] mx-auto">
@@ -386,7 +392,7 @@ export function OfficialTradeDocument({
             })}
             <tr className="inv-subtotal">
               <td colSpan={vehicleColSpan} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
-                Vehicles total
+                {vehiclesTotalLabel}
               </td>
               <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(vehiclesSum, currency)}</td>
             </tr>
@@ -423,15 +429,15 @@ export function OfficialTradeDocument({
 
         <table className="inv-table inv-compact mt-1.5 text-[8px]">
           <tbody>
-            <tr>
-              <td className="px-1.5 py-0.5 text-right font-semibold">Vehicles total</td>
-              <td className="w-[28%] px-1.5 py-0.5 text-right">{formatMoney(vehiclesSum, currency)}</td>
-            </tr>
+            {hasExtraCharges && (
+              <tr>
+                <td className="px-1.5 py-0.5 text-right font-semibold">{vehiclesTotalLabel}</td>
+                <td className="w-[28%] px-1.5 py-0.5 text-right">{formatMoney(vehiclesSum, currency)}</td>
+              </tr>
+            )}
             {showFreightBlock && (
               <tr>
-                <td className="px-1.5 py-0.5 text-right font-semibold">
-                  {freightPolicy.isRoro ? 'Ocean freight' : 'Freight'}
-                </td>
+                <td className="px-1.5 py-0.5 text-right font-semibold">Freight</td>
                 <td className="px-1.5 py-0.5 text-right">{formatMoney(freight, currency)}</td>
               </tr>
             )}

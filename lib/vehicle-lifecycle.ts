@@ -193,16 +193,18 @@ export function freightModeListLabel(mode: Vehicle['freight_mode'] | '' | undefi
  */
 export function vehicleListRowClass(vehicle: Vehicle): string {
   const pay = effectivePaymentStatus(vehicle);
+  const glass =
+    'shadow-glass-sm backdrop-blur-md supports-[backdrop-filter]:bg-opacity-90';
   if (pay === 'paid') {
-    return 'border border-emerald-600/35 border-l-[5px] border-l-emerald-700 bg-emerald-50 text-slate-900';
+    return `border border-emerald-600/35 border-l-[5px] border-l-emerald-700 bg-emerald-50/90 text-slate-900 ${glass}`;
   }
   if (pay === 'partial_paid') {
-    return 'border border-amber-500/40 border-l-[5px] border-l-amber-600 bg-amber-50 text-slate-900';
+    return `border border-amber-500/40 border-l-[5px] border-l-amber-600 bg-amber-50/90 text-slate-900 ${glass}`;
   }
   if (pay === 'reserved') {
-    return 'border border-sky-500/40 border-l-[5px] border-l-sky-600 bg-sky-50 text-slate-900';
+    return `border border-sky-500/40 border-l-[5px] border-l-sky-600 bg-sky-50/90 text-slate-900 ${glass}`;
   }
-  return 'border border-emerald-200 border-l-[5px] border-l-emerald-500 bg-white text-slate-900';
+  return `border border-white/70 border-l-[5px] border-l-emerald-500 bg-white/85 text-slate-900 ${glass}`;
 }
 
 /** Extra list cue when the vehicle is paid/delivered but commission is still due. */

@@ -68,7 +68,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/50 bg-card/70 px-3 shadow-glass-sm backdrop-blur-xl supports-[backdrop-filter]:bg-card/55 sm:gap-3 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-3 shadow-glass-sm backdrop-blur-xl supports-[backdrop-filter]:bg-card/45 sm:gap-3 sm:px-4">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
@@ -92,12 +92,12 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             setSearchQ('');
           }}
         >
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
             placeholder="Search vehicles…"
-            className="h-9 rounded-full border-border/50 bg-muted/40 pl-9 focus-visible:bg-background/90"
+            className="h-9 rounded-full border-white/50 bg-white/70 pl-10 shadow-glass-sm backdrop-blur-md focus-visible:bg-white/90 dark:border-white/10 dark:bg-white/10"
             aria-label="Search vehicles"
           />
         </form>

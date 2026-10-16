@@ -1100,7 +1100,7 @@ function VehiclesPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          <div className="space-y-3 pr-16">
+          <div className="space-y-3">
             {paged.map((v) => {
               const pay = effectivePaymentStatus(v);
               const pays = vehiclePays[v.id];

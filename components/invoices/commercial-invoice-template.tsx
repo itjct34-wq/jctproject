@@ -43,11 +43,14 @@ export function CommercialInvoiceTemplate({
   showQr = true,
   variant = 'commercial',
 }: Props) {
+  const shipmentType = invoice.shipment_type || 'RORO';
+  const shipmentMode =
+    invoice.container_mode || (invoice.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel');
   const vehiclesTotal = Number(invoice.subtotal || 0);
   const freightPolicy = resolveFreightPolicy({
     incoterm: invoice.incoterms,
-    shipmentType: invoice.shipment_type,
-    containerMode: invoice.container_mode,
+    shipmentType,
+    containerMode: shipmentMode,
   });
   const freight = normalizeFreightAmount(freightPolicy, invoice.freight_total);
   const freightNotes = normalizeFreightNotes(freightPolicy, invoice.freight_notes);
@@ -68,8 +71,8 @@ export function CommercialInvoiceTemplate({
       salesAgent={salesAgent}
       customer={customer}
       currency={invoice.currency}
-      shipmentType={invoice.shipment_type || 'RORO'}
-      shipmentMode={invoice.container_mode || (invoice.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel')}
+      shipmentType={shipmentType}
+      shipmentMode={shipmentMode}
       shipmentTerm={invoice.incoterms || 'FOB'}
       portOfLoading={invoice.port_of_loading}
       portOfDischarge={invoice.port_of_discharge}

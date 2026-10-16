@@ -434,8 +434,57 @@ export default function CustomersPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
         { label: 'Total customers', value: stats.total }, { label: 'Open leads', value: stats.leads }, { label: 'Active accounts', value: stats.active }, { label: 'Requirements', value: stats.requirements },
       ].map((s) => <Card key={s.label} className="erp-stat-card rounded-md shadow-sm"><CardContent className="p-3.5 sm:p-4"><p className="erp-stat-label">{s.label}</p><p className="erp-stat-value">{s.value}</p></CardContent></Card>)}</div>
-      <div className="erp-filter-panel"><div className="erp-filter-bar"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, code, company, email..." /></div><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="lead">Lead</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="blocked">Blocked</SelectItem></SelectContent></Select></div></div>
-      <Card className="overflow-hidden">{loading ? <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading customer records...</div> : filtered.length === 0 ? <ErpEmptyState icon={CircleUserRound} title="No customers found" description={isSellingFocused ? 'You only see customers assigned to you.' : 'Create a customer or adjust your search filters.'} /> : <div className="divide-y divide-border">{filtered.map((c) => <button key={c.id} onClick={() => loadDetails(c)} className="erp-list-row"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{c.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><p className="truncate text-sm font-medium">{c.full_name}</p><Badge variant="outline" className={`text-[10px] ${statusStyles[c.status]}`}>{c.status}</Badge></div><p className="truncate text-[11px] text-muted-foreground">{c.customer_code}{c.company_name ? ` · ${c.company_name}` : ''} · Assigned to {staffName(c.assigned_to)}</p></div><div className="hidden items-center gap-3 text-[11px] text-muted-foreground md:flex">{c.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</span>}{c.country && <span>{c.country}</span>}</div><ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /></button>)}</div>}</Card>
+      <div className="erp-filter-panel">
+        <div className="erp-filter-bar">
+          <div className="erp-filter-search">
+            <Search aria-hidden />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, code, company, email..." />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="erp-filter-select"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="lead">Lead</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="erp-list-panel">
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />Loading customer records...
+          </div>
+        ) : filtered.length === 0 ? (
+          <ErpEmptyState icon={CircleUserRound} title="No customers found" description={isSellingFocused ? 'You only see customers assigned to you.' : 'Create a customer or adjust your search filters.'} />
+        ) : (
+          <div className="divide-y divide-border/60">
+            {filtered.map((c) => (
+              <button key={c.id} onClick={() => loadDetails(c)} className="erp-list-row">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
+                  {c.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-sm font-medium">{c.full_name}</p>
+                    <Badge variant="outline" className={`rounded-full text-[10px] capitalize ${statusStyles[c.status]}`}>{c.status}</Badge>
+                  </div>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {c.customer_code}{c.company_name ? ` · ${c.company_name}` : ''} · Assigned to {staffName(c.assigned_to)}
+                  </p>
+                </div>
+                <div className="hidden items-center gap-3 text-[11px] text-muted-foreground md:flex">
+                  {c.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</span>}
+                  {c.country && <span>{c.country}</span>}
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen><DialogHeader><DialogTitle>Add customer</DialogTitle></DialogHeader><form onSubmit={submitCreate} className="space-y-2.5">
         <p className="text-[11px] text-muted-foreground">Consignee details print on invoices. Phone and email must be unique.</p>

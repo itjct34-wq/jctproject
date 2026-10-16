@@ -66,7 +66,7 @@ function CurrencyCard({ totals }: { totals: RemittanceCurrencyTotals }) {
   const high = totals.allocatedPct >= REMITTANCE_ALLOCATED_RING_THRESHOLD;
 
   return (
-    <Card className="border-border/70 shadow-[0_6px_22px_rgba(11,31,51,0.06)]">
+    <Card className="glass-panel-strong border-border/50">
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2">
           <p className="text-base font-bold tracking-tight text-primary">

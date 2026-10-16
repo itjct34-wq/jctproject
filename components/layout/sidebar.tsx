@@ -41,8 +41,8 @@ interface SidebarProps {
 function ErpMark({ compact }: { compact?: boolean }) {
   if (compact) {
     return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 ring-1 ring-brand/25">
-        <span className="text-[11px] font-bold tracking-wider text-brand">ERP</span>
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-foreground shadow-sm ring-1 ring-white/10">
+        <span className="text-[11px] font-bold tracking-wider">ERP</span>
       </div>
     );
   }
@@ -52,8 +52,8 @@ function ErpMark({ compact }: { compact?: boolean }) {
         <span className="text-[10px] font-bold tracking-wide">ERP</span>
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold tracking-tight text-foreground">ERP</p>
-        <p className="truncate text-[10px] text-muted-foreground">Operations</p>
+        <p className="truncate text-sm font-semibold tracking-tight text-white">ERP</p>
+        <p className="truncate text-[10px] text-white/55">Operations</p>
       </div>
     </div>
   );
@@ -81,7 +81,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   return (
     <aside
       className={cn(
-        'sticky top-0 flex h-[100dvh] flex-col border-r border-border/60 bg-card/80 shadow-glass-sm backdrop-blur-xl transition-all duration-200',
+        'erp-sidebar sticky top-0 flex h-[100dvh] flex-col border-r transition-all duration-200',
         mobile ? 'w-72 max-w-[85vw]' : collapsed ? 'w-16' : 'w-64'
       )}
     >
@@ -171,17 +171,17 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                           mobile ? 'py-3' : 'py-2',
                           collapsed && 'justify-center',
                           isActive
-                            ? 'bg-brand/12 font-medium text-foreground shadow-sm ring-1 ring-brand/20'
+                            ? 'bg-brand/25 font-medium text-white shadow-sm'
                             : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                         )}
                       >
                         {isActive && (
                           <span
-                            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-brand"
+                            className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-brand"
                             aria-hidden
                           />
                         )}
-                        <Icon className={cn('h-4 w-4 shrink-0', isActive && 'text-brand')} />
+                        <Icon className={cn('h-4 w-4 shrink-0', isActive && 'text-white')} />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </Link>
                     );

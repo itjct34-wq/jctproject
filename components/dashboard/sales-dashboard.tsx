@@ -147,7 +147,8 @@ export function SalesDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map((kpi) => (
           <Link key={kpi.label} href={kpi.href}>
-            <Card className="h-full border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-glass">
+            <Card className="glass-panel-strong h-full border-border/40 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-glass">
+              <div className="h-1 bg-gradient-to-r from-brand/90 to-info/50" />
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kpi.tone}`}>
@@ -155,7 +156,7 @@ export function SalesDashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground truncate">{kpi.label}</p>
-                    <p className="text-xl font-bold">{kpi.value}</p>
+                    <p className="text-xl font-bold tracking-tight tabular-nums">{kpi.value}</p>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{kpi.sub}</p>
@@ -167,7 +168,7 @@ export function SalesDashboard() {
 
       <div className="grid gap-3 md:grid-cols-2">
         <Link href="/payments">
-          <Card className="h-full border-border/50 transition-all duration-200 hover:border-brand/20 hover:shadow-glass">
+          <Card className="glass-panel-strong h-full border-border/40 transition-all duration-200 hover:border-brand/25 hover:shadow-glass">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CreditCard className="h-3.5 w-3.5 text-brand/80" /> My tagged T/T (read-only)
@@ -180,7 +181,7 @@ export function SalesDashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2 border-border/60">
+        <Card className="glass-panel-strong lg:col-span-2 border-border/40">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base">Recent reservations</CardTitle>
             <Link href="/vehicles"><Button variant="ghost" size="sm" className="text-xs">View all</Button></Link>
@@ -204,7 +205,7 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60">
+        <Card className="glass-panel-strong border-border/40">
           <CardHeader className="pb-3"><CardTitle className="text-base">Quick actions</CardTitle></CardHeader>
           <CardContent className="space-y-1">
             {[
@@ -216,7 +217,7 @@ export function SalesDashboard() {
               { label: 'View remittances / T/T', icon: CreditCard, href: '/payments' },
             ].map((action) => (
               <Link key={action.label} href={action.href}>
-                <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/60">
+                <div className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-brand/[0.06]">
                   <action.icon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{action.label}</span>
                 </div>

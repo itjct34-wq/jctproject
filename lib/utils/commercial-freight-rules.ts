@@ -89,13 +89,56 @@ export function isContainerShipment(ctx: CommercialFreightContext): boolean {
 }
 
 export function isRoroShipment(ctx: CommercialFreightContext): boolean {
+  // Any explicit "roro" token wins (e.g. "RORO Vessel", "RoRo").
+  const haystack = [ctx.freightMode, ctx.shipmentType, ctx.containerMode]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  if (haystack.includes('roro')) return true;
   if (isContainerShipment(ctx)) return false;
-  const mode = (ctx.freightMode || '').toLowerCase();
-  if (mode === 'roro') return true;
-  const type = (ctx.shipmentType || '').toLowerCase();
-  if (type.includes('roro')) return true;
-  const container = (ctx.containerMode || '').toLowerCase();
-  return container.includes('roro');
+  // Empty / unspecified mode defaults to RORO (platform default for car exports).
+  if (!haystack.trim()) return true;
+  return false;
+}
+
+/** True when a line item description is a freight charge (not a vehicle). */
+export function isFreightChargeDescription(description?: string | null): boolean {
+  const d = (description || '').trim().toLowerCase();
+  if (!d) return false;
+  // Strip optional [JCTV] wrapper / notes
+  const plain = d.replace(/^\[jctv\]\s*/i, '').split(/\s\|\|\s/)[0]?.trim() || d;
+  if (
+    /^(ocean|sea|marine|container|roro)\s*freight$/.test(plain) ||
+    plain === 'freight' ||
+    plain === 'ocean freight' ||
+    plain === 'sea freight'
+  ) {
+    return true;
+  }
+  return /\bocean\s*freight\b|\bsea\s*freight\b|\broro\s*freight\b|\bcontainer\s*freight\b/.test(
+    plain
+  );
+}
+
+type DescribedLine = {
+  description?: string | null;
+  vehicle_id?: string | null;
+};
+
+/**
+ * Drop stand-alone freight charge rows from the vehicle table.
+ * Freight either rolls into vehicle prices (RORO), is forbidden (FOB),
+ * or is rendered in its own freight section (container 20/40).
+ */
+export function filterFreightChargeLines<T extends DescribedLine>(
+  lines: T[],
+  _policy?: CommercialFreightPolicy
+): T[] {
+  if (!lines.length) return lines;
+  return lines.filter((line) => {
+    if (line.vehicle_id) return true;
+    return !isFreightChargeDescription(line.description);
+  });
 }
 
 export function isSizedContainer(ctx: CommercialFreightContext): boolean {
@@ -229,11 +272,14 @@ type PricedLine = {
   quantity?: number | null;
   unit_price: number;
   line_total: number;
+  description?: string | null;
+  vehicle_id?: string | null;
 };
 
 /**
  * Distribute freight across vehicle lines for document display.
  * Single-line invoices (typical RORO) get the full amount on unit + line total.
+ * Freight-charge rows are never used as distribution targets.
  */
 export function applyFreightToVehicleLines<T extends PricedLine>(
   lines: T[],
@@ -242,7 +288,15 @@ export function applyFreightToVehicleLines<T extends PricedLine>(
   const addon = Math.round(Number(freightAddon) || 0);
   if (!(addon > 0) || !lines.length) return lines;
 
-  const bases = lines.map((line) => {
+  const targets = lines
+    .map((line, idx) => ({ line, idx }))
+    .filter(
+      ({ line }) =>
+        Boolean(line.vehicle_id) || !isFreightChargeDescription(line.description)
+    );
+  if (!targets.length) return lines;
+
+  const bases = targets.map(({ line }) => {
     const qty = Number(line.quantity || 0) || 1;
     const unit = Number(line.unit_price || 0);
     const total = Number(line.line_total || 0) || qty * unit;
@@ -250,21 +304,30 @@ export function applyFreightToVehicleLines<T extends PricedLine>(
   });
   const baseSum = bases.reduce((sum, b) => sum + b.total, 0);
   let remaining = addon;
+  const shares = new Map<number, number>();
 
-  return lines.map((line, idx) => {
-    const isLast = idx === lines.length - 1;
+  targets.forEach(({ idx }, tIdx) => {
+    const isLast = tIdx === targets.length - 1;
     let share: number;
     if (isLast) {
       share = remaining;
     } else if (baseSum > 0) {
-      share = Math.round((bases[idx].total / baseSum) * addon);
+      share = Math.round((bases[tIdx].total / baseSum) * addon);
       remaining -= share;
     } else {
-      share = Math.floor(addon / lines.length);
+      share = Math.floor(addon / targets.length);
       remaining -= share;
     }
-    const qty = bases[idx].qty;
-    const newTotal = bases[idx].total + share;
+    shares.set(idx, share);
+  });
+
+  return lines.map((line, idx) => {
+    const share = shares.get(idx);
+    if (share == null) return line;
+    const qty = Number(line.quantity || 0) || 1;
+    const baseTotal =
+      Number(line.line_total || 0) || qty * Number(line.unit_price || 0);
+    const newTotal = Math.round(baseTotal) + share;
     const newUnit = qty === 1 ? newTotal : Math.round(newTotal / qty);
     return {
       ...line,

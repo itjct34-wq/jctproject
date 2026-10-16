@@ -30,7 +30,7 @@ export function KpiCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden border-border/50 hover:border-brand/25 hover:shadow-glass transition-all duration-200 hover:-translate-y-0.5',
+        'glass-panel-strong overflow-hidden border-border/40 hover:border-brand/30 hover:shadow-glass transition-all duration-200 hover:-translate-y-0.5',
         className
       )}
     >

@@ -16,6 +16,7 @@ import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney, letterhe
 import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
 import {
   applyFreightToVehicleLines,
+  filterFreightChargeLines,
   normalizeFreightNotes,
   resolveDocumentFreightDisplay,
   resolveFreightPolicy,
@@ -57,14 +58,17 @@ export async function exportCommercialInvoiceDocx(opts: {
   const { invoice, items, customer, vehicles = [] } = opts;
   const freightPolicy = resolveFreightPolicy({
     incoterm: invoice.incoterms,
-    shipmentType: invoice.shipment_type,
-    containerMode: invoice.container_mode,
+    shipmentType: invoice.shipment_type || 'RORO',
+    containerMode:
+      invoice.container_mode ||
+      (invoice.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel'),
   });
   const freightDisplay = resolveDocumentFreightDisplay(freightPolicy, invoice.freight_total);
   const freight = freightDisplay.documentFreight;
   const freightNotes =
     normalizeFreightNotes(freightPolicy, invoice.freight_notes) || freightPolicy.defaultFreightLabel;
   const showFreight = freightDisplay.showFreightBlock;
+  const vehiclesTotalLabel = showFreight ? 'Vehicles total' : 'Total';
   const vehiclesBase = Number(invoice.subtotal || 0);
   const vehiclesTotal = vehiclesBase + freightDisplay.vehiclesFreightAddon;
   const grand =
@@ -75,24 +79,22 @@ export async function exportCommercialInvoiceDocx(opts: {
     Number(invoice.other_charges || 0) -
     Number(invoice.discount_total || 0);
 
-  const pricedItems = applyFreightToVehicleLines(
-    (items.length ? items : []).map((item) => ({
-      ...item,
-      quantity: item.quantity,
-      unit_price: Number(item.unit_price || 0),
-      line_total: Number(item.line_total || 0) || Number(item.quantity || 1) * Number(item.unit_price || 0),
-    })),
-    freightDisplay.vehiclesFreightAddon
-  );
+  const mappedItems = (items.length ? items : []).map((item) => ({
+    ...item,
+    quantity: item.quantity,
+    unit_price: Number(item.unit_price || 0),
+    line_total: Number(item.line_total || 0) || Number(item.quantity || 1) * Number(item.unit_price || 0),
+  }));
+  const baseItems = filterFreightChargeLines(mappedItems, freightPolicy);
+  const pricedItems = applyFreightToVehicleLines(baseItems, freightDisplay.vehiclesFreightAddon);
 
-  const vehicleRows = pricedItems.map((item, idx) => {
-    const original = items[idx];
+  const vehicleRows = pricedItems.map((item) => {
     const vehicle = vehicles.find((v) => v.id === item.vehicle_id);
     const chassis = vehicle?.chassis_number || extractChassis(item.description) || '—';
     const stock = vehicle
       ? [vehicle.stock_number, vehicle.make, vehicle.model].filter(Boolean).join(' · ')
       : item.description;
-    const depositBaseUnit = Number(original?.unit_price ?? item.unit_price);
+    const depositBaseUnit = Number(item.unit_price);
     return new TableRow({
       children: [
         cell(chassis),
@@ -253,7 +255,7 @@ export async function exportCommercialInvoiceDocx(opts: {
             rows: [
               new TableRow({
                 children: [
-                  cell('Vehicles total'),
+                  cell(vehiclesTotalLabel),
                   cell(formatMoney(vehiclesTotal, invoice.currency), { align: AlignmentType.RIGHT }),
                 ],
               }),
@@ -261,7 +263,7 @@ export async function exportCommercialInvoiceDocx(opts: {
                 ? [
                     new TableRow({
                       children: [
-                        cell(freightPolicy.isRoro ? 'Ocean freight' : 'Freight'),
+                        cell('Freight'),
                         cell(formatMoney(freight, invoice.currency), { align: AlignmentType.RIGHT }),
                       ],
                     }),

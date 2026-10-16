@@ -3,6 +3,7 @@ import type { Invoice, InvoiceItem, Customer, Quotation } from '@/lib/types';
 import { decodeInvoiceVehicle, extractChassis, formatDepositRatio, formatDocumentNo } from '@/lib/jct-official';
 import {
   applyFreightToVehicleLines,
+  filterFreightChargeLines,
   normalizeFreightAmount,
   normalizeFreightNotes,
   resolveDocumentFreightDisplay,
@@ -222,9 +223,10 @@ export async function exportTradeDocumentExcel(opts: {
   });
   row += 1;
 
-  const baseLines = opts.lines.length
+  const rawLines = opts.lines.length
     ? opts.lines
     : [{ chassis: '—', description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
+  const baseLines = filterFreightChargeLines(rawLines, freightPolicy);
   const lines = applyFreightToVehicleLines(baseLines, freightDisplay.vehiclesFreightAddon);
   lines.forEach((line) => {
     const values = opts.showDeposit
@@ -239,8 +241,9 @@ export async function exportTradeDocumentExcel(opts: {
     row += 1;
   });
 
+  const vehiclesTotalLabel = showFreight ? 'Vehicles total' : 'Total';
   ws.mergeCells(row, 1, row, lastCol - 1);
-  ws.getCell(row, 1).value = 'Vehicles total';
+  ws.getCell(row, 1).value = vehiclesTotalLabel;
   styleHeader(ws.getCell(row, 1));
   ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
   ws.getCell(row, lastCol).value = money(vehiclesTotal);
@@ -285,8 +288,8 @@ export async function exportTradeDocumentExcel(opts: {
   styleHeader(ws.getCell(row, 1), NAVY);
   row += 1;
 
-  const totals: [string, number, boolean?][] = [['Vehicles total', vehiclesTotal]];
-  if (showFreight) totals.push([freightPolicy.isRoro ? 'Ocean freight' : 'Freight', freight]);
+  const totals: [string, number, boolean?][] = [[vehiclesTotalLabel, vehiclesTotal]];
+  if (showFreight) totals.push(['Freight', freight]);
   if (insurance) totals.push(['Insurance', insurance]);
   if (other) totals.push(['Other charges', other]);
   if (discount) totals.push(['Discount', -discount]);
@@ -334,10 +337,13 @@ export async function exportCommercialInvoiceExcel(opts: {
   verifyUrl?: string;
 }) {
   const { invoice, items, customer, verifyUrl } = opts;
+  const shipmentType = invoice.shipment_type || 'RORO';
+  const shipmentMode =
+    invoice.container_mode || (invoice.shipment_type === 'Container' ? '40ft Container' : 'RORO Vessel');
   const policy = resolveFreightPolicy({
     incoterm: invoice.incoterms,
-    shipmentType: invoice.shipment_type,
-    containerMode: invoice.container_mode,
+    shipmentType,
+    containerMode: shipmentMode,
   });
   const freight = normalizeFreightAmount(policy, invoice.freight_total);
   const insurance = Number(invoice.insurance_total || 0);
@@ -351,8 +357,8 @@ export async function exportCommercialInvoiceExcel(opts: {
     issueDate: invoice.issue_date,
     currency: invoice.currency,
     customer,
-    shipmentType: invoice.shipment_type,
-    shipmentMode: invoice.container_mode,
+    shipmentType,
+    shipmentMode,
     shipmentTerm: invoice.incoterms,
     portOfLoading: invoice.port_of_loading,
     portOfDischarge: invoice.port_of_discharge,

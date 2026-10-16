@@ -224,7 +224,9 @@ export async function createReservationInvoice(input: ReservationInvoiceInput) {
     },
   ];
 
-  if (freightPolicy.allowFreight && freight > 0) {
+  // Container: freight is its own document section (amount also on invoice.freight_total).
+  // RORO: freight rolls into vehicle unit/line totals — never insert an "Ocean freight" line item.
+  if (freightPolicy.showFreightOnDocument && freight > 0) {
     lineItems.push({
       invoice_id: invData.id,
       vehicle_id: null,

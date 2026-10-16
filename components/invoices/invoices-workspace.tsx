@@ -6,7 +6,6 @@ import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -36,6 +35,9 @@ import {
   normalizeFreightNotes,
   resolveFreightPolicy,
 } from '@/lib/utils/commercial-freight-rules';
+import { formatCurrency } from '@/lib/utils/currencies';
+import { sumByCurrency } from '@/lib/utils/format';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export type InvoiceWorkspaceKind = 'commercial' | 'auction';
@@ -49,8 +51,17 @@ export function isAuctionDepositInvoice(inv: Pick<Invoice, 'payment_terms' | 'in
   );
 }
 
-const statusStyles: Record<Invoice['payment_status'], string> = {
-  unpaid: 'bg-red-50 text-red-700 border-red-200', partial: 'bg-amber-50 text-amber-700 border-amber-200', paid: 'bg-emerald-50 text-emerald-700 border-emerald-200', cancelled: 'bg-slate-100 text-slate-600 border-slate-200', credited: 'bg-blue-50 text-blue-700 border-blue-200',
+const statusChipClass: Record<Invoice['payment_status'], string> = {
+  unpaid: 'erp-chip-danger',
+  partial: 'erp-chip-warning',
+  paid: 'erp-chip-success',
+  cancelled: 'erp-chip-neutral',
+  credited: 'erp-chip-info',
+};
+const typeChipClass: Record<Invoice['invoice_type'], string> = {
+  commercial: 'erp-chip-type',
+  proforma: 'erp-chip-type-muted',
+  credit_note: 'erp-chip-info',
 };
 const typeLabels: Record<Invoice['invoice_type'], string> = { proforma: 'Proforma', commercial: 'Commercial', credit_note: 'Credit Note' };
 const emptyForm = {
@@ -509,6 +520,11 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
   const kindInvoices = invoices.filter((inv) => (isAuction ? isAuctionDepositInvoice(inv) : !isAuctionDepositInvoice(inv)));
   const stats = { total: kindInvoices.length, unpaid: kindInvoices.filter((i) => i.payment_status === 'unpaid').length, paid: kindInvoices.filter((i) => i.payment_status === 'paid').length, outstanding: kindInvoices.filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial').reduce((sum, i) => sum + i.total, 0) };
+  const receivablesByCurrency = sumByCurrency(
+    kindInvoices
+      .filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial')
+      .map((i) => ({ amount: Number(i.total) || 0, currency: i.currency }))
+  );
 
   const selectedCustomer = customers.find((c) => c.id === form.customer_id) || null;
   const freightPolicy = useMemo(
@@ -813,8 +829,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     <div className="space-y-6">
       <PageHeader title={isAuction ? 'Auction deposit invoices' : 'Invoices'} description={isAuction ? 'Auction deposit invoices with a manual deposit amount — same print layout as commercial invoices' : 'Proforma, commercial, and purchase invoices with PDF generation'} actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={handleExport}><Download className="mr-1.5 h-4 w-4" />Export</Button>{canCreateInvoice && <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />{isAuction ? 'New auction invoice' : 'New invoice'}</Button>}</div>} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[
-        { label: 'Total invoices', value: stats.total, tone: 'bg-blue-50 text-blue-600' }, { label: 'Unpaid', value: stats.unpaid, tone: 'bg-red-50 text-red-600' }, { label: 'Paid', value: stats.paid, tone: 'bg-emerald-50 text-emerald-600' }, { label: 'Outstanding', value: stats.outstanding.toLocaleString(), tone: 'bg-amber-50 text-amber-600' },
-      ].map((s) => <Card key={s.label} className="border-border/60"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{s.label}</p><p className="text-xl font-bold">{s.value}</p></CardContent></Card>)}</div>
+        { label: 'Total invoices', value: stats.total }, { label: 'Unpaid', value: stats.unpaid }, { label: 'Paid', value: stats.paid }, { label: 'Outstanding', value: stats.outstanding.toLocaleString() },
+      ].map((s) => <Card key={s.label} className="erp-stat-card"><CardContent className="p-4"><p className="erp-stat-label">{s.label}</p><p className="erp-stat-value text-xl">{s.value}</p></CardContent></Card>)}</div>
       <div className="erp-filter-panel">
         <div className="erp-filter-bar">
           <div className="erp-filter-search">
@@ -834,51 +850,135 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           </Select>
         </div>
       </div>
-      <Card className="overflow-hidden border-border/60">{loading ? <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading invoices...</div> : filtered.length === 0 ? <div className="flex flex-col items-center justify-center p-10 text-center"><FileText className="mb-2 h-8 w-8 text-muted-foreground/50" /><h3 className="text-sm font-semibold">No invoices found</h3><p className="mt-1 text-xs text-muted-foreground">{isSellingFocused ? 'You only see invoices you created or that belong to your customers.' : 'Create an invoice or adjust your filters.'}</p></div> : <div className="divide-y divide-border/70">{filtered.map((inv) => (
-        <div
-          key={inv.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => loadDetails(inv)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadDetails(inv); } }}
-          className="erp-list-row cursor-pointer"
-        >
-          <button
-            type="button"
-            title="Print / PDF"
-            aria-label={`Print or download PDF for ${inv.invoice_code}`}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              void openPrintPreview(inv);
-            }}
-          >
-            <FileText className="h-4 w-4" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-sm font-medium">{inv.invoice_code}</p>
-              <Badge variant="outline" className={`text-[10px] ${statusStyles[inv.payment_status]}`}>{inv.payment_status}</Badge>
-              <Badge variant="secondary" className="text-[10px]">{typeLabels[inv.invoice_type]}</Badge>
+      <div className={cn('grid gap-4', receivablesByCurrency.length > 0 && 'xl:grid-cols-[minmax(0,1fr)_17rem]')}>
+        <div className="erp-list-panel">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />Loading invoices...
             </div>
-            <p className="truncate text-[11px] text-muted-foreground">{customerName(inv.customer_id)} · {inv.currency} {inv.total.toLocaleString()}</p>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 shrink-0 gap-1.5 px-2.5"
-            aria-label={`Actions for ${inv.invoice_code}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              void loadDetails(inv);
-            }}
-          >
-            <MoreHorizontal className="h-3.5 w-3.5" />
-            Actions
-          </Button>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-10 text-center">
+              <FileText className="mb-2 h-8 w-8 text-muted-foreground/50" />
+              <h3 className="text-sm font-semibold">No invoices found</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isSellingFocused
+                  ? 'You only see invoices you created or that belong to your customers.'
+                  : 'Create an invoice or adjust your filters.'}
+              </p>
+            </div>
+          ) : (
+            <div className="erp-table-scroll">
+              <table className="erp-data-table min-w-[720px]">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th className="text-right">Total</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((inv) => (
+                    <tr
+                      key={inv.id}
+                      role="button"
+                      tabIndex={0}
+                      className="cursor-pointer"
+                      onClick={() => loadDetails(inv)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          loadDetails(inv);
+                        }
+                      }}
+                    >
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <span className="erp-chip-inv" aria-hidden>
+                            INV
+                          </span>
+                          <span className="font-medium text-foreground">{inv.invoice_code}</span>
+                        </div>
+                      </td>
+                      <td className="max-w-[12rem] truncate text-muted-foreground">
+                        {customerName(inv.customer_id)}
+                      </td>
+                      <td>
+                        <span className={typeChipClass[inv.invoice_type]}>{typeLabels[inv.invoice_type]}</span>
+                      </td>
+                      <td>
+                        <span className={cn(statusChipClass[inv.payment_status], 'capitalize')}>
+                          {inv.payment_status}
+                        </span>
+                      </td>
+                      <td className="text-right tabular-nums font-medium">
+                        {inv.currency} {inv.total.toLocaleString()}
+                      </td>
+                      <td className="text-right">
+                        <div className="inline-flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1 px-2"
+                            aria-label={`Print or download PDF for ${inv.invoice_code}`}
+                            onClick={() => void openPrintPreview(inv)}
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1.5 px-2.5"
+                            aria-label={`Actions for ${inv.invoice_code}`}
+                            onClick={() => void loadDetails(inv)}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            Actions
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      ))}</div>}</Card>
+        {receivablesByCurrency.length > 0 ? (
+          <aside className="erp-summary-panel p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Total receivables
+            </p>
+            <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-foreground">
+              {receivablesByCurrency.length === 1
+                ? formatCurrency(receivablesByCurrency[0].total, receivablesByCurrency[0].currency)
+                : `${receivablesByCurrency.length} currencies`}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {stats.unpaid + kindInvoices.filter((i) => i.payment_status === 'partial').length} unpaid / partial
+            </p>
+            <ul className="mt-4 space-y-2.5 border-t border-border/50 pt-3">
+              {receivablesByCurrency.map((bucket) => (
+                <li key={bucket.currency} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="inline-flex items-center gap-2 font-medium text-muted-foreground">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">
+                      {bucket.currency.slice(0, 2)}
+                    </span>
+                    {bucket.currency}
+                  </span>
+                  <span className="tabular-nums font-semibold">
+                    {formatCurrency(bucket.total, bucket.currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
+      </div>
       {lineItemForm(createOpen, () => setCreateOpen(false), submitCreate, isAuction ? 'New auction deposit invoice' : 'New invoice')}
       {lineItemForm(editOpen, () => setEditOpen(false), submitEdit, isAuction ? 'Edit auction deposit invoice' : 'Edit invoice')}
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete invoice?" description="This will permanently remove the invoice and its line items." onConfirm={confirmDelete} loading={submitting} />
@@ -904,7 +1004,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className={statusStyles[selected.payment_status]}>{selected.payment_status}</Badge>
+                      <span className={cn(statusChipClass[selected.payment_status], 'capitalize')}>{selected.payment_status}</span>
                       {(['unpaid', 'partial', 'paid', 'cancelled', 'credited'] as const).map((s) => (
                         <Button key={s} size="sm" variant={selected.payment_status === s ? 'default' : 'outline'} onClick={() => updatePaymentStatus(s)}>
                           {s}
