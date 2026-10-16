@@ -1,7 +1,7 @@
 import { PublicShell } from '@/components/public/public-shell';
 
 export const metadata = {
-  title: 'About — Japan Circular Trading',
+  title: 'About — Used vehicle export',
   description: 'Used vehicle export specialists based in Nagoya, Japan.',
 };
 
@@ -10,7 +10,7 @@ export default function AboutPage() {
     <PublicShell>
       <section className="jct-home-wrap max-w-3xl py-16 md:py-20">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--jct-vermilion)]">About us</p>
-        <h1 className="mt-3 font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">Japan Circular Trading</h1>
+        <h1 className="mt-3 font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">Nagoya vehicle export</h1>
         <p className="mt-6 leading-relaxed text-[var(--jct-muted)]">
           We are a Nagoya-based exporter focused on quality used vehicles for international markets.
           Our team combines auction-floor experience with disciplined documentation and shipping coordination.

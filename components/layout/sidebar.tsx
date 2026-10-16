@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { getNavGroupsForRoles } from '@/lib/nav';
-import { JCT_OFFICIAL } from '@/lib/jct-official';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -71,18 +70,14 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
           collapsed && !mobile ? 'h-[4.5rem] justify-center px-1.5' : 'min-h-[4.5rem] px-2.5 py-2'
         )}
       >
-        <img
-          src={JCT_OFFICIAL.logo}
-          alt="Japan Circular Trading"
-          className={cn(
-            'shrink-0 bg-white object-contain object-left',
-            collapsed && !mobile ? 'h-12 w-12' : 'h-14 w-auto max-h-16 max-w-[210px]'
-          )}
-        />
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
+        {!collapsed || mobile ? (
+          <div className="min-w-0 flex-1 px-1">
             <p className="text-sm font-semibold text-primary truncate">ERP</p>
             <p className="text-[11px] text-muted-foreground truncate">Operations</p>
+          </div>
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+            <span className="text-[10px] font-bold tracking-wide text-primary">ERP</span>
           </div>
         )}
         {mobile && (

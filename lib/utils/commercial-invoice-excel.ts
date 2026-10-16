@@ -104,7 +104,7 @@ export async function exportTradeDocumentExcel(opts: {
   showDeposit?: boolean;
 }) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Japan Circular Trading';
+  wb.creator = 'Vehicle Export ERP';
   wb.created = new Date();
   const ws = wb.addWorksheet(opts.title, {
     pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
@@ -125,7 +125,7 @@ export async function exportTradeDocumentExcel(opts: {
   };
 
   mergeTo(1);
-  ws.getCell(1, 1).value = 'JAPAN CIRCULAR TRADING CO., LTD.';
+  ws.getCell(1, 1).value = 'Company';
   ws.getCell(1, 1).font = { name: 'Arial', size: 16, bold: true, color: { argb: NAVY } };
 
   mergeTo(2);

@@ -163,7 +163,7 @@ function styleHeaderRow(row: { height: number; eachCell: (cb: (cell: { font: unk
 export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Japan Circular Trading';
+  wb.creator = 'Vehicle Export ERP';
   const kindLabel = kind === 'auctions' ? 'Auction stock' : kind === 'machinery' ? 'Machinery' : kind === 'parts' ? 'Parts' : 'Cars';
   const guide = wb.addWorksheet('How to fill', { views: [{ showGridLines: false }] });
   guide.getColumn(1).width = 92;

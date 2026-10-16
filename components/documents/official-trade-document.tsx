@@ -7,6 +7,8 @@ import {
   formatDocumentNo,
   formatMoney,
   formatTransmissionLabel,
+  letterheadName,
+  type CompanyLetterheadSettings,
 } from '@/lib/jct-official';
 import { JctHanko } from './jct-hanko';
 import { InvoiceQRCode } from '@/components/invoices/qr-code';
@@ -58,6 +60,8 @@ type Props = {
   verificationUrl?: string;
   showQr?: boolean;
   depositMode?: 'ratio' | 'amount';
+  /** From company_settings; used for letterhead instead of a hard-coded brand name. */
+  company?: CompanyLetterheadSettings | null;
 };
 
 function customerAddress(customer?: Customer | null) {
@@ -166,6 +170,7 @@ export function OfficialTradeDocument({
   verificationUrl,
   showQr = true,
   depositMode = 'ratio',
+  company,
 }: Props) {
   const displayLines = lines.length ? lines : [{ description: '—', quantity: 1, unit_price: 0, line_total: 0 }];
   const units = displayLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || displayLines.length;
@@ -176,6 +181,8 @@ export function OfficialTradeDocument({
   const partyPhone = customer?.phone || customer?.whatsapp || '';
   const mode = shipmentMode || (shipmentType === 'Container' ? '40ft Container' : 'RORO Vessel');
   const printedNo = formatDocumentNo(documentNo);
+  const orgName = letterheadName(company);
+  const beneficiaryName = letterheadName(company) || JCT_OFFICIAL.bank.beneficiary;
   const showDeposit = kind === 'invoice';
   const vehiclesSum =
     vehiclesTotal ??
@@ -196,12 +203,11 @@ export function OfficialTradeDocument({
   return (
     <div className="invoice-print-root bg-white text-[#0b1f3a] max-w-[210mm] mx-auto">
       <div className="invoice-sheet flex flex-col bg-white p-[8mm]">
-        <header className="flex items-center justify-between gap-4 border-b-2 border-[#c4161c] pb-2">
-          <img
-            src={JCT_OFFICIAL.logo}
-            alt="Japan Circular Trading"
-            className="h-[148px] w-auto max-w-[420px] object-contain object-left shrink-0"
-          />
+        <header className="flex items-end justify-between gap-4 border-b-2 border-[#c4161c] pb-2">
+          <div className="min-w-0">
+            <p className="text-[14px] font-bold leading-tight tracking-tight text-[#0b1f3a]">{orgName}</p>
+            <p className="mt-0.5 text-[8px] leading-snug text-[#0b1f3a]">{JCT_OFFICIAL.address}</p>
+          </div>
           <div className="text-right shrink-0">
             <h1 className="text-[22px] font-black leading-none tracking-tight text-[#0b1f3a]">{title}</h1>
             <p className="mt-1 font-mono text-[12px] font-bold text-[#0b1f3a]">{printedNo}</p>
@@ -257,7 +263,7 @@ export function OfficialTradeDocument({
                 />
               </td>
               <td className="px-1.5 py-1">
-                <p className="text-[11px] font-bold leading-tight">{JCT_OFFICIAL.shortName}</p>
+                <p className="text-[11px] font-bold leading-tight">{orgName}</p>
                 <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.address}</p>
                 <p className="text-[9px]">Fax {JCT_OFFICIAL.fax} · Tel {JCT_OFFICIAL.phone}</p>
                 <p className="text-[9px]">{JCT_OFFICIAL.email}</p>
@@ -422,7 +428,7 @@ export function OfficialTradeDocument({
               <td className="w-1/3 px-1.5 py-1">
                 <p className="mb-0.5 text-[7.5px] font-bold uppercase tracking-wide text-[#0b1f3a]">Beneficiary Information</p>
                 <BankLine label="Account Number" value={JCT_OFFICIAL.bank.account} />
-                <BankLine label="Beneficiary Name" value={JCT_OFFICIAL.bank.beneficiary} />
+                <BankLine label="Beneficiary Name" value={beneficiaryName} />
                 <BankLine label="Beneficiary Address" value={JCT_OFFICIAL.bank.beneficiaryAddress} />
               </td>
               <td className="w-1/3 px-1.5 py-1">
@@ -441,7 +447,7 @@ export function OfficialTradeDocument({
           <div className="grid grid-cols-[1fr_96px] items-center gap-2">
             <div className="px-2 text-center">
               <p className="text-[10px] font-bold leading-tight tracking-tight text-[#0b1f3a]">
-                {JCT_OFFICIAL.legalName}
+                {orgName}
               </p>
               <p className="mt-0.5 text-[8px] text-[#0b1f3a]">
                 <span className="font-semibold">{JCT_OFFICIAL.directorTitle}</span>{' '}

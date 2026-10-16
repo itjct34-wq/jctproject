@@ -21,6 +21,7 @@ export function CommercialInvoiceTemplate({
   invoice,
   items,
   customer,
+  company,
   vehicles,
   salesAgent,
   showQr = true,
@@ -81,6 +82,7 @@ export function CommercialInvoiceTemplate({
       verificationUrl={verifyUrl || undefined}
       showQr={showQr}
       depositMode={variant === 'auction_deposit' ? 'amount' : 'ratio'}
+      company={company?.name ? { company_name: company.name } : null}
     />
   );
 }

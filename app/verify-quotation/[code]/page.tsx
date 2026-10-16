@@ -53,7 +53,7 @@ export default function VerifyQuotationPage() {
             <ShieldCheck className="h-7 w-7 text-[var(--jct-vermilion)]" />
           </div>
           <h1 className="mt-4 font-display text-2xl font-bold text-[var(--jct-navy)]">Quotation authenticity verification</h1>
-          <p className="mt-2 text-sm text-[var(--jct-muted)]">Japan Circular Trading · Nagoya, Japan</p>
+          <p className="mt-2 text-sm text-[var(--jct-muted)]">Nagoya, Japan · no login required</p>
         </div>
         <div className="rounded-2xl border border-[var(--jct-border)] bg-white p-6">
           {loading && (
@@ -68,7 +68,7 @@ export default function VerifyQuotationPage() {
                 <BadgeCheck className="h-8 w-8 shrink-0 text-emerald-700" />
                 <div>
                   <p className="font-semibold text-emerald-800">Authentic quotation</p>
-                  <p className="text-xs text-emerald-800/80">This quotation number was issued by Japan Circular Trading.</p>
+                  <p className="text-xs text-emerald-800/80">This quotation number matches our issued records.</p>
                 </div>
               </div>
               <dl className="space-y-3 text-sm">

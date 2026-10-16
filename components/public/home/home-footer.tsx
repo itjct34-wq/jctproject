@@ -10,7 +10,7 @@ export function HomeFooter() {
       <div className="jct-home-wrap grid gap-8 py-12 md:grid-cols-4">
         <div className="space-y-4 md:col-span-2">
           <span className="inline-flex rounded-xl bg-white/80 px-2 py-1.5 ring-1 ring-[var(--jct-navy)]/10">
-            <BrandLogo placement="footer" />
+            <BrandLogo placement="footer" label="Export" />
           </span>
           <p className="max-w-md text-sm leading-relaxed text-[var(--jct-muted)]">
             Used vehicle export from Nagoya, Japan. Auction sourcing, inspection support, RORO and container shipping
@@ -65,9 +65,9 @@ export function HomeFooter() {
         </div>
       </div>
       <div className="jct-site-footer-bar py-4 text-center text-xs text-[var(--jct-muted-2)]">
-        <p>© {new Date().getFullYear()} Japan Circular Trading Co., Ltd.</p>
+        <p>© {new Date().getFullYear()} · Used vehicle export</p>
         <p className="mt-1">
-          Brand names, logos and flags belong to their respective owners. JCT is not affiliated with them.
+          Brand names, logos and flags belong to their respective owners. We are not affiliated with them.
         </p>
       </div>
     </footer>

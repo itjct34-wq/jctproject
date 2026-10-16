@@ -19,6 +19,7 @@ export function CommercialQuotationTemplate({
   quotation,
   items = [],
   customer,
+  company,
   verificationUrl,
   vehicles,
   salesAgent,
@@ -77,6 +78,7 @@ export function CommercialQuotationTemplate({
       grandTotal={grand}
       notes={quotation.notes}
       verificationUrl={verificationUrl}
+      company={company?.name ? { company_name: company.name } : null}
     />
   );
 }

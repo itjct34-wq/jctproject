@@ -6,8 +6,8 @@ import { STOCK_CATALOGS, type StockCategory } from '@/lib/stock-category';
 export async function vehicleDetailMetadata(id: string, category: StockCategory): Promise<Metadata> {
   const catalog = STOCK_CATALOGS[category];
   const fallback: Metadata = {
-    title: `${catalog.itemNoun} | Japan Circular Trading`,
-    description: `Export ${catalog.itemNoun.toLowerCase()} from Japan Circular Trading.`,
+    title: `${catalog.itemNoun} | Japan export`,
+    description: `Export ${catalog.itemNoun.toLowerCase()} from Japan.`,
   };
   const db = createPublicSupabase();
   if (!db || !id) return fallback;
@@ -35,7 +35,7 @@ export async function vehicleDetailMetadata(id: string, category: StockCategory)
       ? `FOB ${row.listed_currency || 'USD'} ${Math.round(Number(row.listed_price)).toLocaleString()}`
       : 'FOB USD on request';
   return {
-    title: `${title} | Japan Circular Trading`,
+    title: `${title} | Japan export`,
     description: `${title} (${row.stock_number || 'stock'}) — ${price}. ${catalog.itemNoun} for export.`,
   };
 }

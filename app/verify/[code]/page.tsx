@@ -42,7 +42,7 @@ export default function VerifyInvoicePage() {
             <ShieldCheck className="h-7 w-7 text-[var(--jct-vermilion)]" />
           </div>
           <h1 className="font-display text-xl font-bold text-[var(--jct-navy)]">Invoice authenticity check</h1>
-          <p className="mt-1 text-sm text-[var(--jct-muted)]">Japan Circular Trading · no login required</p>
+          <p className="mt-1 text-sm text-[var(--jct-muted)]">No login required</p>
         </div>
 
         <div className="w-full rounded-2xl border border-[var(--jct-border)] bg-white p-6">
@@ -59,7 +59,7 @@ export default function VerifyInvoicePage() {
                 <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-700" />
                 <div>
                   <p className="font-semibold text-emerald-800">Authentic Invoice</p>
-                  <p className="text-xs text-emerald-800/70">This document was issued by Japan Circular Trading</p>
+                  <p className="text-xs text-emerald-800/70">This document matches our issued records</p>
                 </div>
               </div>
 

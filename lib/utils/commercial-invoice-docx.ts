@@ -12,7 +12,7 @@ import {
   VerticalAlign,
   WidthType,
 } from 'docx';
-import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney } from '@/lib/jct-official';
+import { JCT_OFFICIAL, extractChassis, formatDepositRatio, formatMoney, letterheadName } from '@/lib/jct-official';
 import type { Customer, Invoice, InvoiceItem, Vehicle } from '@/lib/types';
 
 const RED = 'C4161C';
@@ -82,7 +82,7 @@ export async function exportCommercialInvoiceDocx(opts: {
             children: [
               new Paragraph({
                 children: [
-                  new TextRun({ text: JCT_OFFICIAL.legalName, bold: true, color: RED, size: 28, font: 'Arial' }),
+                  new TextRun({ text: letterheadName(), bold: true, color: RED, size: 28, font: 'Arial' }),
                 ],
               }),
             ],
@@ -121,7 +121,7 @@ export async function exportCommercialInvoiceDocx(opts: {
                   ),
                   cell(
                     [
-                      JCT_OFFICIAL.shortName,
+                      letterheadName(),
                       JCT_OFFICIAL.address,
                       `Fax: ${JCT_OFFICIAL.fax}`,
                       `Phone: ${JCT_OFFICIAL.phone}`,
@@ -253,7 +253,7 @@ export async function exportCommercialInvoiceDocx(opts: {
           new Paragraph({
             children: [
               new TextRun({
-                text: `Beneficiary Information Account Number: ${JCT_OFFICIAL.bank.account} Beneficiary Name: ${JCT_OFFICIAL.bank.beneficiary} Beneficiary Address: ${JCT_OFFICIAL.bank.beneficiaryAddress}`,
+                text: `Beneficiary Information Account Number: ${JCT_OFFICIAL.bank.account} Beneficiary Name: ${letterheadName()} Beneficiary Address: ${JCT_OFFICIAL.bank.beneficiaryAddress}`,
                 size: 16,
               }),
             ],

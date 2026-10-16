@@ -18,13 +18,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Japan Circular Trading — Mini ERP',
+  title: 'Vehicle Export ERP',
   description:
-    'Internal ERP system for Japan Circular Trading Co., Ltd. — vehicle export management, CRM, inventory, auctions, invoicing, payments, and shipping.',
-  icons: {
-    icon: '/images/jct-official-logo.png',
-    apple: '/images/jct-official-logo.png',
-  },
+    'Vehicle export management — CRM, inventory, auctions, invoicing, payments, and shipping.',
 };
 
 export default function RootLayout({

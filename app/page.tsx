@@ -16,11 +16,11 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: 'Used cars from Japan | Japan Circular Trading, Nagoya',
+  title: 'Used cars from Japan | Nagoya export',
   description:
     'Buy used cars direct from Japan. FOB, C&F and CIF quotes, RORO or container shipping from Nagoya, with payment to official company accounts only.',
   openGraph: {
-    title: 'Used cars from Japan | Japan Circular Trading, Nagoya',
+    title: 'Used cars from Japan | Nagoya export',
     description:
       'Auction-grade Toyota, Honda, Nissan and more. Export from Nagoya with FOB, C&F or CIF quotes.',
     type: 'website',
@@ -30,9 +30,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Japan Circular Trading Co., Ltd.',
-  url: 'https://japancirculartrading.com',
-  email: 'info@japancirculartrading.com',
+  name: 'Vehicle Export',
   telephone: '+81-70-2241-6356',
   address: {
     '@type': 'PostalAddress',

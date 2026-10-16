@@ -8,7 +8,7 @@ export async function printDocumentPdf(fileName: string) {
     .replace(/[^a-zA-Z0-9._ -]+/g, '-')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .slice(0, 120) || 'JCT-Document';
+    .slice(0, 120) || 'Document';
 
   document.title = safeName;
   const root = document.querySelector<HTMLElement>('.invoice-print-root');

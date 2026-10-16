@@ -49,9 +49,9 @@ function LoginForm() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex flex-col items-center gap-3 mb-2">
             <div className="rounded-2xl bg-white px-5 py-3 shadow-md">
-              <BrandLogo placement="header" className="justify-center" />
+              <BrandLogo placement="header" label="ERP" className="justify-center" />
             </div>
-            <p className="text-xs font-medium text-white/85">Co., Ltd. — Nagoya, Japan · ERP</p>
+            <p className="text-xs font-medium text-white/85">Nagoya, Japan · Staff sign-in</p>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ function LoginForm() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@japancirculartrading.com"
+                    placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
@@ -123,10 +123,7 @@ function LoginForm() {
         </Card>
 
         <p className="text-center text-xs text-primary/80 mt-6">
-          Japan Circular Trading Co., Ltd. — Used Vehicle Export
-        </p>
-        <p className="text-center text-xs text-muted-foreground mt-2">
-          +81 70-2241-6356 · itjct34@gmail.com
+          Used vehicle export operations
         </p>
       </div>
     </div>

@@ -1,6 +1,22 @@
+/** Neutral letterhead when company_settings.company_name / legal_name are unset. */
+export const COMPANY_NAME_FALLBACK = 'Company';
+
+export type CompanyLetterheadSettings = {
+  company_name?: string | null;
+  legal_name?: string | null;
+};
+
+/** Prefer org settings for visible company name; never hard-code a brand wordmark. */
+export function letterheadName(settings?: CompanyLetterheadSettings | null) {
+  const legal = settings?.legal_name?.trim();
+  const company = settings?.company_name?.trim();
+  return legal || company || COMPANY_NAME_FALLBACK;
+}
+
 export const JCT_OFFICIAL = {
-  legalName: 'JAPAN CIRCULAR TRADING CO., LTD.',
-  shortName: 'Japan Circular Trading Co., LTD.',
+  /** Prefer letterheadName(company_settings); kept empty so UI does not show a hard-coded brand. */
+  legalName: '',
+  shortName: '',
   tagline: 'EXPORT / IMPORT TRADE / USED CARS / TRUCKS',
   address: '2-505-101, DAITORO, NAKAGAWA-KU, NAGOYA-SHI, AICHI-KEN 454-0943 JAPAN',
   addressLetter: '2-505-101,Daitoro,Nakagawa-ku, Nagoya-shi, Aichi-ken,454-0943 Japan',
@@ -13,14 +29,16 @@ export const JCT_OFFICIAL = {
   directorTitle: 'Representative Director',
   corporateNumber: '8180001159348',
   license: 'Aichi Prefecture Public Safety Commission No. 541212314700',
-  logo: '/images/jct-official-logo.png',
+  /** Logo marks removed from product UI; do not point at brand image assets. */
+  logo: '',
   bank: {
     name: 'RAKUTEN BANK, LTD.',
     branch: 'HEAD OFFICE',
     address: '2-16-5 KONAN, MINATO-KU, TOKYO, JAPAN',
     swift: 'RAKTJPJT OR RAKTJPJTXXX',
     account: '254-7588374',
-    beneficiary: 'JAPAN CIRCULAR TRADING CO., LTD.',
+    /** Wire beneficiary — prefer company_settings.legal_name / company_name when rendering docs. */
+    beneficiary: COMPANY_NAME_FALLBACK,
     beneficiaryAddress: '2-505-101, DAITORO, NAKAGAWA-KU, NAGOYA CITY, AICHI PREF. JAPAN',
     intermediaryName: 'SUMITOMO MITSUI BANKING CORPORATION, TOKYO, JAPAN',
     intermediarySwift: 'SMBCJPJT',

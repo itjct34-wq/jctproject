@@ -32,9 +32,9 @@ export function HomeHeader() {
         <Link
           href="/"
           className="flex min-w-0 shrink items-center rounded-lg bg-white/70 px-2 py-1 shadow-[0_2px_12px_rgba(11,31,51,0.06)] ring-1 ring-[var(--jct-navy)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
-          aria-label="Japan Circular Trading home"
+          aria-label="Home"
         >
-          <BrandLogo placement="header" />
+          <BrandLogo placement="header" label="Export" />
         </Link>
         <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (

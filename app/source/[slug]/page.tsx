@@ -12,9 +12,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const market = resolvePublicSourceMarket(slug);
-  if (!market) return { title: 'Source market | JCT' };
+  if (!market) return { title: 'Source market | Japan export' };
   return {
-    title: `Used cars from ${market.name} | Japan Circular Trading`,
+    title: `Used cars from ${market.name} | Japan export`,
     description: `${market.tagline}. Browse export stock sourced from ${market.name}.`,
   };
 }

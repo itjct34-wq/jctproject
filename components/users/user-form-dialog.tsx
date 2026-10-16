@@ -140,7 +140,7 @@ export function UserFormDialog({
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="user@japancirculartrading.com"
+                placeholder="user@company.com"
                 required={mode === 'create'}
                 disabled={mode === 'edit'}
                 autoComplete={mode === 'create' ? 'off' : undefined}
