@@ -29,7 +29,8 @@ export const JCT_OFFICIAL = {
 } as const;
 
 export function formatMoney(amount: number, currency: string) {
-  return `${currency} ${Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const n = Math.round(Number(amount || 0));
+  return `${currency} ${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export function extractChassis(text: string | null | undefined) {

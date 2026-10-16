@@ -111,12 +111,12 @@ function emptyCharges(): Record<ChargeKey, string> {
   };
 }
 
-function round2(n: number) {
-  return Math.round(n * 100) / 100;
+function roundMoney(n: number) {
+  return Math.round(n);
 }
 
 function money(n: number, ccy = 'USD') {
-  return `${ccy} ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${ccy} ${roundMoney(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function agentLabel(
@@ -190,7 +190,7 @@ export function ReserveVehicleDialog({
     const tt = vehicle.tt_rate == null ? DEFAULT_TT_RATE : Number(vehicle.tt_rate) || DEFAULT_TT_RATE;
     const calc = bid != null ? calcFobFromBid(bid, expense, tt) : null;
     const stored = publicFobUsd(vehicle);
-    const fobUsd = stored != null ? Number(stored) : calc ? round2(calc.fobUsd) : null;
+    const fobUsd = stored != null ? Number(stored) : calc ? roundMoney(calc.fobUsd) : null;
     return { bid, expense, tt, calc, fobUsd };
   }, [vehicle]);
 
@@ -203,8 +203,8 @@ export function ReserveVehicleDialog({
 
   const quotedUsd = Number(quotedPrice) || 0;
   const discountUsd = Number(discount) || 0;
-  const profitUsd = fobUsd != null && quotedPrice !== '' ? round2(quotedUsd - fobUsd) : null;
-  const invoiceTotal = round2(Math.max(0, quotedUsd + chargeExtras - discountUsd));
+  const profitUsd = fobUsd != null && quotedPrice !== '' ? roundMoney(quotedUsd - fobUsd) : null;
+  const invoiceTotal = roundMoney(Math.max(0, quotedUsd + chargeExtras - discountUsd));
 
   useEffect(() => {
     if (!open || !vehicle || !profile) return;
@@ -218,12 +218,12 @@ export function ReserveVehicleDialog({
     const tt = vehicle.tt_rate == null ? DEFAULT_TT_RATE : Number(vehicle.tt_rate) || DEFAULT_TT_RATE;
     const calc = bid != null ? calcFobFromBid(bid, expense, tt) : null;
     const stored = publicFobUsd(vehicle);
-    const fob = stored != null ? Number(stored) : calc ? round2(calc.fobUsd) : null;
+    const fob = stored != null ? Number(stored) : calc ? roundMoney(calc.fobUsd) : null;
 
     setCustomerId('');
     setQuotedCurrency('USD');
     setQuotedTerm((vehicle.incoterm as VehicleIncoterm) || 'FOB');
-    setQuotedPrice(fob != null ? String(round2(fob)) : '');
+    setQuotedPrice(fob != null ? String(roundMoney(fob)) : '');
     setInvoiceCurrency('USD');
     setShipmentTerm((vehicle.incoterm as VehicleIncoterm) || 'FOB');
     setDestinationCountry('');
@@ -354,7 +354,7 @@ export function ReserveVehicleDialog({
       toast.error('Quoted price (USD) must be greater than zero');
       return;
     }
-    const totalUsd = round2(Math.max(0, vehicleLineUsd + chargeExtras - discountUsd));
+    const totalUsd = roundMoney(Math.max(0, vehicleLineUsd + chargeExtras - discountUsd));
     if (totalUsd <= 0) {
       toast.error('Invoice total must be greater than zero');
       return;

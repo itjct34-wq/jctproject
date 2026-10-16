@@ -17,7 +17,7 @@ Snapshot aligned with codebase on branch **`feat/vehicle-commercial-workflow`**.
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Auth + RBAC | Done | RLS + UI role map |
+| Auth + RBAC | Done | RLS + UI role map; `/permissions` admin UI + `user_permissions` overrides (**042**) |
 | CRM (customers, inquiries) | Done | Fullscreen forms |
 | Vehicles + bulk sheet/ZIP | Done | ExcelJS/CSV + photo ZIP + batch history undo |
 | Auctions + purchases | Done | Auction house select |

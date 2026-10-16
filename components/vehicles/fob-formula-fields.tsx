@@ -66,7 +66,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
         <FormulaCell label="TT" value={String(preview.ttRate)} />
         <FormulaCell
           label="FOB USD"
-          value={hasBid ? `$${preview.fobUsd.toFixed(2)}` : '—'}
+          value={hasBid ? `$${Math.round(preview.fobUsd).toLocaleString()}` : '—'}
           emphasize
         />
       </div>

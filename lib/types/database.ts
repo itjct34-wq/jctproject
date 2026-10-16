@@ -28,7 +28,28 @@ export type PermissionAction =
   | 'assign_roles'
   | 'assign_teams'
   | 'download'
-  | 'manage';
+  | 'manage'
+  | 'allocate'
+  | 'reserve'
+  | 'set_bid_requester'
+  | 'edit_courier'
+  | 'edit_shipping';
+
+export type PermissionEffect = 'grant' | 'deny';
+
+export interface UserPermission {
+  id: string;
+  user_id: string;
+  permission_id: string;
+  effect: PermissionEffect;
+  granted_by: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Canonical permission key as `module.action` (e.g. `payments.allocate`). */
+export type PermissionKey = `${PermissionModule}.${PermissionAction}`;
 
 export type PermissionModule =
   | 'dashboard'

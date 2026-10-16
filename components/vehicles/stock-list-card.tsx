@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -48,12 +48,10 @@ function agentDotClass(name: string) {
 
 function listMoney(value: number, currency: string) {
   const n = Number(value);
-  const safe = Number.isFinite(n) ? n : 0;
+  const safe = Math.round(Number.isFinite(n) ? n : 0);
   const code = normalizeCurrency(currency);
   const symbol = CURRENCY_SYMBOLS[code] ?? `${code} `;
-  const intLike = Math.abs(safe - Math.round(safe)) < 0.005;
-  const digits = code === 'JPY' || code === 'PKR' || intLike ? 0 : 2;
-  return `${symbol}${safe.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+  return `${symbol}${safe.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function isoDate(value: string | null | undefined) {
@@ -310,10 +308,13 @@ export function StockListCard({
   const showRemittance = remitList.length > 0 || paymentCount > 0;
   const hasBl = docKinds.includes('bl');
   const hasAbl = docKinds.includes('amend_bl');
-  const hasEc = docKinds.includes('export_certificate') || docKinds.includes('export_certificate_en');
+  const hasEc = docKinds.includes('export_certificate');
+  const hasEec = docKinds.includes('export_certificate_en');
   const hasSd = docKinds.includes('surrender') || docKinds.includes('waybill');
+  const hasDhl = docKinds.includes('dhl');
   const hasAuctionSheet = docKinds.includes('auction_sheet');
-  const hasDocChips = hasBl || hasAbl || hasEc || hasSd || invoice || remitList.length > 0;
+  const hasDocChips =
+    hasBl || hasAbl || hasEc || hasEec || hasSd || hasDhl || invoice || remitList.length > 0;
   const etd = isoDate(v.shipping_etd);
   const eta = isoDate(v.shipping_eta);
   const etdEtaLine = etd || eta ? `ETD ${etd || '—'} · ETA ${eta || '—'}` : '';
@@ -534,8 +535,16 @@ export function StockListCard({
                       <VehicleDocChip
                         entityId={v.id}
                         label="EC"
-                        docKinds={['export_certificate', 'export_certificate_en']}
+                        docKinds={['export_certificate']}
                         className="bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-600/40"
+                      />
+                    ) : null}
+                    {hasEec ? (
+                      <VehicleDocChip
+                        entityId={v.id}
+                        label="EEC"
+                        docKinds={['export_certificate_en']}
+                        className="bg-teal-600 hover:bg-teal-700 focus-visible:ring-teal-600/40"
                       />
                     ) : null}
                     {hasAbl ? (
@@ -552,6 +561,15 @@ export function StockListCard({
                         label="SD"
                         docKinds={['surrender', 'waybill']}
                         className="bg-indigo-600 hover:bg-indigo-700 focus-visible:ring-indigo-600/40"
+                      />
+                    ) : null}
+                    {hasDhl ? (
+                      <VehicleDocChip
+                        entityId={v.id}
+                        label="DHL"
+                        docKinds={['dhl']}
+                        icon={<FileText className="h-3 w-3 shrink-0 text-rose-500" aria-hidden />}
+                        className="h-6 gap-1 rounded-full border border-slate-600 bg-slate-900 px-2 text-white hover:bg-slate-800 focus-visible:ring-slate-500/40"
                       />
                     ) : null}
                     {remitList.length ? (

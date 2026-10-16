@@ -3,7 +3,20 @@
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { BulkUploadWizard } from '@/components/stock/bulk-upload-wizard';
+import { usePermissions } from '@/hooks/use-permissions';
 import { Loader2 } from 'lucide-react';
+
+function BulkUploadGate() {
+  const { canBulkUpload } = usePermissions();
+  if (!canBulkUpload()) {
+    return (
+      <p className="p-8 text-sm text-muted-foreground">
+        You do not have permission to use Bulk upload. Ask an admin to grant <span className="font-medium">vehicles.import</span>.
+      </p>
+    );
+  }
+  return <BulkUploadWizard />;
+}
 
 export default function BulkUploadPage() {
   return (
@@ -20,7 +33,7 @@ export default function BulkUploadPage() {
           </div>
         }
       >
-        <BulkUploadWizard />
+        <BulkUploadGate />
       </Suspense>
     </div>
   );

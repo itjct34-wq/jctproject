@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ChevronDown, Loader2, Plus, Search } from 'lucide-react';
-import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -54,13 +53,6 @@ function remittanceHasAllocations(p: PaymentRow): boolean {
   return (p.allocation_status || 'unallocated') === 'allocated';
 }
 
-function ownsRemittanceForSales(p: PaymentRow, profileId: string): boolean {
-  if (p.sales_agent_id === profileId) return true;
-  if (p.created_by === profileId) return true;
-  if (p.customers?.assigned_to === profileId) return true;
-  return false;
-}
-
 function isoDay(value: string | null | undefined) {
   if (!value) return '—';
   const day = value.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -73,12 +65,18 @@ function isoDay(value: string | null | undefined) {
 function RemittancesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profile } = useAuth();
-  const { can, hasRole, isAdmin, isSellingFocused, isElevatedStaff } = usePermissions();
-  const canCreate = can('payments', 'create');
-  const canEdit = can('payments', 'edit');
-  const canAllocateAction = canCreate || canEdit;
-  const canDeallocateElevated = isAdmin() || hasRole('manager') || hasRole('accounts');
+  const {
+    can,
+    hasRole,
+    isSellingFocused,
+    isElevatedStaff,
+    canMutateRemittances,
+    canAllocateRemittances,
+  } = usePermissions();
+  const canMutate = canMutateRemittances();
+  const canCreate = canMutate;
+  const canEdit = canMutate;
+  const canAllocateAction = canAllocateRemittances();
   const canDelete = can('payments', 'delete') || hasRole('accounts');
   const canManageUnknown = isElevatedStaff;
   const tab = searchParams.get('tab') === 'unknown' ? 'unknown' : 'all';
@@ -267,15 +265,9 @@ function RemittancesPageInner() {
     router.push(`/payments/${p.id}/allocate`);
   };
 
-  const canDeallocateRemittance = (p: PaymentRow) => {
-    if (!canAllocateAction || !profile?.id) return false;
-    if (canDeallocateElevated) return true;
-    return ownsRemittanceForSales(p, profile.id);
-  };
-
   const confirmDeallocate = async () => {
     if (!deallocateTarget) return;
-    if (!canDeallocateRemittance(deallocateTarget)) {
+    if (!canAllocateAction) {
       toast.error('You do not have permission to deallocate this remittance');
       return;
     }
@@ -315,7 +307,7 @@ function RemittancesPageInner() {
           tab === 'unknown'
             ? 'Bank T/Ts waiting for customer and sales agent tagging'
             : isSellingFocused
-              ? 'T/T remittances for your customers — create, allocate to stock, or edit'
+              ? 'T/T remittances for your customers (view only — ask accounts to add or allocate)'
               : 'Record bank remittances and allocate them to stock'
         }
         actions={
@@ -445,7 +437,7 @@ function RemittancesPageInner() {
                     .filter(Boolean)
                     .join(', ');
                   const hasAllocations = remittanceHasAllocations(p);
-                  const showDeallocate = hasAllocations && canDeallocateRemittance(p);
+                  const showDeallocate = hasAllocations && canAllocateAction;
                   const showAllocate = canAllocateAction && !hasAllocations;
                   return (
                     <tr key={p.id} className="align-top hover:bg-muted/40">

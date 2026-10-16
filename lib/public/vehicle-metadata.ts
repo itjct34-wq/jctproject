@@ -32,7 +32,7 @@ export async function vehicleDetailMetadata(id: string, category: StockCategory)
   const title = [row.model_year, row.make, row.model].filter(Boolean).join(' ') || catalog.itemNoun;
   const price =
     row.listed_price != null
-      ? `FOB ${row.listed_currency || 'USD'} ${Number(row.listed_price).toLocaleString()}`
+      ? `FOB ${row.listed_currency || 'USD'} ${Math.round(Number(row.listed_price)).toLocaleString()}`
       : 'FOB USD on request';
   return {
     title: `${title} | Japan Circular Trading`,

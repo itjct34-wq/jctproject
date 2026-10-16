@@ -4,13 +4,18 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { persistSessionCookies } from '@/lib/auth/session-cookie';
-import type { Profile, Role, RoleName } from '@/lib/types';
+import type { PermissionAction, PermissionModule, Profile, Role, RoleName } from '@/lib/types';
+
+export type EffectivePermission = { module: PermissionModule; action: PermissionAction };
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   roles: Role[];
+  /** Effective permissions from DB (roles + user overrides). Empty until loaded. */
+  permissions: EffectivePermission[];
+  permissionsLoaded: boolean;
   loading: boolean;
   signIn: (
     email: string,
@@ -25,21 +30,36 @@ const AuthContext = createContext<AuthContextValue>({
   session: null,
   profile: null,
   roles: [],
+  permissions: [],
+  permissionsLoaded: false,
   loading: true,
   signIn: async () => ({ error: 'Not initialized', roleNames: [] }),
   signOut: async () => {},
   refreshProfile: async () => {},
 });
 
+function mapPermissionRows(rows: unknown): EffectivePermission[] {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row) => {
+      const r = row as { module?: string; action?: string };
+      if (!r.module || !r.action) return null;
+      return { module: r.module as PermissionModule, action: r.action as PermissionAction };
+    })
+    .filter(Boolean) as EffectivePermission[];
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [permissions, setPermissions] = useState<EffectivePermission[]>([]);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadProfileAndRoles = useCallback(async (userId: string) => {
-    const [profileRes, rolesRes] = await Promise.all([
+    const [profileRes, rolesRes, permsRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
       supabase
         .from('user_roles')
@@ -58,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `)
         .eq('user_id', userId)
         .eq('is_active', true),
+      supabase.rpc('get_my_permissions'),
     ]);
 
     if (profileRes.data) {
@@ -69,6 +90,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .map((item) => (item.roles as unknown as Role))
         .filter(Boolean);
       setRoles(userRoles);
+    }
+
+    if (!permsRes.error && permsRes.data) {
+      setPermissions(mapPermissionRows(permsRes.data));
+      setPermissionsLoaded(true);
+    } else {
+      // RPC missing (migration not applied yet) — fall back to role maps in the hook
+      setPermissions([]);
+      setPermissionsLoaded(false);
     }
   }, []);
 
@@ -102,6 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
           setRoles([]);
+          setPermissions([]);
+          setPermissionsLoaded(false);
         }
         setLoading(false);
       })();
@@ -117,43 +149,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
     if (data.user) {
-      const [profileRes, rolesRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle(),
-        supabase
-          .from('user_roles')
-          .select(`
-          is_active,
-          roles (
-            id,
-            name,
-            display_name,
-            description,
-            sort_order,
-            is_system_role,
-            created_at,
-            updated_at
-          )
-        `)
-          .eq('user_id', data.user.id)
-          .eq('is_active', true),
-      ]);
-      if (profileRes.data) setProfile(profileRes.data as Profile);
-      const userRoles =
-        rolesRes.data
-          ?.map((item) => item.roles as unknown as Role)
-          .filter(Boolean) ?? [];
-      setRoles(userRoles);
-      const roleNames = userRoles.map((r) => r.name);
+      await loadProfileAndRoles(data.user.id);
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('is_active, roles(name)')
+        .eq('user_id', data.user.id)
+        .eq('is_active', true);
+      const roleNames =
+        rolesData
+          ?.map((item) => (item.roles as unknown as { name: RoleName } | null)?.name)
+          .filter(Boolean) as RoleName[] ?? [];
       return { error: null, roleNames };
     }
     return { error: null, roleNames: [] };
-  }, []);
+  }, [loadProfileAndRoles]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     persistSessionCookies(null);
     setProfile(null);
     setRoles([]);
+    setPermissions([]);
+    setPermissionsLoaded(false);
     setUser(null);
     setSession(null);
   }, []);
@@ -166,7 +183,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, roles, loading, signIn, signOut, refreshProfile }}
+      value={{
+        user,
+        session,
+        profile,
+        roles,
+        permissions,
+        permissionsLoaded,
+        loading,
+        signIn,
+        signOut,
+        refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>

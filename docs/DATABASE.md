@@ -10,7 +10,7 @@
 
 | Domain | Tables / views |
 |--------|----------------|
-| RBAC | `profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`, `teams`, `team_members` |
+| RBAC | `profiles`, `roles`, `permissions`, `role_permissions`, `user_permissions` (grant/deny overrides — **042**), `user_roles`, `teams`, `team_members`; RPC `get_my_permissions()` |
 | Payroll | `user_payroll` (salary amount + currency, default PKR) — migration **033** |
 | CRM | `customers`, contacts, communications, requirements, `inquiries` |
 | Inventory | `vehicles`, `vehicle_status_history`, `vehicle_images`, `bulk_import_batches` |

@@ -126,8 +126,8 @@ export const DOC_KIND_LABELS: Record<VehicleDocKind, string> = {
   draft: 'Draft',
   waybill: 'Waybill',
   shipping_invoice: 'Shipping invoice',
-  export_certificate: 'Export certificate',
-  export_certificate_en: 'Export certificate (EN)',
+  export_certificate: 'Export Certificate - 輸出証明書',
+  export_certificate_en: 'Export Certificate (English version) - 輸出証明書 (英語版)',
   inspection: 'Inspection certificate',
   auction_sheet: 'Auction sheet',
   spare_key: 'Spare key',
@@ -163,7 +163,7 @@ export const PAYMENT_STATUS_PILL_STYLES: Record<VehiclePaymentStatus, string> = 
   available: 'bg-white text-slate-950 border border-slate-900',
   reserved: 'bg-sky-600 text-white',
   partial_paid: 'bg-amber-500 text-white',
-  paid: 'bg-emerald-600 text-white',
+  paid: 'bg-green-700 text-white',
 };
 
 export const SHIPPING_STATUS_STYLES: Record<VehicleShippingStatus, string> = {
@@ -190,7 +190,7 @@ export function freightModeListLabel(mode: Vehicle['freight_mode'] | '' | undefi
 /** Full-row ERP list tint from payment_status (shipping stays in the right rail). */
 export function vehicleListRowClass(vehicle: Vehicle): string {
   const pay = effectivePaymentStatus(vehicle);
-  if (pay === 'paid') return 'border-2 border-emerald-500 bg-emerald-200 text-emerald-950';
+  if (pay === 'paid') return 'border-2 border-green-600 bg-green-300 text-green-950';
   if (pay === 'partial_paid') return 'border-2 border-amber-500 bg-amber-200 text-amber-950';
   if (pay === 'reserved') return 'border-2 border-sky-500 bg-sky-200 text-sky-950';
   return 'border-2 border-emerald-300 bg-white text-emerald-950';

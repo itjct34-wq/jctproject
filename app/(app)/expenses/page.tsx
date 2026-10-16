@@ -50,9 +50,10 @@ function personName(p: Pick<Profile, 'full_name' | 'display_name' | 'email'> | u
 
 export default function ExpensesPage() {
   const { profile } = useAuth();
-  const { can, isAdmin, hasRole, isSellingFocused } = usePermissions();
+  const { can, isAdmin, hasRole, isSellingFocused, canViewExpenses } = usePermissions();
   const canCreate = can('expenses', 'create');
-  const canPaySalary = isAdmin() || hasRole('manager') || hasRole('accounts');
+  const canPaySalary = isAdmin() || hasRole('manager') || hasRole('accounts') || can('expenses', 'approve');
+  const expensesAllowed = canViewExpenses() || isAdmin();
   const lockedOfficeId = isSellingFocused ? profile?.office_id || '' : '';
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -438,6 +439,14 @@ export default function ExpensesPage() {
       </div>
     </>
   );
+
+  if (!expensesAllowed) {
+    return (
+      <p className="p-8 text-sm text-muted-foreground">
+        You do not have permission to view Accounts &amp; Expenses.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-6">

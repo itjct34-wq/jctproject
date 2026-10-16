@@ -14,7 +14,6 @@ type Props = {
   vehicles?: Pick<Vehicle, 'id' | 'stock_number' | 'make' | 'model' | 'chassis_number' | 'color' | 'model_year' | 'transmission'>[];
   salesAgent?: string | null;
   showQr?: boolean;
-  includeBankNotice?: boolean;
   variant?: 'commercial' | 'auction_deposit';
 };
 
@@ -25,7 +24,6 @@ export function CommercialInvoiceTemplate({
   vehicles,
   salesAgent,
   showQr = true,
-  includeBankNotice = false,
   variant = 'commercial',
 }: Props) {
   const vehiclesTotal = Number(invoice.subtotal || 0);
@@ -82,7 +80,6 @@ export function CommercialInvoiceTemplate({
       notes={invoice.notes}
       verificationUrl={verifyUrl || undefined}
       showQr={showQr}
-      includeBankNotice={includeBankNotice}
       depositMode={variant === 'auction_deposit' ? 'amount' : 'ratio'}
     />
   );
