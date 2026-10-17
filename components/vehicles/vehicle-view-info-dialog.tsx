@@ -138,7 +138,7 @@ function isAuctionDepositInvoice(inv: Pick<Invoice, 'payment_terms' | 'invoice_c
 function SpecCard({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border border-border/70 bg-background px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-semibold text-foreground break-words">{value || '—'}</p>
     </div>
   );
@@ -509,13 +509,13 @@ export function VehicleViewInfoDialog({
                 <ShippingStepper vehicle={vehicle} />
                 <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">FOB</p>
+                    <p className="text-xs uppercase text-muted-foreground">FOB</p>
                     <p className="font-semibold">
                       {detail?.fobUsd != null ? formatMoney(detail.fobUsd, detail.ccy) : '—'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Sold / term</p>
+                    <p className="text-xs uppercase text-muted-foreground">Sold / term</p>
                     <p className="font-semibold">
                       {vehicle.sold_price != null
                         ? `${formatMoney(Number(vehicle.sold_price), detail?.ccy || 'USD')} ${vehicle.incoterm || ''}`
@@ -523,17 +523,17 @@ export function VehicleViewInfoDialog({
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Freight</p>
+                    <p className="text-xs uppercase text-muted-foreground">Freight</p>
                     <p className="font-semibold">{detail?.freight || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Profit (ex freight)</p>
+                    <p className="text-xs uppercase text-muted-foreground">Profit (ex freight)</p>
                     <p className="font-semibold">
                       {detail?.profit != null ? formatMoney(detail.profit, detail.ccy) : '—'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground">Commission</p>
+                    <p className="text-xs uppercase text-muted-foreground">Commission</p>
                     <p className="font-semibold">
                       {detail?.commission != null && Number(vehicle.commission_pkr) > 0
                         ? formatMoney(Number(vehicle.commission_pkr), 'PKR')
@@ -662,11 +662,11 @@ export function VehicleViewInfoDialog({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-[11px] uppercase tracking-wide">User ID</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">User name</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Action</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Performed on</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Date</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">User ID</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">User name</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Action</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Performed on</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Date</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -732,13 +732,13 @@ export function VehicleViewInfoDialog({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Payment</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Remitter</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Allocated</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Status</TableHead>
-                            <TableHead className="text-[11px] uppercase tracking-wide">Date</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Payment</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Remitter</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Allocated</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Status</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wide">Date</TableHead>
                             {canDeallocateRemittance ? (
-                              <TableHead className="text-[11px] uppercase tracking-wide"> </TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide"> </TableHead>
                             ) : null}
                           </TableRow>
                         </TableHeader>

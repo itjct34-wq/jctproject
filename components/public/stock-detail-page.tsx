@@ -55,7 +55,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
 
   return (
     <PublicShell>
-      <section className="jct-home-wrap py-10 md:py-14">
+      <section className="jct-home-wrap py-10 pb-28 md:py-14 md:pb-14">
         <Link href={catalog.path} className="inline-flex min-h-11 items-center gap-2 text-sm text-[var(--jct-muted)] hover:text-[var(--jct-navy)]">
           <ArrowLeft className="h-4 w-4" /> {catalog.backLabel}
         </Link>
@@ -81,12 +81,12 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-2 rounded-full border border-[var(--jct-border)] bg-white px-2.5 py-1">
                     <CountryFlag country={source} code={sourceCode} size="sm" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--jct-navy)]">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">
                       {source}
                     </span>
                   </span>
                   <span
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider ${
+                    className={`rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-wider ${
                       vehicle.status === 'in_stock'
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                         : 'border-amber-200 bg-amber-50 text-amber-800'
@@ -107,7 +107,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
               </div>
 
               <div className="jct-stock-panel jct-stock-panel-accent p-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB USD</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB USD</p>
                 <p className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--jct-navy)]">
                   {vehicle.listed_price != null
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency || 'USD')
@@ -128,7 +128,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
                 {spec('Source country', source, CarFront)}
               </dl>
 
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="hidden flex-wrap gap-3 pt-2 md:flex">
                 <Link
                   href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
                   className="jct-btn-primary px-6"
@@ -143,6 +143,37 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
           </div>
         )}
       </section>
+
+      {vehicle ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--jct-border)] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(11,31,51,0.12)] backdrop-blur-md md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-lg items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--jct-vermilion)]">FOB</p>
+              <p className="truncate font-display text-lg font-bold text-[var(--jct-navy)]">
+                {vehicle.listed_price != null
+                  ? formatCurrency(vehicle.listed_price, vehicle.listed_currency || 'USD')
+                  : 'Ask'}
+              </p>
+            </div>
+            {process.env.NEXT_PUBLIC_WHATSAPP || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? (
+              <a
+                href={`https://wa.me/${(process.env.NEXT_PUBLIC_WHATSAPP || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I am interested in ${vehicle.stock_number}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#25D366] px-4 text-sm font-semibold text-white"
+              >
+                WhatsApp
+              </a>
+            ) : null}
+            <Link
+              href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--jct-navy)] px-4 text-sm font-semibold text-white"
+            >
+              Enquire
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </PublicShell>
   );
 }
@@ -150,8 +181,8 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
 function spec(label: string, value: string, Icon: typeof Gauge) {
   return (
     <div key={label} className="rounded-xl border border-[var(--jct-navy)]/12 bg-white p-3 shadow-[0_2px_12px_rgba(11,31,51,0.04)]">
-      <dt className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--jct-muted-2)]">
-        <Icon className="h-3 w-3" /> {label}
+      <dt className="flex items-center gap-1 text-xs uppercase tracking-wider text-[var(--jct-muted-2)]">
+        <Icon className="h-3.5 w-3.5" /> {label}
       </dt>
       <dd className="mt-1 font-medium capitalize text-[var(--jct-navy)]">{value}</dd>
     </div>

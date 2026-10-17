@@ -1006,7 +1006,7 @@ function VehiclesPage() {
         <h3 className="text-xs font-semibold tracking-wide text-sky-800 dark:text-sky-200">
           Vehicle cost &amp; FOB term
         </h3>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Term and commercial cost stay at the top. Available stock uses FOB as vehicle cost; reserved/sold uses sold price.
         </p>
         <div className="grid gap-1.5 sm:grid-cols-2">

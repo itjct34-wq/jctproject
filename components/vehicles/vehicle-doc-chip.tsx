@@ -106,7 +106,7 @@ export function VehicleDocChip({
         <button
           type="button"
           className={cn(
-            'inline-flex h-6 min-w-[1.75rem] items-center justify-center gap-1 rounded px-1.5 text-[10px] font-bold uppercase',
+            'inline-flex h-6 min-w-[1.75rem] items-center justify-center gap-1 rounded px-1.5 text-xs font-bold uppercase',
             'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
             'disabled:opacity-70',
             !className?.includes('text-') && 'text-white',
@@ -128,7 +128,7 @@ export function VehicleDocChip({
         </button>
       </PopoverAnchor>
       <PopoverContent className="w-64 p-2" align="center" onOpenAutoFocus={(ev) => ev.preventDefault()}>
-        <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">{label} documents</p>
+        <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">{label} documents</p>
         <ul className="space-y-1">
           {files.map((file) => (
             <li key={file.id}>

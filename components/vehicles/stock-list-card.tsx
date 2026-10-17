@@ -190,7 +190,7 @@ function StockListCardActionsMenu({
     <>
       {onEdit || onAssign || onSetBidRequester || onViewInfo ? (
         <>
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Stock
           </DropdownMenuLabel>
           {onEdit ? <DropdownMenuItem onSelect={onEdit}>Edit Stock Details</DropdownMenuItem> : null}
@@ -206,7 +206,7 @@ function StockListCardActionsMenu({
       {onReserve ? (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Sale &amp; Invoice
           </DropdownMenuLabel>
           <DropdownMenuItem onSelect={onReserve}>Reserve Vehicle</DropdownMenuItem>
@@ -215,7 +215,7 @@ function StockListCardActionsMenu({
       {onShipping || onCourier ? (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Shipping
           </DropdownMenuLabel>
           {onCourier ? <DropdownMenuItem onSelect={onCourier}>Edit Courier Info</DropdownMenuItem> : null}
@@ -225,7 +225,7 @@ function StockListCardActionsMenu({
       {onMarkCommissionPaid || invoice ? (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Money
           </DropdownMenuLabel>
           {onMarkCommissionPaid ? (
@@ -241,7 +241,7 @@ function StockListCardActionsMenu({
       {onMakeAvailable || onDelete ? (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Danger
           </DropdownMenuLabel>
           {onMakeAvailable ? (
@@ -435,7 +435,7 @@ export function StockListCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-[15px] font-bold leading-tight tracking-tight text-sky-800">{v.stock_number}</p>
             {incoterm ? (
-              <span className="inline-flex rounded-md bg-lime-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-lime-800 ring-1 ring-lime-300/80">
+              <span className="inline-flex rounded-md bg-lime-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-lime-800 ring-1 ring-lime-300/80">
                 {incoterm}
               </span>
             ) : null}
@@ -443,10 +443,10 @@ export function StockListCard({
           <p className="text-[13px] font-bold uppercase leading-snug text-slate-900">{title || '—'}</p>
           {v.model_grade ? <p className="text-[12px] leading-snug text-slate-700">{v.model_grade}</p> : null}
           {chips.length ? (
-            <p className="mt-0.5 text-[11px] uppercase leading-snug tracking-wide text-slate-600">{chips.join(' · ')}</p>
+            <p className="mt-0.5 text-xs uppercase leading-snug tracking-wide text-slate-600">{chips.join(' · ')}</p>
           ) : null}
           {v.chassis_number ? (
-            <span className="mt-1.5 inline-flex rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-white">
+            <span className="mt-1.5 inline-flex rounded-md bg-slate-800 px-2 py-0.5 text-xs font-semibold tracking-wide text-white">
               {v.chassis_number}
             </span>
           ) : null}
@@ -462,18 +462,18 @@ export function StockListCard({
           ) : null}
           <div className="mt-1.5 flex flex-wrap gap-1">
             {cfNoFreight ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-800 ring-1 ring-red-200">
+              <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-800 ring-1 ring-red-200">
                 <AlertTriangle className="h-3 w-3" /> C&amp;F no freight
               </span>
             ) : null}
             {noBankRate ? (
-              <span className="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 ring-1 ring-amber-200">
+              <span className="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
                 No bank rate
               </span>
             ) : null}
           </div>
           {containerLabel ? (
-            <p className="mt-1.5 text-[11px] font-semibold text-slate-600">Container {containerLabel}</p>
+            <p className="mt-1.5 text-xs font-semibold text-slate-600">Container {containerLabel}</p>
           ) : null}
         </div>
 
@@ -489,31 +489,31 @@ export function StockListCard({
           {dateLabel ? <p className="text-slate-500">{dateLabel}</p> : null}
           {vehicleCost != null ? (
             <p className="mt-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-sky-700">Vehicle cost </span>
+              <span className="text-xs font-bold uppercase tracking-wide text-sky-700">Vehicle cost </span>
               <span className="text-[13px] font-bold text-slate-950">{listMoney(vehicleCost, soldCcy)}</span>
             </p>
           ) : null}
           {bid != null ? (
             <p>
-              <span className="text-[10px] font-semibold uppercase text-slate-500">Bid </span>
+              <span className="text-xs font-semibold uppercase text-slate-500">Bid </span>
               <span className="font-semibold text-rose-700">{listMoney(bid, purchaseCcy)}</span>
             </p>
           ) : null}
           {buyJpy != null ? (
             <p>
-              <span className="text-[10px] font-semibold uppercase text-slate-500">Buy </span>
+              <span className="text-xs font-semibold uppercase text-slate-500">Buy </span>
               <span className="font-semibold text-slate-800">{listMoney(buyJpy, 'JPY')}</span>
             </p>
           ) : null}
           {showFobBesideCost ? (
             <p>
-              <span className="text-[10px] font-semibold uppercase text-slate-500">FOB </span>
+              <span className="text-xs font-semibold uppercase text-slate-500">FOB </span>
               <span className="font-semibold text-slate-800">{listMoney(Number(fobUsd), soldCcy)}</span>
             </p>
           ) : null}
           {showWeb && listed != null ? (
             <p>
-              <span className="text-[10px] font-semibold uppercase text-slate-500">Web </span>
+              <span className="text-xs font-semibold uppercase text-slate-500">Web </span>
               <span className="font-semibold">{listMoney(listed, v.listed_currency || 'USD')}</span>
             </p>
           ) : null}
@@ -537,7 +537,7 @@ export function StockListCard({
           ) : null}
           {bidRequesterName ? (
             <p className="mt-1">
-              <span className="inline-flex max-w-full items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-900">
+              <span className="inline-flex max-w-full items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-900">
                 <span className="truncate">BID {bidRequesterName}</span>
               </span>
             </p>
@@ -550,13 +550,13 @@ export function StockListCard({
           <div className="min-w-0 max-w-full space-y-1.5 md:col-span-4 xl:col-span-1 xl:pr-1">
             <div className="flex flex-wrap gap-1.5">
               <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-sky-600">Sold</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-sky-600">Sold</p>
                 <p className="text-[13px] font-bold leading-tight whitespace-nowrap">
                   {sold != null ? listMoney(sold, soldCcy) : '—'}
                 </p>
               </div>
               <div className="min-w-[7.5rem] flex-1 basis-[7.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Balance</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Balance</p>
                 <p
                   className={cn(
                     'text-[13px] font-bold leading-tight whitespace-nowrap',
@@ -566,36 +566,36 @@ export function StockListCard({
                   {due != null ? listMoney(due, soldCcy) : '—'}
                 </p>
                 {paidInFull ? (
-                  <p className="flex items-center gap-0.5 whitespace-nowrap text-[10px] font-semibold text-emerald-700">
+                  <p className="flex items-center gap-0.5 whitespace-nowrap text-xs font-semibold text-emerald-700">
                     <Check className="h-3 w-3 shrink-0" /> Paid in full
                   </p>
                 ) : duePct != null ? (
-                  <p className="whitespace-nowrap text-[10px] font-semibold text-red-600">{duePct}% due</p>
+                  <p className="whitespace-nowrap text-xs font-semibold text-red-600">{duePct}% due</p>
                 ) : null}
               </div>
               <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">Profit (ex freight)</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Profit (ex freight)</p>
                 <p className="text-[13px] font-bold leading-tight whitespace-nowrap text-emerald-800">
                   {profit != null ? listMoney(profit, soldCcy) : '—'}
                 </p>
                 {v.tt_rate != null ? (
-                  <p className="whitespace-nowrap text-[10px] text-slate-500">@{Number(v.tt_rate)} TT</p>
+                  <p className="whitespace-nowrap text-xs text-slate-500">@{Number(v.tt_rate)} TT</p>
                 ) : null}
-                <p className="whitespace-nowrap text-[10px] font-semibold text-fuchsia-700">JP {markupPct}%</p>
+                <p className="whitespace-nowrap text-xs font-semibold text-fuchsia-700">JP {markupPct}%</p>
                 {commAmt != null && commAmt > 0 ? (
-                  <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold text-slate-700">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-1 text-xs font-semibold text-slate-700">
                     <span className="whitespace-nowrap">Comm {listMoney(commAmt, 'PKR')}</span>
                     {commStatus === 'paid' ? (
-                      <span className="rounded-full bg-emerald-600 px-1 text-[9px] uppercase text-white">Paid</span>
+                      <span className="rounded-full bg-emerald-600 px-1 text-xs uppercase text-white">Paid</span>
                     ) : commStatus === 'due' ? (
-                      <span className="rounded-full bg-fuchsia-100 px-1 text-[9px] uppercase text-fuchsia-900">Due</span>
+                      <span className="rounded-full bg-fuchsia-100 px-1 text-xs uppercase text-fuchsia-900">Due</span>
                     ) : null}
                   </p>
                 ) : null}
               </div>
             </div>
             {cfNoFreight ? (
-              <p className="flex items-center gap-1 text-[11px] font-semibold text-red-700">
+              <p className="flex items-center gap-1 text-xs font-semibold text-red-700">
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> C&amp;F but NO Freight!
               </p>
             ) : null}
@@ -680,7 +680,7 @@ export function StockListCard({
                   </div>
                 ) : null}
                 {etdEtaLine ? (
-                  <p className="text-[11px] font-medium text-slate-500">{etdEtaLine}</p>
+                  <p className="text-xs font-medium text-slate-500">{etdEtaLine}</p>
                 ) : null}
               </div>
             ) : null}
@@ -700,7 +700,7 @@ export function StockListCard({
             <span
               role="status"
               className={cn(
-                'inline-flex w-full items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide shadow-sm',
+                'inline-flex w-full items-center justify-center px-3 py-1.5 text-xs font-bold uppercase tracking-wide shadow-sm',
                 pay === 'available' ? 'rounded-full' : 'rounded-md',
                 PAYMENT_STATUS_PILL_STYLES[pay]
               )}
@@ -708,13 +708,13 @@ export function StockListCard({
               {PAYMENT_STATUS_PILL_LABELS[pay]}
             </span>
             {incoterm ? (
-              <span className="inline-flex w-full items-center justify-center rounded-md bg-lime-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-lime-900 ring-1 ring-lime-300/80">
+              <span className="inline-flex w-full items-center justify-center rounded-md bg-lime-100 px-2 py-1 text-xs font-bold uppercase tracking-wide text-lime-900 ring-1 ring-lime-300/80">
                 {incoterm}
               </span>
             ) : null}
             <p
               className={cn(
-                'px-0.5 text-center text-[11px] uppercase leading-snug tracking-wide',
+                'px-0.5 text-center text-xs uppercase leading-snug tracking-wide',
                 pay === 'available' ? 'font-normal text-slate-600' : 'font-semibold text-slate-700'
               )}
             >

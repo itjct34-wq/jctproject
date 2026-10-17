@@ -463,13 +463,13 @@ function RemittancesPageInner() {
                   const showAllocate = canAllocateAction;
                   return (
                     <tr key={p.id} className="align-top hover:bg-muted/40">
-                      <td className="px-2 py-1 text-[11px] leading-4">
+                      <td className="px-2 py-1 text-xs leading-4">
                         <p className="font-semibold text-primary">ID: {paymentDisplayId(p.payment_code)}</p>
                         <p>Created: {isoDay(p.created_at)}</p>
                         <p>Remit: {isoDay(p.remit_date || p.payment_date)}</p>
                         <p>Received: {isoDay(p.received_date)}</p>
                       </td>
-                      <td className="px-2 py-1 text-[11px] leading-4">
+                      <td className="px-2 py-1 text-xs leading-4">
                         {unknown ? (
                           <>
                             <p className="font-medium text-amber-800">Untagged</p>
@@ -484,18 +484,18 @@ function RemittancesPageInner() {
                           </>
                         )}
                       </td>
-                      <td className="px-2 py-1 text-[11px] leading-4">
+                      <td className="px-2 py-1 text-xs leading-4">
                         <p className="font-medium uppercase">{p.remitter_name || '—'}</p>
                         <p>{p.bank_name || '—'}</p>
                       </td>
-                      <td className="px-2 py-1 text-[11px] leading-4">
+                      <td className="px-2 py-1 text-xs leading-4">
                         <p>Exchange Rate: {Number(p.exchange_rate || 0)}</p>
                         <p>Instructed Amount: {formatMoney(remittanceInstructed(p), p.currency)}</p>
                         <p>Remit Amount: {formatMoney(remittanceAmount(p), p.currency)}</p>
                         <p>Bank Charges: {formatMoney(Number(p.bank_charges) || 0, p.currency)}</p>
                         <p>Remaining Allocation: {formatMoney(remaining, p.currency)}</p>
                       </td>
-                      <td className="px-2 py-1 text-[11px]">{stockIds || '—'}</td>
+                      <td className="px-2 py-1 text-xs">{stockIds || '—'}</td>
                       <td className="px-2 py-1">
                         <span
                           className={

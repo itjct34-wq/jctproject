@@ -102,11 +102,11 @@ function CurrencyCard({ totals }: { totals: RemittanceCurrencyTotals }) {
         </div>
 
         <div>
-          <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Allocation status
           </p>
           <StatusPie totals={totals} />
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {(Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>).map((key) => (
               <span key={key} className="inline-flex items-center gap-1">
                 <span
@@ -129,7 +129,7 @@ function CurrencyCard({ totals }: { totals: RemittanceCurrencyTotals }) {
         </div>
 
         <div className="text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Unallocated
           </p>
           <p className="mt-1 text-xl font-bold tracking-tight text-rose-600">

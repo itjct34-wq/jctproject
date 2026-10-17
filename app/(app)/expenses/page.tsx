@@ -687,13 +687,13 @@ export default function ExpensesPage() {
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-border/70 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Amount</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Amount</p>
                     <p className="mt-1 text-sm font-semibold">
                       {selected.currency} {selected.amount.toLocaleString()}
                     </p>
                   </div>
                   <div className="rounded-lg border border-border/70 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Date</p>
                     <p className="mt-1 text-sm">{format(new Date(selected.expense_date), 'MMM d, yyyy')}</p>
                   </div>
                 </div>

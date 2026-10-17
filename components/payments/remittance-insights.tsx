@@ -105,7 +105,7 @@ function CurrencyMixPie({
           />
         </PieChart>
       </ResponsiveContainer>
-      <div className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+      <div className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         {data.map((d) => (
           <span key={d.name} className="inline-flex items-center gap-1">
             <span className="inline-block h-2 w-2 rounded-sm" style={{ background: d.fill }} aria-hidden />
@@ -262,7 +262,7 @@ export function RemittanceInsights({
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">From</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">From</Label>
               <Input
                 type="date"
                 value={from}
@@ -271,7 +271,7 @@ export function RemittanceInsights({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">To</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">To</Label>
               <Input
                 type="date"
                 value={to}
@@ -346,7 +346,7 @@ export function RemittanceInsights({
           <CardContent className="overflow-x-auto p-0 sm:p-0">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-2.5 font-medium">Office</th>
                   <th className="px-3 py-2.5 font-medium">Txns</th>
                   {currencyCols.map((code) => (

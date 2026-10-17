@@ -20,7 +20,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
     <section className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-2">
       <div>
         <h3 className="text-xs font-semibold">Bid &amp; vehicle cost (FOB)</h3>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Vehicle cost (available) = FOB USD · FOB JPY = bid + 10% + expense · FOB USD = FOB JPY ÷ TT
         </p>
       </div>
@@ -77,7 +77,7 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
 function FormulaCell({ label, value, emphasize }: { label: string; value: string; emphasize?: boolean }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={emphasize ? 'font-semibold text-primary' : 'font-medium'}>{value}</p>
     </div>
   );

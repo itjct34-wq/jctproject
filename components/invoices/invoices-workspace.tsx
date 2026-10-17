@@ -647,7 +647,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             )}
           </div>
           {form.customer_mode === 'existing' && selectedCustomer && (
-            <p className="truncate text-[11px] leading-tight text-muted-foreground">
+            <p className="truncate text-xs leading-tight text-muted-foreground">
               {selectedCustomer.full_name}
               {selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ''}
               {selectedCustomer.email ? ` · ${selectedCustomer.email}` : ''}
@@ -717,7 +717,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
         {/* 2. Shipping terms & charges + freight — always visible */}
         <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
-          <p className="text-[11px] font-semibold leading-tight text-muted-foreground">Shipping terms & charges</p>
+          <p className="text-xs font-semibold leading-tight text-muted-foreground">Shipping terms & charges</p>
           <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-0.5"><Label>Shipment mode</Label>
               <Select
@@ -764,7 +764,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               </>
             ) : (
               <div className="flex items-end sm:col-span-3 lg:col-span-3">
-                <p className="w-full rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-[11px] leading-tight text-muted-foreground">
+                <p className="w-full rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-xs leading-tight text-muted-foreground">
                   FOB — vehicle cost only; freight not on this invoice.
                 </p>
               </div>
@@ -774,7 +774,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <div className="space-y-0.5"><Label>Discount</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
           </div>
           {freightPolicy.requireFreight && (
-            <p className="text-[10px] leading-tight text-amber-700">Container shipments must include freight.</p>
+            <p className="text-xs leading-tight text-amber-700">Container shipments must include freight.</p>
           )}
         </section>
 
@@ -860,7 +860,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
         {/* 5. Invoice notes — collapsed */}
         <details className="shrink-0 rounded-md border border-border/60">
-          <summary className="cursor-pointer select-none px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+          <summary className="cursor-pointer select-none px-2 py-1 text-xs font-semibold text-muted-foreground">
             Notes{form.notes.trim() ? ' · set' : ''}
           </summary>
           <div className="border-t border-border/60 px-2 py-1">
@@ -1005,7 +1005,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         </div>
         {receivablesByCurrency.length > 0 ? (
           <aside className="erp-summary-panel p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Total receivables
             </p>
             <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-foreground">
@@ -1020,7 +1020,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               {receivablesByCurrency.map((bucket) => (
                 <li key={bucket.currency} className="flex items-center justify-between gap-2 text-sm">
                   <span className="inline-flex items-center gap-2 font-medium text-muted-foreground">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand">
                       {bucket.currency.slice(0, 2)}
                     </span>
                     {bucket.currency}

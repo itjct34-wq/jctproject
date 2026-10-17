@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { getNavGroupsForRoles } from '@/lib/nav';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ErpMark } from '@/components/brand/erp-mark';
 import { ChevronLeft, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 function isNavItemActive(
   pathname: string,
@@ -40,27 +47,6 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
-function ErpMark({ compact }: { compact?: boolean }) {
-  if (compact) {
-    return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-foreground shadow-sm ring-1 ring-white/10">
-        <span className="text-[11px] font-bold tracking-wider">ERP</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex min-w-0 items-center gap-2.5 px-1">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground shadow-sm">
-        <span className="text-[10px] font-bold tracking-wide">ERP</span>
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold tracking-tight text-white">ERP</p>
-        <p className="truncate text-[10px] text-white/55">Operations</p>
-      </div>
-    </div>
-  );
-}
-
 export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -81,6 +67,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
   };
 
   return (
+    <TooltipProvider delayDuration={200}>
     <aside
       className={cn(
         'erp-sidebar sticky top-0 flex h-[100dvh] flex-col border-r transition-all duration-200',
@@ -94,11 +81,11 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
         )}
       >
         {!collapsed || mobile ? (
-          <div className="min-w-0 flex-1">
-            <ErpMark />
+          <div className="min-w-0 flex-1 px-1">
+            <ErpMark size="md" />
           </div>
         ) : (
-          <ErpMark compact />
+          <ErpMark size="sm" compact showWordmark={false} />
         )}
         {mobile && (
           <button
@@ -141,7 +128,7 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                   onClick={() => toggleGroup(group.label)}
                   aria-expanded={isExpanded}
                   className={cn(
-                    'flex w-full items-center justify-between px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors',
+                    'flex w-full items-center justify-between px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors',
                     mobile ? 'py-2.5' : 'py-1.5'
                   )}
                 >
@@ -155,19 +142,21 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                 </button>
               )}
 
+              {collapsed && !mobile ? (
+                <div className="mx-2 my-1.5 h-px bg-white/10" aria-hidden />
+              ) : null}
+
               {(isExpanded || collapsed) && (
                 <div className="space-y-0.5 px-2">
                   {visibleItems.map((item) => {
                     const isActive = isNavItemActive(pathname, searchParams, item.href);
                     const Icon = item.icon;
-
-                    return (
+                    const link = (
                       <Link
-                        key={item.href}
                         href={item.href}
                         onClick={onNavigate}
                         aria-current={isActive ? 'page' : undefined}
-                        title={collapsed ? item.label : undefined}
+                        aria-label={collapsed ? item.label : undefined}
                         className={cn(
                           'relative flex items-center gap-3 rounded-xl px-2.5 text-sm transition-colors duration-150',
                           mobile ? 'py-3' : 'py-2',
@@ -187,6 +176,16 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </Link>
                     );
+
+                    if (collapsed && !mobile) {
+                      return (
+                        <Tooltip key={item.href}>
+                          <TooltipTrigger asChild>{link}</TooltipTrigger>
+                          <TooltipContent side="right">{item.label}</TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+                    return <div key={item.href}>{link}</div>;
                   })}
                 </div>
               )}
@@ -215,5 +214,6 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
         </div>
       )}
     </aside>
+    </TooltipProvider>
   );
 }

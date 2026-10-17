@@ -2,13 +2,16 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, type LucideIcon } from 'lucide-react';
 import { ReactNode } from 'react';
+import { IconTile } from '@/components/ui/icon-tile';
 
 interface KpiCardProps {
   label: string;
   value: string | number;
   icon?: ReactNode;
+  /** Prefer Lucide icon component for IconTile rendering. */
+  lucideIcon?: LucideIcon;
   trend?: { value: number; label?: string };
   trendDirection?: 'up' | 'down' | 'neutral';
   className?: string;
@@ -19,6 +22,7 @@ export function KpiCard({
   label,
   value,
   icon,
+  lucideIcon,
   trend,
   trendDirection = 'neutral',
   className,
@@ -30,7 +34,7 @@ export function KpiCard({
   return (
     <Card
       className={cn(
-        'glass-panel-strong overflow-hidden border-border/40 hover:border-brand/30 hover:shadow-glass transition-all duration-200 hover:-translate-y-0.5',
+        'erp-stat-card overflow-hidden border-border/40 hover:border-brand/30 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]',
         className
       )}
     >
@@ -39,7 +43,9 @@ export function KpiCard({
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {label}
           </span>
-          {icon && (
+          {lucideIcon ? (
+            <IconTile icon={lucideIcon} size="md" tone="brand" />
+          ) : icon ? (
             <div
               className={cn(
                 'flex h-9 w-9 items-center justify-center rounded-xl',
@@ -48,7 +54,7 @@ export function KpiCard({
             >
               {icon}
             </div>
-          )}
+          ) : null}
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold text-foreground tabular-nums tracking-tight">{value}</span>

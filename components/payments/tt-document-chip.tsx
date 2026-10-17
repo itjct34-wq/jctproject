@@ -72,7 +72,7 @@ export function TtDocumentChip({ paymentId, canEdit = false }: Props) {
         <button
           type="button"
           className={cn(
-            'inline-flex h-7 min-w-[2rem] items-center justify-center rounded bg-red-600 px-1.5 text-[11px] font-bold text-white',
+            'inline-flex h-7 min-w-[2rem] items-center justify-center rounded bg-red-600 px-1.5 text-xs font-bold text-white',
             'transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/40',
             'disabled:opacity-70',
           )}
@@ -85,7 +85,7 @@ export function TtDocumentChip({ paymentId, canEdit = false }: Props) {
         </button>
       </PopoverAnchor>
       <PopoverContent className="w-64 p-2" align="center" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">TT documents</p>
+        <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">TT documents</p>
         <ul className="space-y-1">
           {files.map((file) => (
             <li key={file.id}>

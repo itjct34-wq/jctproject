@@ -14,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import { ROLE_COLORS } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils/currencies';
-import { sumByCurrency } from '@/lib/utils/format';
 import { supabase } from '@/lib/supabase/client';
+import { IconTile } from '@/components/ui/icon-tile';
 import {
   Users, Car, Gavel, Receipt, CreditCard, Ship, CheckSquare, Bell,
   TrendingUp, DollarSign, Clock, Activity, Building2, MapPin, Upload,
@@ -57,109 +57,150 @@ function OperationsDashboardPage() {
   const { canView } = usePermissions();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadDashboard = async () => {
+    if (!profile) return;
+    setLoading(true);
+    setLoadError(null);
+
+    const [
+      customersRes,
+      leadsRes,
+      stockRes,
+      reservedRes,
+      auctionsRes,
+      shipmentsBooked,
+      shipmentsLoaded,
+      shipmentsTransit,
+      salesCountRes,
+      officesRes,
+      shiftsRes,
+      notifRes,
+      pendingTasksRes,
+      recentTasksRes,
+      moneyRes,
+      overdueTasksRes,
+    ] = await Promise.all([
+      supabase.from('customers').select('id', { count: 'exact', head: true }),
+      supabase.from('customers').select('id', { count: 'exact', head: true }).eq('status', 'lead'),
+      supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'in_stock'),
+      supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'reserved'),
+      supabase.from('auction_listings').select('id', { count: 'exact', head: true }).eq('result', 'pending'),
+      supabase.from('shipments').select('id', { count: 'exact', head: true }).eq('status', 'booked'),
+      supabase.from('shipments').select('id', { count: 'exact', head: true }).eq('status', 'loaded'),
+      supabase.from('shipments').select('id', { count: 'exact', head: true }).eq('status', 'in_transit'),
+      supabase.from('sales').select('id', { count: 'exact', head: true }).neq('status', 'cancelled'),
+      supabase.from('offices').select('id', { count: 'exact', head: true }).eq('is_active', true),
+      supabase.from('shifts').select('id', { count: 'exact', head: true }).eq('is_active', true),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .eq('is_read', false),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase
+        .from('tasks')
+        .select('id, title, status, priority, due_date, assigned_to')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase.rpc('dashboard_money_by_currency'),
+      supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .neq('status', 'completed')
+        .neq('status', 'cancelled')
+        .lt('due_date', format(new Date(), 'yyyy-MM-dd')),
+    ]);
+
+    const critical = [customersRes, stockRes].find((r) => r.error);
+    if (critical?.error) {
+      setLoadError(critical.error.message);
+      setLoading(false);
+      toast.error(`Dashboard data: ${critical.error.message}`);
+      return;
+    }
+
+    const recentTasks = recentTasksRes.data || [];
+    const assigneeIds = Array.from(new Set(recentTasks.map((t) => t.assigned_to).filter(Boolean)));
+    const assigneeNames: Record<string, string> = {};
+    if (assigneeIds.length > 0) {
+      const { data: assignees } = await supabase.from('profiles').select('id, full_name, email').in('id', assigneeIds);
+      assignees?.forEach((a) => {
+        assigneeNames[a.id] = a.full_name || a.email;
+      });
+    }
+
+    const moneyRows = (moneyRes.data || []) as Array<{ bucket: string; currency: string; total: number }>;
+    const toBuckets = (bucket: string): Bucket[] =>
+      moneyRows
+        .filter((r) => r.bucket === bucket && Number(r.total) > 0)
+        .map((r) => ({ currency: r.currency, total: Number(r.total) || 0 }));
+
+    // Fallback if RPC not applied yet: empty money lines (counts still correct).
+    if (moneyRes.error) {
+      toast.error(`Money totals unavailable: ${moneyRes.error.message}`, {
+        description: 'Counts still load. Apply migration 049_dashboard_aggregates if missing.',
+      });
+    }
+
+    setData({
+      totalCustomers: customersRes.count ?? 0,
+      activeLeads: leadsRes.count ?? 0,
+      availableVehicles: stockRes.count ?? 0,
+      reservedVehicles: reservedRes.count ?? 0,
+      pendingAuctions: auctionsRes.count ?? 0,
+      activeShipments:
+        (shipmentsBooked.count ?? 0) + (shipmentsLoaded.count ?? 0) + (shipmentsTransit.count ?? 0),
+      totalSales: salesCountRes.count ?? 0,
+      salesByCurrency: toBuckets('sales'),
+      outstandingByCurrency: toBuckets('outstanding'),
+      paymentsByCurrency: toBuckets('payments'),
+      expensesByCurrency: toBuckets('expenses'),
+      officeCount: officesRes.count ?? 0,
+      shiftCount: shiftsRes.count ?? 0,
+      unreadNotifications: notifRes.count ?? 0,
+      pendingTasks: pendingTasksRes.count ?? 0,
+      overdueTasks: overdueTasksRes.count ?? 0,
+      recentTasks: recentTasks as DashboardData['recentTasks'],
+      assigneeNames,
+    });
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function loadDashboard() {
-      if (!profile) return;
-      setLoading(true);
-
-      const [
-        tasksRes, notifRes, recentTasksRes, customersRes, vehiclesRes,
-        auctionsRes, salesRes, invoicesRes, paymentsRes, expensesRes,
-        shipmentsRes, officesRes, shiftsRes,
-      ] = await Promise.all([
-        supabase.from('tasks').select('id, status, due_date'),
-        supabase.from('notifications').select('id').eq('user_id', profile.id).eq('is_read', false),
-        supabase.from('tasks').select('id, title, status, priority, due_date, assigned_to').order('created_at', { ascending: false }).limit(5),
-        supabase.from('customers').select('id, status'),
-        supabase.from('vehicles').select('id, status'),
-        supabase.from('auction_listings').select('id, result').eq('result', 'pending'),
-        supabase.from('sales').select('id, sale_price, status, currency'),
-        supabase.from('invoices').select('id, total, payment_status, currency'),
-        supabase.from('payments').select('id, amount, remit_amount, currency, status'),
-        supabase.from('expenses').select('id, amount, status, currency'),
-        supabase.from('shipments').select('id, status'),
-        supabase.from('offices').select('id, is_active'),
-        supabase.from('shifts').select('id, is_active'),
-      ]);
-
-      const failed = [customersRes, vehiclesRes, salesRes, invoicesRes].find((r) => r.error);
-      if (failed?.error) toast.error(`Dashboard data: ${failed.error.message}`);
-
-      const allTasks = tasksRes.data || [];
-      const now = format(new Date(), 'yyyy-MM-dd');
-      const recentTasks = recentTasksRes.data || [];
-      const assigneeIds = Array.from(new Set(recentTasks.map((t) => t.assigned_to).filter(Boolean)));
-      const assigneeNames: Record<string, string> = {};
-      if (assigneeIds.length > 0) {
-        const { data: assignees } = await supabase.from('profiles').select('id, full_name, email').in('id', assigneeIds);
-        assignees?.forEach((a) => { assigneeNames[a.id] = a.full_name || a.email; });
-      }
-
-      const salesData = (salesRes.data || []) as Array<{ sale_price: number; status: string; currency: string | null }>;
-      const invoiceData = (invoicesRes.data || []) as Array<{ total: number; payment_status: string; currency: string | null }>;
-      const paymentData = (paymentsRes.data || []) as Array<{
-        amount: number;
-        remit_amount?: number | null;
-        currency: string | null;
-        status: string;
-      }>;
-      const expenseData = (expensesRes.data || []) as Array<{ amount: number; status: string; currency?: string | null }>;
-
-      setData({
-        totalCustomers: customersRes.data?.length || 0,
-        activeLeads: (customersRes.data || []).filter((c) => c.status === 'lead').length,
-        availableVehicles: (vehiclesRes.data || []).filter((v) => v.status === 'in_stock').length,
-        reservedVehicles: (vehiclesRes.data || []).filter((v) => v.status === 'reserved').length,
-        pendingAuctions: auctionsRes.data?.length || 0,
-        activeShipments: (shipmentsRes.data || []).filter((s) => ['booked', 'loaded', 'in_transit'].includes(s.status)).length,
-        totalSales: salesData.filter((s) => s.status !== 'cancelled').length,
-        salesByCurrency: sumByCurrency(
-          salesData.filter((s) => s.status !== 'cancelled').map((s) => ({ amount: Number(s.sale_price) || 0, currency: s.currency }))
-        ),
-        outstandingByCurrency: sumByCurrency(
-          invoiceData
-            .filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial')
-            .map((i) => ({ amount: Number(i.total) || 0, currency: i.currency }))
-        ),
-        paymentsByCurrency: sumByCurrency(
-          paymentData
-            .filter((p) => p.status !== 'rejected')
-            .map((p) => ({
-              amount: Number(p.remit_amount ?? p.amount) || 0,
-              currency: p.currency,
-            }))
-        ),
-        expensesByCurrency: sumByCurrency(
-          expenseData
-            .filter((e) => e.status === 'paid' || e.status === 'approved')
-            .map((e) => ({ amount: Number(e.amount) || 0, currency: e.currency || 'JPY' }))
-        ),
-        officeCount: (officesRes.data || []).filter((o) => o.is_active !== false).length,
-        shiftCount: (shiftsRes.data || []).filter((s) => s.is_active !== false).length,
-        unreadNotifications: notifRes.data?.length || 0,
-        pendingTasks: allTasks.filter((t) => t.status === 'pending').length,
-        overdueTasks: allTasks.filter((t) => t.status !== 'completed' && t.status !== 'cancelled' && t.due_date && t.due_date < now).length,
-        recentTasks: recentTasks as DashboardData['recentTasks'],
-        assigneeNames,
-      });
-      setLoading(false);
-    }
-    loadDashboard();
+    void loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
-  if (loading || !data) return <DashboardSkeleton />;
+  if (loading && !data) return <DashboardSkeleton />;
+
+  if (loadError && !data) {
+    return (
+      <Card className="border-destructive/30">
+        <CardContent className="flex flex-col items-start gap-3 p-6">
+          <p className="text-sm font-medium text-foreground">Could not load dashboard</p>
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+          <Button type="button" onClick={() => void loadDashboard()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data) return <DashboardSkeleton />;
 
   const firstName = profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || 'there';
   const currentDate = format(new Date(), 'EEEE, MMMM d, yyyy');
 
   const kpis = [
-    { label: 'Customers', value: String(data.totalCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-brand/10 text-brand' },
-    { label: 'Vehicles in stock', value: String(data.availableVehicles), sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'bg-info/15 text-info' },
-    { label: 'Pending auctions', value: String(data.pendingAuctions), sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'bg-warning/15 text-warning' },
-    { label: 'Active shipments', value: String(data.activeShipments), sub: 'In progress', icon: Ship, href: '/shipments', tone: 'bg-info/15 text-info' },
-    { label: 'Offices', value: String(data.officeCount), sub: `${data.shiftCount} shifts`, icon: Building2, href: '/offices', tone: 'bg-success/15 text-success' },
-    { label: 'Open tasks', value: String(data.pendingTasks), sub: `${data.overdueTasks} overdue`, icon: CheckSquare, href: '/tasks', tone: 'bg-brand/10 text-brand' },
+    { label: 'Customers', value: String(data.totalCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'brand' as const },
+    { label: 'Vehicles in stock', value: String(data.availableVehicles), sub: `${data.reservedVehicles} reserved`, icon: Car, href: '/vehicles', tone: 'info' as const },
+    { label: 'Pending auctions', value: String(data.pendingAuctions), sub: 'Awaiting results', icon: Gavel, href: '/auctions', tone: 'warning' as const },
+    { label: 'Active shipments', value: String(data.activeShipments), sub: 'In progress', icon: Ship, href: '/shipments', tone: 'info' as const },
+    { label: 'Offices', value: String(data.officeCount), sub: `${data.shiftCount} shifts`, icon: Building2, href: '/offices', tone: 'success' as const },
+    { label: 'Open tasks', value: String(data.pendingTasks), sub: `${data.overdueTasks} overdue`, icon: CheckSquare, href: '/tasks', tone: 'brand' as const },
   ];
 
   return (
@@ -173,16 +214,14 @@ function OperationsDashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 xl:grid-cols-6">
         {kpis.map((kpi) => (
-          <Link key={kpi.label} href={kpi.href}>
-            <Card className="glass-panel-strong h-full overflow-hidden border-border/40 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-glass">
+          <Link key={kpi.label} href={kpi.href} className="w-[70%] shrink-0 snap-start sm:w-[45%] md:w-auto">
+            <Card className="erp-stat-card h-full overflow-hidden border-border/40 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 active:scale-[0.98]">
               <div className="h-1 bg-gradient-to-r from-brand/90 to-info/50" />
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kpi.tone}`}>
-                    <kpi.icon className="h-4 w-4" />
-                  </div>
+                  <IconTile icon={kpi.icon} size="md" tone={kpi.tone} />
                   <div className="min-w-0">
                     <p className="truncate text-xs text-muted-foreground">{kpi.label}</p>
                     <p className="text-xl font-bold tracking-tight tabular-nums">{kpi.value}</p>
@@ -280,7 +319,7 @@ function OperationsDashboardPage() {
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Notifications</span>
                 {data.unreadNotifications > 0 && (
-                  <Badge className="ml-auto text-[10px]">{data.unreadNotifications}</Badge>
+                  <Badge className="ml-auto text-xs">{data.unreadNotifications}</Badge>
                 )}
               </div>
             </Link>

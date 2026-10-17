@@ -151,7 +151,7 @@ export function BulkImportDialog({
           {preview.length > 0 && (
             <div>
               <Label className="text-xs text-muted-foreground">Preview (first {preview.length} rows)</Label>
-              <div className="mt-1 max-h-40 overflow-auto rounded border text-[11px]">
+              <div className="mt-1 max-h-40 overflow-auto rounded border text-xs">
                 <table className="w-full">
                   <thead className="bg-muted sticky top-0">
                     <tr>

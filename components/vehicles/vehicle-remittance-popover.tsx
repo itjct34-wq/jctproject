@@ -93,7 +93,7 @@ export function VehicleTtChip({ remittances }: { remittances: VehicleRemittanceR
         <button
           type="button"
           className={cn(
-            'inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded bg-violet-600 px-1.5 text-[10px] font-bold uppercase text-white',
+            'inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded bg-violet-600 px-1.5 text-xs font-bold uppercase text-white',
             'transition-colors hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600/40',
             'disabled:opacity-70'
           )}
@@ -108,7 +108,7 @@ export function VehicleTtChip({ remittances }: { remittances: VehicleRemittanceR
       <PopoverContent className="w-72 p-2" align="center" onOpenAutoFocus={(ev) => ev.preventDefault()}>
         {mode === 'files' ? (
           <>
-            <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">TT documents</p>
+            <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">TT documents</p>
             <ul className="space-y-1">
               {files.map((file) => (
                 <li key={file.id}>
@@ -134,7 +134,7 @@ export function VehicleTtChip({ remittances }: { remittances: VehicleRemittanceR
           </>
         ) : (
           <>
-            <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">Remittances · open TT</p>
+            <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">Remittances · open TT</p>
             <ul className="space-y-1">
               {remittances.map((row) => (
                 <li key={row.paymentId}>
@@ -196,7 +196,7 @@ export function VehicleRemittancePopover({
       <PopoverAnchor asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
           onClick={(e) => {
             e.stopPropagation();
             setOpen((v) => !v);
@@ -210,7 +210,7 @@ export function VehicleRemittancePopover({
       <PopoverContent className="w-80 p-2" align="end" onOpenAutoFocus={(ev) => ev.preventDefault()}>
         {fileMode ? (
           <>
-            <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">TT documents</p>
+            <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">TT documents</p>
             <ul className="space-y-1">
               {files.map((file) => (
                 <li key={file.id}>
@@ -236,7 +236,7 @@ export function VehicleRemittancePopover({
           </>
         ) : (
           <>
-            <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">
+            <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
               Remittances{canDeallocate ? ' · open TT or deallocate from this stock' : ''}
             </p>
             <ul className="space-y-1">
@@ -264,7 +264,7 @@ export function VehicleRemittancePopover({
                     {canDeallocate && row.allocationId && onDeallocate ? (
                       <button
                         type="button"
-                        className="shrink-0 rounded px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-destructive hover:bg-destructive/10"
+                        className="shrink-0 rounded px-1.5 py-1 text-xs font-semibold uppercase tracking-wide text-destructive hover:bg-destructive/10"
                         title="Deallocate from this vehicle only"
                         onClick={(e) => {
                           e.stopPropagation();

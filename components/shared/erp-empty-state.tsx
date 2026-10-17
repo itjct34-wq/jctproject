@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { IconTile } from '@/components/ui/icon-tile';
 import { cn } from '@/lib/utils';
 
 type ErpEmptyStateProps = {
@@ -29,8 +30,8 @@ export function ErpEmptyState({
       )}
     >
       {Icon ? (
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/70 ring-1 ring-border/60">
-          <Icon className="h-5 w-5 text-muted-foreground" aria-hidden />
+        <div className="mb-3">
+          <IconTile icon={Icon} size="lg" tone="neutral" />
         </div>
       ) : null}
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>

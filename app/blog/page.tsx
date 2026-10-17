@@ -65,7 +65,7 @@ export default function BlogIndexPage() {
                   )}
                 </div>
                 <div className="p-5">
-                  <p className="text-[10px] uppercase tracking-wider text-[var(--jct-vermilion)]">{post.category || 'Guide'}</p>
+                  <p className="text-xs uppercase tracking-wider text-[var(--jct-vermilion)]">{post.category || 'Guide'}</p>
                   <h2 className="mt-1 line-clamp-2 text-lg font-semibold text-[var(--jct-navy)]">{post.title}</h2>
                   {post.excerpt && <p className="mt-2 line-clamp-2 text-sm text-[var(--jct-muted)]">{post.excerpt}</p>}
                   <p className="mt-3 text-xs text-[var(--jct-muted-2)]">

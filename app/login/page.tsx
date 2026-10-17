@@ -1,6 +1,8 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -8,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
-import { toast } from 'sonner';
 import { getPostLoginPath } from '@/lib/nav';
 
 function LoginForm() {
@@ -19,15 +20,17 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    const { error, roleNames } = await signIn(email, password);
+    const { error: signInError, roleNames } = await signIn(email, password);
 
-    if (error) {
-      toast.error(error);
+    if (signInError) {
+      setError(signInError);
       setLoading(false);
       return;
     }
@@ -46,8 +49,15 @@ function LoginForm() {
     <div className="erp-shell relative flex min-h-[100dvh] items-center justify-center px-4">
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-brand-foreground shadow-glass">
-            <span className="text-sm font-bold tracking-wide">ERP</span>
+          <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-card shadow-glass ring-1 ring-border/60">
+            <Image
+              src="/images/jct-official-logo.png"
+              alt="JCT"
+              width={56}
+              height={56}
+              className="h-full w-full object-contain p-1"
+              priority
+            />
           </div>
           <p className="text-xs font-medium text-muted-foreground">Staff sign-in</p>
         </div>
@@ -61,42 +71,61 @@ function LoginForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error ? (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {error}
+                </div>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="relative flex items-center">
+                  <Mail className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" aria-hidden />
                   <Input
                     id="email"
                     type="email"
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9"
+                    className="pl-9 text-base md:text-sm"
                     required
                     autoComplete="email"
+                    aria-invalid={error ? true : undefined}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Link
+                    href="/login/reset"
+                    className="text-xs font-medium text-brand hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative flex items-center">
+                  <Lock className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" aria-hidden />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-11"
+                    className="pl-9 pr-11 text-base md:text-sm"
                     required
                     autoComplete="current-password"
+                    aria-invalid={error ? true : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-0 top-0 flex h-10 w-11 items-center justify-center rounded-r-xl text-muted-foreground hover:text-foreground"
+                    className="absolute right-0 flex h-full w-11 items-center justify-center rounded-r-xl text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

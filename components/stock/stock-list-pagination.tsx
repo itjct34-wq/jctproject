@@ -67,7 +67,8 @@ export function StockListPagination({
             item === 'ellipsis' ? (
               <span
                 key={`e-${idx}`}
-                className="flex h-8 w-8 items-center justify-center text-sm text-muted-foreground"
+                className="flex h-9 w-9 items-center justify-center text-sm text-muted-foreground"
+                aria-hidden
               >
                 …
               </span>
@@ -78,10 +79,11 @@ export function StockListPagination({
                 variant={item === safePage ? 'default' : 'outline'}
                 size="icon"
                 className={cn(
-                  'h-8 w-8 text-sm',
+                  'h-9 w-9 min-w-9 text-sm',
                   item === safePage ? 'bg-foreground text-background hover:bg-foreground/90' : ''
                 )}
                 onClick={() => onPageChange(item)}
+                aria-label={`Page ${item}`}
                 aria-current={item === safePage ? 'page' : undefined}
               >
                 {item}

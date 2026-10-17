@@ -118,7 +118,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
         </div>
 
         <div className="jct-stock-panel mt-6 p-4 md:p-5">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-muted-2)]">Filter by origin</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--jct-muted-2)]">Filter by origin</p>
           <div className="flex flex-wrap gap-2">
           <button
             type="button"

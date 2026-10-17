@@ -579,7 +579,7 @@ function QuotationsPageInner() {
         </div>
       ) : (
         <div className="grid gap-1.5 sm:grid-cols-4">
-          <p className="sm:col-span-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+          <p className="sm:col-span-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground">
             FOB — vehicle cost only; freight is not included.
           </p>
           <div className="space-y-0.5"><Label>Insurance</Label><Input type="number" value={form.insurance} onChange={(e) => setForm({ ...form, insurance: e.target.value })} /></div>
@@ -678,21 +678,21 @@ function QuotationsPageInner() {
                       QT
                     </span>
                     <p className="text-sm font-medium">{q.quotation_code}</p>
-                    <Badge variant="outline" className={`text-[10px] ${statusStyles[q.status]}`}>
+                    <Badge variant="outline" className={`text-xs ${statusStyles[q.status]}`}>
                       {q.status}
                     </Badge>
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-xs">
                       {q.price_type}
                     </Badge>
                   </div>
-                  <p className="truncate text-[11px] text-muted-foreground">{customerName(q.customer_id)}</p>
+                  <p className="truncate text-xs text-muted-foreground">{customerName(q.customer_id)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-semibold">
                     {q.currency} {q.total.toLocaleString()}
                   </p>
                   {q.valid_until && (
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Until {format(new Date(q.valid_until), 'MMM d')}
                     </p>
                   )}

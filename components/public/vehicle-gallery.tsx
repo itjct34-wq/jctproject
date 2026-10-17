@@ -97,11 +97,11 @@ export function VehicleGallery({ images, alt }: Props) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={current} alt={alt} className="aspect-[16/11] w-full object-cover" />
         {count > 1 ? (
-          <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-1 text-[11px] font-medium text-white">
+          <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-1 text-xs font-medium text-white">
             {active + 1} / {count} · tap to enlarge
           </span>
         ) : (
-          <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-1 text-[11px] font-medium text-white">
+          <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-1 text-xs font-medium text-white">
             Tap to enlarge
           </span>
         )}

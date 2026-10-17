@@ -387,7 +387,7 @@ export function BulkUploadWizard() {
                   : 'border-border bg-card text-muted-foreground'
             )}
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[11px]">{s.n}</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-xs">{s.n}</span>
             {s.label}
           </button>
         ))}
@@ -547,7 +547,7 @@ export function BulkUploadWizard() {
             {preview.length > 0 && (
               <div>
                 <Label className="text-xs text-muted-foreground">Preview (first {preview.length} rows)</Label>
-                <div className="mt-1 max-h-44 overflow-auto rounded-lg border text-[11px]">
+                <div className="mt-1 max-h-44 overflow-auto rounded-lg border text-xs">
                   <table className="w-full">
                     <thead className="sticky top-0 bg-primary text-primary-foreground">
                       <tr>

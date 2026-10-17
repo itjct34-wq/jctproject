@@ -57,7 +57,7 @@ export default function BlogPostPage() {
           </div>
         ) : (
           <>
-            <p className="mt-8 text-[10px] uppercase tracking-wider text-[var(--jct-vermilion)]">{post.category || 'Guide'}</p>
+            <p className="mt-8 text-xs uppercase tracking-wider text-[var(--jct-vermilion)]">{post.category || 'Guide'}</p>
             <h1 className="mt-2 font-display text-3xl font-bold leading-tight text-[var(--jct-navy)] md:text-4xl">{post.title}</h1>
             <p className="mt-3 text-sm text-[var(--jct-muted-2)]">
               {post.published_at ? new Date(post.published_at).toLocaleDateString() : ''}

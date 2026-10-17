@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     /*
       Liquid Glass ERP tokens — neutral charcoal + refined brand red.
       Print / public-site CSS stay scoped below (.public-site, .jct-home, invoice-print).
@@ -57,9 +58,14 @@
       radial-gradient(ellipse 60% 40% at 90% 0%, hsl(199 78% 42% / 0.08), transparent 45%),
       linear-gradient(165deg, hsl(220 18% 97%) 0%, hsl(220 14% 94%) 48%, hsl(220 16% 96%) 100%);
     --sidebar-glass: 220 18% 10% / 0.92;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-muted: 0 0% 100%;
+    --sidebar-muted-foreground: 220 10% 68%;
+    --sidebar-border: 0 0% 100%;
   }
 
   .dark {
+    color-scheme: dark;
     --background: 220 18% 7%;
     --foreground: 220 14% 96%;
     --card: 220 16% 11%;
@@ -106,6 +112,10 @@
       radial-gradient(ellipse 55% 40% at 85% 5%, hsl(199 78% 42% / 0.14), transparent 45%),
       linear-gradient(165deg, hsl(220 20% 8%) 0%, hsl(220 18% 6%) 100%);
     --sidebar-glass: 220 18% 8% / 0.94;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-muted: 0 0% 100%;
+    --sidebar-muted-foreground: 220 10% 68%;
+    --sidebar-border: 0 0% 100%;
   }
 }
 
@@ -155,32 +165,32 @@
     -webkit-backdrop-filter: blur(var(--glass-blur));
   }
   .erp-chip {
-    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide;
   }
   .erp-chip-inv,
   .erp-chip-qt {
-    @apply inline-flex items-center rounded-md border border-brand/30 bg-brand/5 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-brand;
+    @apply inline-flex items-center rounded-md border border-brand/30 bg-brand/5 px-1.5 py-0.5 text-xs font-bold tracking-wider text-brand;
   }
   .erp-chip-type {
-    @apply inline-flex items-center rounded-full border border-sky-200/80 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-800;
+    @apply inline-flex items-center rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-xs font-semibold text-info;
   }
   .erp-chip-type-muted {
-    @apply inline-flex items-center rounded-full border border-slate-200/90 bg-slate-100/90 px-2 py-0.5 text-[10px] font-semibold text-slate-600;
+    @apply inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground;
   }
   .erp-chip-success {
-    @apply inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800;
+    @apply inline-flex items-center rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-semibold text-success;
   }
   .erp-chip-warning {
-    @apply inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800;
+    @apply inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning;
   }
   .erp-chip-danger {
-    @apply inline-flex items-center rounded-full border border-red-200/80 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700;
+    @apply inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive;
   }
   .erp-chip-neutral {
-    @apply inline-flex items-center rounded-full border border-slate-200/90 bg-slate-100/90 px-2 py-0.5 text-[10px] font-semibold text-slate-600;
+    @apply inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground;
   }
   .erp-chip-info {
-    @apply inline-flex items-center rounded-full border border-blue-200/80 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-800;
+    @apply inline-flex items-center rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-xs font-semibold text-info;
   }
 }
 
@@ -194,44 +204,43 @@
 }
 .erp-shell .erp-filter-panel {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg-strong));
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: var(--glass-shadow-sm);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
   @apply p-2.5 sm:p-3;
 }
 .erp-shell .erp-sidebar {
   background: hsl(var(--sidebar-glass));
-  border-right-color: hsl(0 0% 100% / 0.08);
-  color: hsl(0 0% 96%);
+  border-right-color: hsl(var(--sidebar-border) / 0.12);
+  color: hsl(var(--sidebar-foreground));
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  /* Remap tokens so Tailwind utilities stay valid (no circular @apply). */
-  --foreground: 0 0% 98%;
-  --muted-foreground: 220 10% 68%;
-  --muted: 0 0% 100%;
-  --border: 0 0% 100%;
+  --foreground: var(--sidebar-foreground);
+  --muted-foreground: var(--sidebar-muted-foreground);
+  --muted: var(--sidebar-muted);
+  --border: var(--sidebar-border);
 }
 .erp-shell .erp-sidebar .hover\:bg-muted\/60:hover { background: hsl(0 0% 100% / 0.08); }
-.erp-shell .erp-sidebar .border-border\/60 { border-color: hsl(0 0% 100% / 0.1); }
+.erp-shell .erp-sidebar .border-border\/60 { border-color: hsl(var(--sidebar-border) / 0.12); }
 .erp-shell .erp-list-panel {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg-strong));
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: var(--glass-shadow-sm);
   overflow: hidden;
 }
 .erp-shell .erp-summary-panel {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg-strong));
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: var(--glass-shadow-sm);
+}
+.erp-shell .erp-stat-card {
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: var(--glass-shadow-sm);
 }
 .erp-shell .erp-filter-bar input,
 .erp-shell .erp-filter-panel input,
@@ -290,7 +299,7 @@
   border-bottom: 1px solid hsl(var(--border));
 }
 .erp-shell .erp-data-table thead tr {
-  @apply text-[10px] uppercase tracking-wider;
+  @apply text-xs uppercase tracking-wider;
 }
 .erp-shell .erp-data-table th {
   @apply px-2.5 py-2 text-left font-semibold text-muted-foreground;
@@ -317,7 +326,7 @@
   border-left: 3px solid hsl(var(--brand));
 }
 .erp-shell .erp-stat-label {
-  @apply text-[11px] font-semibold uppercase tracking-wider text-muted-foreground;
+  @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
 }
 .erp-shell .erp-stat-value {
   @apply mt-1 text-2xl font-bold leading-none tracking-tight text-foreground;

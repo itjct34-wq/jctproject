@@ -446,16 +446,16 @@ export default function PermissionsPage() {
                                 <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-sm font-medium">{entry.label}</span>
-                                    <code className="rounded bg-muted px-1 text-[10px]">{entry.key}</code>
+                                    <code className="rounded bg-muted px-1 text-xs">{entry.key}</code>
                                     {effective ? (
-                                      <Badge className="bg-emerald-600/90 text-[10px]">Allowed</Badge>
+                                      <Badge className="bg-emerald-600/90 text-xs">Allowed</Badge>
                                     ) : (
-                                      <Badge variant="outline" className="text-[10px]">
+                                      <Badge variant="outline" className="text-xs">
                                         Blocked
                                       </Badge>
                                     )}
                                     {fromRole && state === 'inherit' && (
-                                      <span className="text-[10px] text-muted-foreground">from role</span>
+                                      <span className="text-xs text-muted-foreground">from role</span>
                                     )}
                                   </div>
                                   <p className="text-xs text-muted-foreground">{entry.description}</p>
@@ -553,7 +553,7 @@ export default function PermissionsPage() {
                           <span>
                             <span className="block text-sm font-medium">{entry.label}</span>
                             <span className="block text-xs text-muted-foreground">{entry.description}</span>
-                            <code className="text-[10px] text-muted-foreground">{entry.key}</code>
+                            <code className="text-xs text-muted-foreground">{entry.key}</code>
                           </span>
                         </label>
                       );

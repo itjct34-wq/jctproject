@@ -294,6 +294,7 @@ export default function AllocateRemittancePage() {
                   type="button"
                   variant="ghost"
                   size="icon"
+                  aria-label="Remove allocation line"
                   className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-destructive"
                   title="Remove this stock line"
                   onClick={() => setLines((rows) => rows.filter((r) => r.key !== line.key))}

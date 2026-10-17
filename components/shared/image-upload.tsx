@@ -93,7 +93,7 @@ export function ImageUpload({
               <Trash2 className="mr-1.5 h-3.5 w-3.5" />Remove
             </Button>
           )}
-          <p className="text-[11px] text-muted-foreground">JPG / PNG / WebP · max {Math.round(maxBytes / 1024 / 1024)}MB</p>
+          <p className="text-xs text-muted-foreground">JPG / PNG / WebP · max {Math.round(maxBytes / 1024 / 1024)}MB</p>
         </div>
         <input
           ref={inputRef}

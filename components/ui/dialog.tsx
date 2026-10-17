@@ -47,9 +47,9 @@ const DialogContent = React.forwardRef<
       ref={ref}
       data-dialog-workform={fullscreen ? 'true' : undefined}
       className={cn(
-        'fixed z-50 grid border border-border/60 bg-background/95 shadow-glass backdrop-blur-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        'fixed z-50 grid border border-border/60 bg-background/95 shadow-glass backdrop-blur-xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         !fullscreen &&
-          'left-[50%] top-[50%] max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 overflow-y-auto rounded-2xl p-3 sm:p-4 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
+          'inset-x-0 bottom-0 top-auto max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 gap-3 overflow-y-auto rounded-t-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom md:inset-auto md:left-[50%] md:top-[50%] md:bottom-auto md:max-h-[90dvh] md:w-[calc(100%-1.5rem)] md:max-w-lg md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-2xl md:p-4 md:pb-4 md:data-[state=closed]:slide-out-to-left-1/2 md:data-[state=closed]:slide-out-to-top-[48%] md:data-[state=open]:slide-in-from-left-1/2 md:data-[state=open]:slide-in-from-top-[48%] md:data-[state=closed]:zoom-out-95 md:data-[state=open]:zoom-in-95',
         className,
         fullscreen && FULLSCREEN_CLASS
       )}
@@ -73,6 +73,12 @@ const DialogContent = React.forwardRef<
       }
       {...props}
     >
+      {!fullscreen ? (
+        <div
+          className="mx-auto mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/30 md:hidden"
+          aria-hidden
+        />
+      ) : null}
       {children}
       <DialogPrimitive.Close
         data-radix-dialog-close=""
@@ -113,7 +119,7 @@ const DialogFooter = ({
   <div
     data-slot="dialog-footer"
     className={cn(
-      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+      'sticky bottom-0 z-[1] -mx-3 mt-auto flex flex-col-reverse gap-2 border-t border-border/60 bg-background/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm sm:static sm:mx-0 sm:flex-row sm:justify-end sm:space-x-2 sm:border-0 sm:bg-transparent sm:p-0 sm:pb-0 sm:pt-0 sm:backdrop-blur-none [&_button]:w-full sm:[&_button]:w-auto',
       className
     )}
     {...props}

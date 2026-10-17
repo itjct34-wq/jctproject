@@ -87,7 +87,7 @@ export default function VerifyInvoicePage() {
               </dl>
 
               {result.verified_at && (
-                <p className="pt-2 text-center text-[10px] text-[var(--jct-muted-2)]">
+                <p className="pt-2 text-center text-xs text-[var(--jct-muted-2)]">
                   Verified at {new Date(result.verified_at).toLocaleString()}
                 </p>
               )}

@@ -18,9 +18,28 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Vehicle Export ERP',
+  title: {
+    default: 'JCT ERP',
+    template: '%s · JCT ERP',
+  },
   description:
     'Vehicle export management — CRM, inventory, auctions, invoicing, payments, and shipping.',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'JCT',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0f14' },
+  ],
+  appleWebApp: {
+    capable: true,
+    title: 'JCT',
+    statusBarStyle: 'default',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+  },
 };
 
 export default function RootLayout({

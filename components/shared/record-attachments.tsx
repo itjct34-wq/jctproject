@@ -191,7 +191,7 @@ export function AttachmentCountBadge({ count }: { count: number }) {
   if (!count) return null;
   return (
     <span
-      className="inline-flex items-center gap-0.5 rounded-md border border-border/70 bg-muted/70 px-1.5 py-0.5 text-[11px] font-medium text-foreground"
+      className="inline-flex items-center gap-0.5 rounded-md border border-border/70 bg-muted/70 px-1.5 py-0.5 text-xs font-medium text-foreground"
       title={`${count} attached file${count === 1 ? '' : 's'}`}
     >
       <Paperclip className="h-3 w-3" />
@@ -330,7 +330,7 @@ export function RecordAttachments({
               <Paperclip className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">Attached files</h3>
               {!loading && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                   {rows.length}
                 </span>
               )}
@@ -410,7 +410,7 @@ export function RecordAttachments({
         </ul>
       )}
       {!compactEmpty || rows.length > 0 ? (
-        <p className="text-[11px] text-muted-foreground">Private files. View uses a short-lived signed link and respects your record permissions. Maximum 20 MB per file.</p>
+        <p className="text-xs text-muted-foreground">Private files. View uses a short-lived signed link and respects your record permissions. Maximum 20 MB per file.</p>
       ) : null}
 
       <AlertDialog

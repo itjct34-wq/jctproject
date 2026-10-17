@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,12 +36,12 @@ function profileDisplayName(p: ProfileNameRow | undefined) {
 }
 
 const statusStyles: Record<Sale['status'], string> = {
-  reserved: 'bg-amber-50 text-amber-700 border-amber-200',
-  confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
-  paid: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  shipped: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  delivered: 'bg-slate-100 text-slate-600 border-slate-200',
-  cancelled: 'bg-red-50 text-red-700 border-red-200',
+  reserved: 'bg-warning/10 text-warning border-warning/30',
+  confirmed: 'bg-info/10 text-info border-info/30',
+  paid: 'bg-success/10 text-success border-success/30',
+  shipped: 'bg-info/10 text-info border-info/30',
+  delivered: 'bg-muted text-muted-foreground border-border',
+  cancelled: 'bg-destructive/10 text-destructive border-destructive/30',
 };
 
 const emptyForm = {
@@ -497,7 +498,13 @@ export default function SalesPage() {
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search sale code..." />
+              <Input
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search sale code..."
+                aria-label="Search sale code"
+              />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-44"><SelectValue /></SelectTrigger>
@@ -588,11 +595,31 @@ export default function SalesPage() {
                 (Bid JPY + markup % + expense JPY) ÷ JPY per USD + vehicle profit → FOB. Freight / insurance are pass-through (not profit).
               </p>
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-                <div className="space-y-1"><Label>Bid (JPY)</Label><Input type="number" inputMode="decimal" value={form.bid_jpy} onChange={(e) => setForm({ ...form, bid_jpy: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Markup %</Label><Input type="number" inputMode="decimal" step="0.1" value={form.markup_pct} onChange={(e) => setForm({ ...form, markup_pct: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Expense (JPY)</Label><Input type="number" inputMode="decimal" value={form.expense_jpy} onChange={(e) => setForm({ ...form, expense_jpy: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Rate (JPY per USD)</Label><Input type="number" inputMode="decimal" step="0.01" value={form.exchange_rate} onChange={(e) => setForm({ ...form, exchange_rate: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Vehicle profit (USD)</Label><Input type="number" inputMode="decimal" value={form.profit_usd} onChange={(e) => setForm({ ...form, profit_usd: e.target.value })} /></div>
+                <FormField label="Bid (JPY)">
+                  {(p) => (
+                    <Input {...p} type="number" inputMode="decimal" value={form.bid_jpy} onChange={(e) => setForm({ ...form, bid_jpy: e.target.value })} />
+                  )}
+                </FormField>
+                <FormField label="Markup %">
+                  {(p) => (
+                    <Input {...p} type="number" inputMode="decimal" step="0.1" value={form.markup_pct} onChange={(e) => setForm({ ...form, markup_pct: e.target.value })} />
+                  )}
+                </FormField>
+                <FormField label="Expense (JPY)">
+                  {(p) => (
+                    <Input {...p} type="number" inputMode="decimal" value={form.expense_jpy} onChange={(e) => setForm({ ...form, expense_jpy: e.target.value })} />
+                  )}
+                </FormField>
+                <FormField label="Rate (JPY per USD)">
+                  {(p) => (
+                    <Input {...p} type="number" inputMode="decimal" step="0.01" value={form.exchange_rate} onChange={(e) => setForm({ ...form, exchange_rate: e.target.value })} />
+                  )}
+                </FormField>
+                <FormField label="Vehicle profit (USD)">
+                  {(p) => (
+                    <Input {...p} type="number" inputMode="decimal" value={form.profit_usd} onChange={(e) => setForm({ ...form, profit_usd: e.target.value })} />
+                  )}
+                </FormField>
               </div>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-3">
@@ -657,7 +684,7 @@ export default function SalesPage() {
             {pricingPreview && (
               <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
                 <p className="font-semibold flex items-center gap-1"><Calculator className="h-3.5 w-3.5" /> Cost preview</p>
-                <pre className="whitespace-pre-wrap font-mono text-[11px]">{formatPricingSummary(pricingPreview)}</pre>
+                <pre className="whitespace-pre-wrap font-mono text-xs">{formatPricingSummary(pricingPreview)}</pre>
               </div>
             )}
             <DialogFooter>

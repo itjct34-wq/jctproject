@@ -1,6 +1,7 @@
 import { HomeFooter } from './home/home-footer';
 import { HomeHeader } from './home/home-header';
 import { TopNotice } from './home/top-notice';
+import { FloatingWhatsApp } from '@/components/public/floating-whatsapp';
 
 /** Public marketing site uses the JCT navy/red light shell, independent of ERP theme. */
 export function PublicShell({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       <HomeHeader />
       <main className="flex-1">{children}</main>
       <HomeFooter />
+      <FloatingWhatsApp />
     </div>
   );
 }

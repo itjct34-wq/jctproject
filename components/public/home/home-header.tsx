@@ -34,7 +34,7 @@ export function HomeHeader() {
           className="flex min-w-0 shrink items-center rounded-lg bg-white/70 px-2 py-1 shadow-[0_2px_12px_rgba(11,31,51,0.06)] ring-1 ring-[var(--jct-navy)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
           aria-label="Home"
         >
-          <BrandLogo placement="header" label="Export" />
+          <BrandLogo placement="header" label="JCT" />
         </Link>
         <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
@@ -74,36 +74,57 @@ export function HomeHeader() {
         </button>
       </div>
       {open && (
-        <div id="home-mobile-nav" className="jct-site-header-mobile px-4 py-3 lg:hidden">
-          <nav className="flex flex-col gap-1" aria-label="Mobile">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  'rounded-full px-4 py-3 text-base text-[var(--jct-navy)] hover:bg-white hover:shadow-[inset_0_-2px_0_var(--jct-vermilion)]',
-                  navLinkActive(pathname, item.href) && 'bg-white font-semibold shadow-[inset_0_-2px_0_var(--jct-vermilion)]'
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+        <div
+          id="home-mobile-nav"
+          className="fixed inset-0 z-[60] flex flex-col bg-[var(--jct-panel,#f7f8fa)] lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site menu"
+        >
+          <div className="flex items-center justify-between border-b border-[var(--jct-border)] px-4 py-3">
+            <BrandLogo placement="header" label="JCT" />
+            <button
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--jct-navy)]/20"
+              aria-label="Close menu"
+              onClick={() => setOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto px-4 py-3" aria-label="Mobile">
+            <div className="flex flex-col gap-1">
+              {NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    'rounded-2xl px-4 py-3.5 text-base font-medium text-[var(--jct-navy)] hover:bg-white',
+                    navLinkActive(pathname, item.href) && 'bg-white font-semibold shadow-sm'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+          <div className="sticky bottom-0 space-y-2 border-t border-[var(--jct-border)] bg-[var(--jct-panel,#f7f8fa)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Link
               href="/inventory"
               onClick={() => setOpen(false)}
-              className="jct-btn-secondary mt-2 w-full px-4 py-3 text-center text-base"
+              className="jct-btn-secondary flex w-full items-center justify-center px-4 py-3 text-center text-base"
             >
               Search stock
             </Link>
             <Link
               href="/contact"
               onClick={() => setOpen(false)}
-              className="jct-btn-primary mt-2 w-full px-4 py-3 text-center text-base"
+              className="jct-btn-primary flex w-full items-center justify-center px-4 py-3 text-center text-base"
             >
               Request a car
             </Link>
-          </nav>
+          </div>
         </div>
       )}
     </header>

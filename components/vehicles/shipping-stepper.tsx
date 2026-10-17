@@ -19,7 +19,7 @@ export function ShippingStepper({ vehicle }: { vehicle: Pick<Vehicle, 'payment_s
         <li key={stage} className="flex items-center gap-1.5">
           <span
             className={cn(
-              'rounded-full border px-2.5 py-0.5 text-[11px] font-medium',
+              'rounded-full border px-2.5 py-0.5 text-xs font-medium',
               idx < currentIdx && 'border-emerald-200 bg-emerald-50 text-emerald-800',
               idx === currentIdx && 'border-primary bg-primary text-primary-foreground',
               idx > currentIdx && 'border-border bg-muted/40 text-muted-foreground'

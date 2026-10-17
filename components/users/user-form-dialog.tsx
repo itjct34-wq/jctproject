@@ -174,7 +174,7 @@ export function UserFormDialog({
                 </button>
               </div>
               {mode === 'create' ? (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Min {MIN_PASSWORD_LENGTH} characters. Share it securely; ask the user to change it on first login.
                 </p>
               ) : null}

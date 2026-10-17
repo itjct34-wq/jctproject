@@ -78,11 +78,11 @@ export function HeroGallery() {
           </button>
         ))}
       </div>
-      <p className="absolute right-3 top-3 rounded-md bg-black/35 px-2 py-0.5 text-[10px] text-white/90">
+      <p className="absolute right-3 top-3 rounded-md bg-black/35 px-2 py-0.5 text-xs text-white/90">
         Photos: {HERO_IMAGES[active]?.credit}
       </p>
       <div className="absolute bottom-4 left-4 right-4 z-10 rounded-xl bg-white p-4 shadow-[0_12px_40px_rgba(11,31,51,0.18)] sm:left-auto sm:right-6 sm:w-64">
-        <p className="text-[11px] uppercase tracking-wider text-[var(--jct-muted-2)]">RORO and container</p>
+        <p className="text-xs uppercase tracking-wider text-[var(--jct-muted-2)]">RORO and container</p>
         <p className="mt-1 font-display text-sm font-semibold text-[var(--jct-navy)]">Price terms you can choose</p>
         <p className="mt-2 text-sm text-[var(--jct-muted)]">FOB / C&amp;F / CIF</p>
       </div>

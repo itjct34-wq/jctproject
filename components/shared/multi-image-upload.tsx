@@ -155,7 +155,7 @@ export function MultiImageUpload({
         </div>
       )}
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         JPG / PNG / WebP · up to {maxImages} photos · max {Math.round(maxBytes / 1024 / 1024)}MB each · star = primary
       </p>
 

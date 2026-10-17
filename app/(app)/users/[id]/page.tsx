@@ -179,7 +179,7 @@ export default function UserProfilePage() {
                       <span
                         key={role.id}
                         className={cn(
-                          'inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded border',
+                          'inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded border',
                           ROLE_COLORS[role.name as RoleName]
                         )}
                       >

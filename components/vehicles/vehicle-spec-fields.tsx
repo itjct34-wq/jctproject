@@ -45,7 +45,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
     <>
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-0.5 sm:col-span-2 lg:col-span-1">
-          <Label className="text-[11px]">Category *</Label>
+          <Label className="text-xs">Category *</Label>
           <Select
             value={form.stock_category}
             onValueChange={(v) => onChange({ stock_category: v as StockCategory })}
@@ -59,7 +59,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           </Select>
         </div>
         <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
-          <Label className="text-[11px]">{parts ? 'Part number / chassis *' : 'Chassis *'}</Label>
+          <Label className="text-xs">{parts ? 'Part number / chassis *' : 'Chassis *'}</Label>
           <Input
             value={form.chassis_number}
             onChange={(e) => onChange({ chassis_number: e.target.value })}
@@ -69,7 +69,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
         </div>
         {parts ? (
           <div className="space-y-0.5">
-            <Label className="text-[11px]">Part SKU</Label>
+            <Label className="text-xs">Part SKU</Label>
             <Input
               value={form.part_sku}
               onChange={(e) => onChange({ part_sku: e.target.value })}
@@ -78,7 +78,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           </div>
         ) : null}
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Stock no.</Label>
+          <Label className="text-xs">Stock no.</Label>
           <Input
             value={form.stock_number}
             onChange={(e) => onChange({ stock_number: e.target.value })}
@@ -86,7 +86,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Make *</Label>
+          <Label className="text-xs">Make *</Label>
           <Input
             value={form.make}
             onChange={(e) => onChange({ make: e.target.value })}
@@ -95,7 +95,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Model *</Label>
+          <Label className="text-xs">Model *</Label>
           <Input
             value={form.model}
             onChange={(e) => onChange({ model: e.target.value })}
@@ -104,7 +104,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Colour</Label>
+          <Label className="text-xs">Colour</Label>
           <Input
             value={form.colour}
             onChange={(e) => onChange({ colour: e.target.value })}
@@ -112,7 +112,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Year</Label>
+          <Label className="text-xs">Year</Label>
           <Input
             value={form.model_year}
             onChange={(e) => onChange({ model_year: e.target.value })}
@@ -120,7 +120,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Engine</Label>
+          <Label className="text-xs">Engine</Label>
           <Input
             value={form.engine}
             onChange={(e) => onChange({ engine: e.target.value })}
@@ -128,7 +128,7 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[11px]">Transmission</Label>
+          <Label className="text-xs">Transmission</Label>
           <Input
             value={form.transmission}
             onChange={(e) => onChange({ transmission: e.target.value })}

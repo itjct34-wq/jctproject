@@ -695,12 +695,12 @@ export function ReserveVehicleDialog({
               </Field>
             </div>
             {!freightPolicy.allowFreight && (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 FOB — vehicle cost only; freight charge is excluded from the reservation invoice.
               </p>
             )}
             {freightPolicy.requireFreight && (
-              <p className="text-[11px] text-amber-700">
+              <p className="text-xs text-amber-700">
                 Container + {shipmentTerm}: enter Ocean freight (USD) below.
               </p>
             )}
@@ -711,7 +711,7 @@ export function ReserveVehicleDialog({
               </p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">Bid (purchase)</p>
+                  <p className="text-xs uppercase text-muted-foreground">Bid (purchase)</p>
                   <p className="font-medium">
                     {fobBreakdown?.bid != null
                       ? `¥${Math.round(fobBreakdown.bid).toLocaleString()}`
@@ -719,7 +719,7 @@ export function ReserveVehicleDialog({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">+{markupPct}% markup</p>
+                  <p className="text-xs uppercase text-muted-foreground">+{markupPct}% markup</p>
                   <p className="font-medium">
                     {fobBreakdown?.calc
                       ? `¥${Math.round(fobBreakdown.calc.markupJpy).toLocaleString()}`
@@ -727,7 +727,7 @@ export function ReserveVehicleDialog({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">+ Expense JPY</p>
+                  <p className="text-xs uppercase text-muted-foreground">+ Expense JPY</p>
                   <p className="font-medium">
                     {fobBreakdown
                       ? `¥${Math.round(fobBreakdown.expense).toLocaleString()}`
@@ -735,33 +735,33 @@ export function ReserveVehicleDialog({
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">÷ TT rate</p>
+                  <p className="text-xs uppercase text-muted-foreground">÷ TT rate</p>
                   <p className="font-medium">{fobBreakdown ? fobBreakdown.tt : DEFAULT_TT_RATE}</p>
                 </div>
               </div>
               <div className="mt-3 grid gap-2 border-t border-border/50 pt-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">FOB USD</p>
+                  <p className="text-xs uppercase text-muted-foreground">FOB USD</p>
                   <p className="font-semibold text-primary">
                     {fobUsd != null ? money(fobUsd) : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">Profit (quoted − FOB)</p>
+                  <p className="text-xs uppercase text-muted-foreground">Profit (quoted − FOB)</p>
                   <p className={`font-semibold ${profitUsd != null && profitUsd < 0 ? 'text-destructive' : ''}`}>
                     {profitUsd != null ? money(profitUsd) : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">Freight + charges (not profit)</p>
+                  <p className="text-xs uppercase text-muted-foreground">Freight + charges (not profit)</p>
                   <p className="font-medium">{money(chargeExtras)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase text-muted-foreground">Invoice total</p>
+                  <p className="text-xs uppercase text-muted-foreground">Invoice total</p>
                   <p className="font-semibold">{money(invoiceTotal)}</p>
                 </div>
               </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 (Bid + {markupPct}% + expense) ÷ TT → FOB USD · quoted − FOB = profit (freight excluded) · quoted + freight/charges − discount = invoice
               </p>
             </div>
@@ -790,7 +790,7 @@ export function ReserveVehicleDialog({
             </div>
             <Field label="Selling / invoice amount (USD)" required className="max-w-xs space-y-1">
               <Input type="number" readOnly value={String(invoiceTotal)} />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Quoted {quotedPrice !== '' ? money(quotedUsd) : '—'} + charges {money(chargeExtras)}
                 {discountUsd > 0 ? ` − discount ${money(discountUsd)}` : ''}
               </p>
@@ -865,7 +865,7 @@ export function ReserveVehicleDialog({
               </Field>
             </div>
             {invoiceDate ? (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Due / payment due linked to invoice date: {dueDate || '—'} (printed document uses invoice
                 issue date).
               </p>

@@ -52,7 +52,7 @@ export function LifecycleBoard({ snapshot }: LifecycleBoardProps) {
               className="glass-panel-strong group rounded-xl border-border/40 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-glass"
             >
               <div className="mb-2 flex items-start justify-between gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {kpi.label}
                 </span>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-colors group-hover:bg-brand/10 group-hover:text-brand">
@@ -110,7 +110,7 @@ export function LifecycleBoard({ snapshot }: LifecycleBoardProps) {
                       <Icon className="h-4 w-4 text-muted-foreground" />
                       {col.title}
                     </Link>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">{col.cue}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{col.cue}</p>
                   </div>
                   <Link
                     href={col.href}
@@ -140,14 +140,14 @@ export function LifecycleBoard({ snapshot }: LifecycleBoardProps) {
                             ) : null}
                           </p>
                           {row.avgDays != null && row.avgDaysLabel ? (
-                            <p className="mt-0.5 text-[10px] text-muted-foreground">
+                            <p className="mt-0.5 text-xs text-muted-foreground">
                               Avg {row.avgDays} {row.avgDaysLabel}
                             </p>
                           ) : null}
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-sm font-bold tabular-nums text-foreground">{row.count.toLocaleString()}</p>
-                          <p className="text-[10px] tabular-nums text-muted-foreground">{row.pctOfBucket}%</p>
+                          <p className="text-xs tabular-nums text-muted-foreground">{row.pctOfBucket}%</p>
                         </div>
                       </div>
                       <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted/70">
@@ -162,7 +162,7 @@ export function LifecycleBoard({ snapshot }: LifecycleBoardProps) {
               </div>
 
               {col.footerAlert ? (
-                <div className="mt-auto border-t border-red-200/70 bg-red-50/80 px-3 py-2 text-[11px] font-medium text-red-800">
+                <div className="mt-auto border-t border-red-200/70 bg-red-50/80 px-3 py-2 text-xs font-medium text-red-800">
                   <AlertTriangle className="mr-1.5 inline h-3 w-3" />
                   {col.footerAlert}
                 </div>
