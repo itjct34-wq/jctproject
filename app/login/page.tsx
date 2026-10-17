@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
@@ -49,24 +48,17 @@ function LoginForm() {
     <div className="erp-shell relative flex min-h-[100dvh] items-center justify-center px-4">
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-card shadow-glass ring-1 ring-border/60">
-            <Image
-              src="/images/jct-official-logo.png"
-              alt="JCT"
-              width={56}
-              height={56}
-              className="h-full w-full object-contain p-1"
-              priority
-            />
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-border/50 bg-card/80 shadow-glass ring-1 ring-border/40">
+            <span className="h-5 w-5 rounded-md bg-brand/80" aria-hidden />
           </div>
           <p className="text-xs font-medium text-muted-foreground">Staff sign-in</p>
         </div>
 
         <Card className="border-border/50 shadow-glass backdrop-blur-xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-center text-lg text-foreground">Sign in to ERP</CardTitle>
+            <CardTitle className="text-center text-lg text-foreground">Sign in</CardTitle>
             <p className="mt-1 text-center text-xs text-muted-foreground">
-              Vehicle export operations system
+              Access your ERP workspace
             </p>
           </CardHeader>
           <CardContent>
@@ -99,33 +91,24 @@ function LoginForm() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/login/reset"
-                    className="text-xs font-medium text-brand hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative flex items-center">
                   <Lock className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" aria-hidden />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-11 text-base md:text-sm"
+                    className="pl-9 pr-10 text-base md:text-sm"
                     required
                     autoComplete="current-password"
-                    aria-invalid={error ? true : undefined}
                   />
                   <button
                     type="button"
+                    className="absolute right-2 flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/70"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-0 flex h-full w-11 items-center justify-center rounded-r-xl text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -136,16 +119,18 @@ function LoginForm() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    Signing in…
                   </>
                 ) : (
-                  'Sign In'
+                  'Sign in'
                 )}
               </Button>
             </form>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
-              Internal system for authorized personnel only.
+              <Link href="/login/reset" className="text-brand hover:underline">
+                Forgot password?
+              </Link>
             </p>
           </CardContent>
         </Card>
@@ -159,7 +144,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="erp-shell flex min-h-[100dvh] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       }
     >

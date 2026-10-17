@@ -59,9 +59,14 @@ export function HomeFooter() {
             </li>
           </ul>
           <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Staff</p>
-          <Link href="/login" className="jct-btn-secondary px-4 py-2 text-sm">
-            ERP login
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/login" className="jct-btn-secondary px-4 py-2 text-sm">
+              ERP login
+            </Link>
+            <Link href="/download" className="jct-btn-secondary px-4 py-2 text-sm">
+              Android app
+            </Link>
+          </div>
         </div>
       </div>
       <div className="jct-site-footer-bar py-4 text-center text-xs text-[var(--jct-muted-2)]">

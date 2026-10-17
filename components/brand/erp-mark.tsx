@@ -1,10 +1,9 @@
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 const SIZES = {
-  sm: { box: 'h-8 w-8', px: 32 },
-  md: { box: 'h-10 w-10', px: 40 },
-  lg: { box: 'h-14 w-14', px: 56 },
+  sm: { box: 'h-8 w-8', icon: 'h-3.5 w-3.5' },
+  md: { box: 'h-10 w-10', icon: 'h-4 w-4' },
+  lg: { box: 'h-14 w-14', icon: 'h-6 w-6' },
 } as const;
 
 type ErpMarkProps = {
@@ -14,43 +13,65 @@ type ErpMarkProps = {
   showWordmark?: boolean;
   className?: string;
   wordmarkClassName?: string;
+  /** `sidebar` = light-on-dark; `chrome` = works on light top bar. */
+  tone?: 'sidebar' | 'chrome';
 };
 
-/** Official JCT mark for ERP chrome (sidebar, login, loading). */
+/**
+ * Neutral ERP chrome mark — no company / product branding.
+ * Official marks belong on printed trade documents only.
+ */
 export function ErpMark({
   size = 'md',
   compact,
   showWordmark = !compact,
   className,
   wordmarkClassName,
+  tone = 'sidebar',
 }: ErpMarkProps) {
   const s = SIZES[size];
+  const onSidebar = tone === 'sidebar';
   return (
     <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
       <span
         className={cn(
-          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/95 shadow-glass-sm ring-1 ring-white/35 backdrop-blur-md',
-          s.box
+          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-glass-sm backdrop-blur-md',
+          s.box,
+          onSidebar
+            ? 'bg-white/15 ring-1 ring-white/20'
+            : 'bg-brand/10 ring-1 ring-border/50'
         )}
+        aria-hidden
       >
-        <Image
-          src="/images/jct-official-logo.png"
-          alt=""
-          width={s.px}
-          height={s.px}
-          className="h-full w-full object-contain p-0.5"
-          priority
+        <span
+          className={cn(
+            'rounded-md shadow-sm',
+            s.icon,
+            onSidebar ? 'bg-white/90' : 'bg-brand/80'
+          )}
         />
       </span>
       {showWordmark ? (
         <div className={cn('min-w-0', wordmarkClassName)}>
-          <p className="truncate text-sm font-semibold tracking-tight text-white">JCT ERP</p>
-          <p className="truncate text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
-            Operations
+          <p
+            className={cn(
+              'truncate text-sm font-semibold tracking-tight',
+              onSidebar ? 'text-white' : 'text-foreground'
+            )}
+          >
+            ERP
+          </p>
+          <p
+            className={cn(
+              'truncate text-[11px] font-medium uppercase tracking-[0.14em]',
+              onSidebar ? 'text-white/50' : 'text-muted-foreground'
+            )}
+          >
+            Workspace
           </p>
         </div>
       ) : null}
-      <span className="sr-only">JCT ERP</span>
+      <span className="sr-only">ERP</span>
     </div>
   );
 }

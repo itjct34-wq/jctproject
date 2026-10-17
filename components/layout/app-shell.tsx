@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { MobileTabBar } from '@/components/layout/mobile-tab-bar';
+import { CommandPalette, useCommandPalette } from '@/components/layout/command-palette';
 import { useAuth } from '@/lib/auth-provider';
 import { ErpMark } from '@/components/brand/erp-mark';
 import { useI18n } from '@/lib/i18n/locale-provider';
@@ -15,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
   const { user, loading } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
@@ -75,7 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent
           side="left"
-          className="w-72 max-w-[85vw] border-0 bg-transparent p-0 shadow-none [&>button]:hidden"
+          className="w-[min(20rem,88vw)] border-0 bg-transparent p-0 shadow-none [&>button]:hidden"
           onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
           onTouchEnd={(e) => {
             if (touchStartX == null) return;
@@ -95,15 +97,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenuClick={() => setMobileOpen(true)} />
+        <TopBar
+          onMenuClick={() => setMobileOpen(true)}
+          onOpenPalette={() => setPaletteOpen(true)}
+        />
         <main
           id="main-content"
-          className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-5 lg:p-6 lg:pb-6"
+          className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:p-4 md:p-5 lg:p-6 lg:pb-6"
         >
           <div className="animate-glass-in">{children}</div>
         </main>
-        <MobileTabBar onMore={() => setMobileOpen(true)} />
+        <MobileTabBar
+          onMore={() => setMobileOpen(true)}
+          onQuickActions={() => setPaletteOpen(true)}
+        />
       </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

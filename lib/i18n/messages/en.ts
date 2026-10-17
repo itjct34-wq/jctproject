@@ -21,6 +21,8 @@ export type MessageTree = {
     viewAll: string;
     noNotifications: string;
     searchVehicles: string;
+    searchOrJump: string;
+    workspace: string;
     quickActions: string;
     skipToMain: string;
   };
@@ -71,9 +73,12 @@ export type MessageTree = {
     more: string;
     new: string;
     newInquiry: string;
+    newInvoice: string;
+    newQuotation: string;
     reserveVehicle: string;
     addExpense: string;
     uploadStock: string;
+    remittances: string;
     noQuickActions: string;
   };
 };
@@ -101,6 +106,8 @@ const en: MessageTree = {
     viewAll: 'View all notifications',
     noNotifications: 'No notifications yet',
     searchVehicles: 'Search vehicles…',
+    searchOrJump: 'Search or jump to…',
+    workspace: 'Workspace',
     quickActions: 'Quick actions',
     skipToMain: 'Skip to main content',
   },
@@ -151,9 +158,12 @@ const en: MessageTree = {
     more: 'More',
     new: 'New',
     newInquiry: 'New inquiry',
+    newInvoice: 'New invoice',
+    newQuotation: 'New quotation',
     reserveVehicle: 'Reserve vehicle',
     addExpense: 'Add expense',
     uploadStock: 'Upload stock',
+    remittances: 'Remittances / T/T',
     noQuickActions: 'No quick actions available for your role.',
   },
 };

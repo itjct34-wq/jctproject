@@ -296,6 +296,22 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     setLineItems([{ ...emptyLine(kind) }]);
     setCreateOpen(true);
   };
+
+  // Quick action / deep link: ?new=1 opens the create invoice sheet.
+  useEffect(() => {
+    if (loading) return;
+    if (searchParams.get('new') !== '1') return;
+    if (!canCreateInvoice) return;
+    if (deepLinkHandled.current === 'new') return;
+    deepLinkHandled.current = 'new';
+    openCreate();
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('new');
+    const qs = next.toString();
+    const path = isAuction ? '/auction-invoices' : '/invoices';
+    router.replace(qs ? `${path}?${qs}` : path);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, searchParams, canCreateInvoice, router, isAuction]);
   const openEditForInvoice = async (inv: Invoice) => {
     const loadedItems = await fetchInvoiceItems(inv);
     const editPolicy = resolveFreightPolicy({

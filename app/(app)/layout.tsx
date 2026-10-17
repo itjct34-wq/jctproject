@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layout/app-shell';
 export const metadata: Metadata = {
   title: {
     default: 'Dashboard',
-    template: '%s · JCT ERP',
+    template: '%s · ERP',
   },
 };
 

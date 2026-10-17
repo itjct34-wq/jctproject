@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/contact',
     '/blog',
     '/verify-agent',
+    '/download',
   ];
   return paths.map((path) => ({
     url: `${BASE}${path === '/' ? '' : path}`,

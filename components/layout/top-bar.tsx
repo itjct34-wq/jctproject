@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -57,10 +56,16 @@ function pageTitleFromPath(pathname: string, t: (path: string, fallback?: string
     }
   }
   if (pathname.startsWith('/profile')) return t('common.myProfile');
-  return 'ERP';
+  return t('common.workspace', 'Workspace');
 }
 
-export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
+export function TopBar({
+  onMenuClick,
+  onOpenPalette,
+}: {
+  onMenuClick: () => void;
+  onOpenPalette?: () => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useI18n();
@@ -68,8 +73,6 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [searchQ, setSearchQ] = useState('');
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const today = format(new Date(), 'EEEE, MMM d, yyyy');
   const pageTitle = pageTitleFromPath(pathname, t);
 
@@ -112,14 +115,6 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     router.refresh();
   };
 
-  const goSearch = () => {
-    const q = searchQ.trim();
-    if (!q) return;
-    router.push(`/vehicles?q=${encodeURIComponent(q)}`);
-    setSearchQ('');
-    setMobileSearchOpen(false);
-  };
-
   const initials = (profile?.full_name || profile?.email || '?')
     .split(' ')
     .map((w) => w[0])
@@ -143,7 +138,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
       </button>
 
       <div className="flex min-w-0 items-center gap-2 lg:hidden">
-        <ErpMark size="sm" compact showWordmark={false} />
+        <ErpMark size="sm" compact showWordmark={false} tone="chrome" />
         <p className="truncate text-sm font-semibold tracking-tight text-foreground">{pageTitle}</p>
       </div>
 
@@ -152,30 +147,26 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="mx-auto hidden min-w-0 max-w-md flex-1 md:block">
-        <form
-          className="relative"
-          onSubmit={(e) => {
-            e.preventDefault();
-            goSearch();
-          }}
+        <button
+          type="button"
+          onClick={() => onOpenPalette?.()}
+          className="relative flex h-10 w-full items-center rounded-full border border-border/40 bg-card/65 px-3.5 text-left text-sm text-muted-foreground shadow-glass-sm backdrop-blur-xl transition-colors hover:bg-card/90"
+          aria-label={t('common.quickActions')}
         >
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchQ}
-            onChange={(e) => setSearchQ(e.target.value)}
-            placeholder={t('common.searchVehicles')}
-            className="h-10 rounded-full border-border/40 bg-card/65 pl-10 shadow-glass-sm backdrop-blur-xl focus-visible:bg-card/90"
-            aria-label={t('common.searchVehicles')}
-          />
-        </form>
+          <Search className="mr-2.5 h-4 w-4 shrink-0" />
+          <span className="flex-1 truncate">{t('common.searchOrJump', 'Search or jump to…')}</span>
+          <kbd className="pointer-events-none ml-2 hidden h-5 select-none items-center gap-0.5 rounded border border-border/60 bg-muted/70 px-1.5 font-mono text-[10px] font-medium lg:inline-flex">
+            Ctrl K
+          </kbd>
+        </button>
       </div>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
         <button
           type="button"
-          aria-label={t('common.search')}
+          aria-label={t('common.quickActions')}
           className="flex h-11 w-11 items-center justify-center rounded-2xl hover:bg-muted/70 md:hidden"
-          onClick={() => setMobileSearchOpen((v) => !v)}
+          onClick={() => onOpenPalette?.()}
         >
           <Search className="h-5 w-5 text-muted-foreground" />
         </button>
@@ -328,27 +319,6 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         </DropdownMenu>
       </div>
 
-      {mobileSearchOpen ? (
-        <div className="absolute inset-x-0 top-full z-40 border-b border-border/40 bg-card/90 p-3 shadow-glass backdrop-blur-xl md:hidden">
-          <form
-            className="relative"
-            onSubmit={(e) => {
-              e.preventDefault();
-              goSearch();
-            }}
-          >
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              placeholder={t('common.searchVehicles')}
-              className="h-12 pl-10 text-base"
-              aria-label={t('common.searchVehicles')}
-            />
-          </form>
-        </div>
-      ) : null}
     </header>
   );
 }

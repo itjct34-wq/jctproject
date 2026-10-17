@@ -24,6 +24,7 @@ const CONFIGS=[
 export default function ConfigurationPage(){
  const {isSuperAdmin,can}=usePermissions();const {profile}=useAuth();
  const canManageAuctionHouses=isSuperAdmin()||can('auctions','create');
+ const canManageCatalogs=isSuperAdmin()||can('settings','edit')||canManageAuctionHouses;
  const [rows,setRows]=useState<Record<string,ConfigRow>>({});const [values,setValues]=useState<Record<string,string>>({});const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);
  const load=useCallback(async()=>{setLoading(true);const {data,error}=await supabase.from('system_config').select('key,value,description').in('key',CONFIGS.map(c=>c.key));if(error)toast.error(error.message);else{const map:Record<string,ConfigRow>={};const text:Record<string,string>={};(data||[]).forEach((r:any)=>{map[r.key]=r;text[r.key]=configValues(r.value,r.key==='currencies'?['enabled','values','options']:r.key==='freight_destinations'?['countries','values','options']:['enabled','values','options','methods']).join('\n')});setRows(map);setValues(text);}setLoading(false);},[]);
  useEffect(()=>{void load();},[load]);
@@ -35,11 +36,11 @@ export default function ConfigurationPage(){
  if(error){toast.error('Could not save '+c.label+': '+error.message);setSaving(false);return;}
  }
  setSaving(false);toast.success('Reusable configuration saved');await load();};
- if(!isSuperAdmin()&&!canManageAuctionHouses)return <div className="mx-auto max-w-xl py-16 text-center"><ShieldAlert className="mx-auto h-10 w-10 text-destructive"/><h1 className="mt-4 text-xl font-semibold">Access required</h1><p className="mt-2 text-sm text-muted-foreground">You need auction or super-admin permissions to manage configuration here.</p></div>;
- return <div className="space-y-6"><PageHeader title="Global configuration" description={isSuperAdmin()?"Maintain reusable values used across the ERP and public inquiry forms.":"Manage the auction house directory used on auction listings."} actions={isSuperAdmin()?<Button onClick={()=>void save()} disabled={loading||saving}>{saving?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Save className="mr-2 h-4 w-4"/>}Save configuration</Button>:undefined}/>
+ if(!isSuperAdmin()&&!canManageAuctionHouses&&!can('settings','edit'))return <div className="mx-auto max-w-xl py-16 text-center"><ShieldAlert className="mx-auto h-10 w-10 text-destructive"/><h1 className="mt-4 text-xl font-semibold">Access required</h1><p className="mt-2 text-sm text-muted-foreground">You need auction, settings, or super-admin permissions to manage configuration here.</p></div>;
+ return <div className="space-y-6"><PageHeader title="Global configuration" description={isSuperAdmin()?"Maintain reusable values used across the ERP and public inquiry forms.":"Manage auction houses, shipping catalogs, and related configuration."} actions={isSuperAdmin()?<Button onClick={()=>void save()} disabled={loading||saving}>{saving?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Save className="mr-2 h-4 w-4"/>}Save configuration</Button>:undefined}/>
  {canManageAuctionHouses?<AuctionHousesPanel/>:null}
- {isSuperAdmin()||canManageAuctionHouses?<FreightRatesPanel/>:null}
- {isSuperAdmin()||canManageAuctionHouses?<ShippingCatalogsPanel/>:null}
+ {canManageCatalogs?<FreightRatesPanel/>:null}
+ {canManageCatalogs?<ShippingCatalogsPanel/>:null}
  {isSuperAdmin()?<>
  <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground"><Settings2 className="mr-2 inline h-4 w-4"/>Values here are global. Removing a currency or destination does not rewrite historical invoices, quotations or inquiries.</div>
  {loading?<div className="flex justify-center p-12"><Loader2 className="h-5 w-5 animate-spin"/></div>:<div className="grid gap-4 lg:grid-cols-2">{CONFIGS.map(c=><Card key={c.key}><CardHeader><CardTitle className="text-base">{c.label}</CardTitle><p className="text-sm text-muted-foreground">{c.help}</p></CardHeader><CardContent className="space-y-2"><Label htmlFor={c.key}>One value per line</Label><Textarea id={c.key} rows={8} spellCheck={false} value={values[c.key]||''} onChange={e=>setValues(v=>({...v,[c.key]:e.target.value}))} placeholder={c.label}/><p className="text-xs text-muted-foreground">{(values[c.key]||'').split('\n').filter(s=>s.trim()).length} values</p></CardContent></Card>)}</div>}

@@ -1,7 +1,7 @@
 {
-  "name": "JCT Vehicle Export ERP",
-  "short_name": "JCT",
-  "description": "Vehicle export management — CRM, inventory, auctions, invoicing, and shipping.",
+  "name": "ERP Workspace",
+  "short_name": "ERP",
+  "description": "Vehicle export operations — CRM, inventory, auctions, invoicing, and shipping.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
