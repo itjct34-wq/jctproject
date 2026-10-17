@@ -1,14 +1,9 @@
 name: Android ERP APK
 
+# Manual only until an APK is verified. After a successful run, set
+# NEXT_PUBLIC_ANDROID_APK_URL to the release asset URL so /download enables the CTA.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'android/**'
-      - 'capacitor.config.ts'
-      - 'native-www/**'
-      - '.github/workflows/android-apk.yml'
 
 permissions:
   contents: write

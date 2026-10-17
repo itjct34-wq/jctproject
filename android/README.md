@@ -69,6 +69,10 @@ cd android
 .\gradlew.bat assembleDebug
 ```
 
+## Optional: GitHub Actions
+
+`.github/workflows/android-apk.yml` can build a debug APK on **workflow_dispatch**. After it publishes a release asset, set Vercel env `NEXT_PUBLIC_ANDROID_APK_URL` to that HTTPS URL so `/download` shows **Download Android APK**.
+
 ## What staff should use today
 
 Until an APK is hosted, use **Add to Home Screen** from `/login` (see the public `/download` page). That is the primary Android path.
