@@ -1047,7 +1047,12 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <Switch checked={printShowQr} onCheckedChange={setPrintShowQr} />
               QR code {printShowQr ? 'on' : 'off'}
             </label>
-            <p className="text-xs text-muted-foreground">PDF prints one invoice on one A4 page.</p>
+            <p className="text-xs text-muted-foreground">
+              Document date uses the invoice issue date
+              {selected?.issue_date ? ` (${String(selected.issue_date).slice(0, 10)})` : ''}.
+              One A4 page. In the print dialog, turn off Headers and footers if a URL or page
+              count still appears.
+            </p>
           </div>
           {selected && (
             <div className="overflow-x-auto print:overflow-visible">

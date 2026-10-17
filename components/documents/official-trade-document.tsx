@@ -390,12 +390,15 @@ export function OfficialTradeDocument({
                 </tr>
               );
             })}
-            <tr className="inv-subtotal">
-              <td colSpan={vehicleColSpan} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
-                {vehiclesTotalLabel}
-              </td>
-              <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(vehiclesSum, currency)}</td>
-            </tr>
+            {/* RORO (no separate freight): skip blue intermediate Total — red Invoice total is enough. */}
+            {showFreightBlock ? (
+              <tr className="inv-subtotal">
+                <td colSpan={vehicleColSpan} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
+                  {vehiclesTotalLabel}
+                </td>
+                <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(vehiclesSum, currency)}</td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
 

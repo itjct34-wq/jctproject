@@ -202,14 +202,21 @@ export async function exportCommercialInvoiceDocx(opts: {
                 ],
               }),
               ...vehicleRows,
-              new TableRow({
-                children: [
-                  cell('VEHICLES TOTAL', { bold: true }),
-                  cell(''),
-                  cell(''),
-                  cell(formatMoney(vehiclesTotal, invoice.currency), { bold: true, align: AlignmentType.RIGHT }),
-                ],
-              }),
+              ...(showFreight
+                ? [
+                    new TableRow({
+                      children: [
+                        cell('VEHICLES TOTAL', { bold: true }),
+                        cell(''),
+                        cell(''),
+                        cell(formatMoney(vehiclesTotal, invoice.currency), {
+                          bold: true,
+                          align: AlignmentType.RIGHT,
+                        }),
+                      ],
+                    }),
+                  ]
+                : []),
             ],
           }),
           ...(showFreight
@@ -253,14 +260,16 @@ export async function exportCommercialInvoiceDocx(opts: {
           new Table({
             width: { size: 9360, type: WidthType.DXA },
             rows: [
-              new TableRow({
-                children: [
-                  cell(vehiclesTotalLabel),
-                  cell(formatMoney(vehiclesTotal, invoice.currency), { align: AlignmentType.RIGHT }),
-                ],
-              }),
               ...(showFreight
                 ? [
+                    new TableRow({
+                      children: [
+                        cell(vehiclesTotalLabel),
+                        cell(formatMoney(vehiclesTotal, invoice.currency), {
+                          align: AlignmentType.RIGHT,
+                        }),
+                      ],
+                    }),
                     new TableRow({
                       children: [
                         cell('Freight'),

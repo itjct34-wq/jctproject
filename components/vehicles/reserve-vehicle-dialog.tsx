@@ -284,6 +284,7 @@ export function ReserveVehicleDialog({
     setNotifyPhone('');
     setNotifyEmail('');
     setInvoiceDate(todayStr);
+    // Due / payment due follow invoice date (no separate manual pickers).
     setDueDate(dueStr);
     setPaymentDue(dueStr);
     setDiscount('');
@@ -375,8 +376,8 @@ export function ReserveVehicleDialog({
       toast.error('Destination country and port are required');
       return;
     }
-    if (!invoiceDate || !dueDate || !paymentDue) {
-      toast.error('Invoice date, due date and payment due are required');
+    if (!invoiceDate) {
+      toast.error('Invoice date is required');
       return;
     }
 
@@ -545,8 +546,8 @@ export function ReserveVehicleDialog({
         email: (notifySame ? consigneeEmail : notifyEmail).trim(),
       },
       issueDate: invoiceDate,
-      dueDate,
-      paymentDueDate: paymentDue,
+      dueDate: dueDate || invoiceDate,
+      paymentDueDate: paymentDue || dueDate || invoiceDate,
       paymentTerms: `${paymentTermPct}% T/T in advance`,
       remarks: remarks.trim() || null,
       emailInvoice,
@@ -830,13 +831,28 @@ export function ReserveVehicleDialog({
             <h3 className="text-xs font-semibold text-primary">Invoice Detail</h3>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Invoice date" required>
-                <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-              </Field>
-              <Field label="Due date" required>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </Field>
-              <Field label="Payment due" required>
-                <Input type="date" value={paymentDue} onChange={(e) => setPaymentDue(e.target.value)} />
+                <Input
+                  type="date"
+                  value={invoiceDate}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setInvoiceDate(next);
+                    // Link due / payment due to invoice date (+7 days) — printed Issue date uses this.
+                    if (next) {
+                      const d = new Date(`${next}T12:00:00`);
+                      d.setDate(d.getDate() + 7);
+                      const y = d.getFullYear();
+                      const m = String(d.getMonth() + 1).padStart(2, '0');
+                      const day = String(d.getDate()).padStart(2, '0');
+                      const linked = `${y}-${m}-${day}`;
+                      setDueDate(linked);
+                      setPaymentDue(linked);
+                    } else {
+                      setDueDate('');
+                      setPaymentDue('');
+                    }
+                  }}
+                />
               </Field>
               <Field label="Discount (USD)">
                 <Input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
@@ -848,6 +864,12 @@ export function ReserveVehicleDialog({
                 <Input readOnly value={String(invoiceTotal)} />
               </Field>
             </div>
+            {invoiceDate ? (
+              <p className="text-[11px] text-muted-foreground">
+                Due / payment due linked to invoice date: {dueDate || '—'} (printed document uses invoice
+                issue date).
+              </p>
+            ) : null}
             <label className="flex items-center gap-2 text-sm font-medium">
               <Checkbox checked={emailInvoice} onCheckedChange={(v) => setEmailInvoice(v === true)} />
               Email invoice

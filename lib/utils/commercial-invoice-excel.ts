@@ -242,14 +242,19 @@ export async function exportTradeDocumentExcel(opts: {
   });
 
   const vehiclesTotalLabel = showFreight ? 'Vehicles total' : 'Total';
-  ws.mergeCells(row, 1, row, lastCol - 1);
-  ws.getCell(row, 1).value = vehiclesTotalLabel;
-  styleHeader(ws.getCell(row, 1));
-  ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
-  ws.getCell(row, lastCol).value = money(vehiclesTotal);
-  ws.getCell(row, lastCol).numFmt = '#,##0.00';
-  styleHeader(ws.getCell(row, lastCol));
-  row += 2;
+  // RORO (no separate freight): skip intermediate blue Total; GRAND TOTAL is enough.
+  if (showFreight) {
+    ws.mergeCells(row, 1, row, lastCol - 1);
+    ws.getCell(row, 1).value = vehiclesTotalLabel;
+    styleHeader(ws.getCell(row, 1));
+    ws.getCell(row, 1).alignment = { horizontal: 'right', vertical: 'middle' };
+    ws.getCell(row, lastCol).value = money(vehiclesTotal);
+    ws.getCell(row, lastCol).numFmt = '#,##0.00';
+    styleHeader(ws.getCell(row, lastCol));
+    row += 2;
+  } else {
+    row += 1;
+  }
 
   if (showFreight) {
     mergeTo(row);
@@ -288,7 +293,8 @@ export async function exportTradeDocumentExcel(opts: {
   styleHeader(ws.getCell(row, 1), NAVY);
   row += 1;
 
-  const totals: [string, number, boolean?][] = [[vehiclesTotalLabel, vehiclesTotal]];
+  const hasExtra = showFreight || !!insurance || !!other || !!discount;
+  const totals: [string, number, boolean?][] = hasExtra ? [[vehiclesTotalLabel, vehiclesTotal]] : [];
   if (showFreight) totals.push(['Freight', freight]);
   if (insurance) totals.push(['Insurance', insurance]);
   if (other) totals.push(['Other charges', other]);

@@ -954,7 +954,16 @@
 }
 
 @media print {
-  @page { size: A4 portrait; margin: 8mm; }
+  /*
+   * Page box: keep a small margin so content is not clipped. Browsers still may
+   * inject URL / datetime / "Page x of y" headers & footers — those are not app-
+   * rendered. Prefer Print → More settings → uncheck "Headers and footers".
+   * printDocumentPdf also prints from about:blank to avoid the app URL line.
+   */
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
   html, body {
     background: white !important;
     -webkit-print-color-adjust: exact !important;

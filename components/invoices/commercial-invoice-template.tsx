@@ -1,6 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
 import type { Invoice, InvoiceItem, Customer, Vehicle } from '@/lib/types';
 import { OfficialTradeDocument } from '@/components/documents/official-trade-document';
 import { decodeInvoiceVehicle, type CompanyLetterheadSettings } from '@/lib/jct-official';
@@ -10,6 +9,13 @@ import {
   resolveFreightPolicy,
 } from '@/lib/utils/commercial-freight-rules';
 import { buildVerifyUrl } from './qr-code';
+
+/** Calendar date (yyyy-MM-dd) from invoice fields — no timezone shift, no print override. */
+function invoiceCalendarDate(value?: string | null) {
+  if (!value) return null;
+  const m = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : String(value).slice(0, 10);
+}
 
 type Props = {
   invoice: Invoice;
@@ -65,9 +71,9 @@ export function CommercialInvoiceTemplate({
       kind="invoice"
       title={variant === 'auction_deposit' ? 'AUCTION DEPOSIT INVOICE' : 'INVOICE'}
       documentNo={invoice.invoice_code}
-      issueDate={format(new Date(invoice.issue_date), 'yyyy-MM-dd')}
-      validDate={invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : null}
-      dueDate={invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : null}
+      issueDate={invoiceCalendarDate(invoice.issue_date) || ''}
+      validDate={invoiceCalendarDate(invoice.due_date)}
+      dueDate={invoiceCalendarDate(invoice.due_date)}
       salesAgent={salesAgent}
       customer={customer}
       currency={invoice.currency}
