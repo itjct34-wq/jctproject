@@ -94,11 +94,24 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
         >
           <Heart className={cn('h-4 w-4', saved && 'fill-current')} aria-hidden />
         </button>
-        {vehicle.status === 'reserved' ? (
-          <span className="absolute bottom-3 left-3 z-[2] rounded-full border border-amber-600/30 bg-amber-500 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white shadow-sm">
-            Reserved
-          </span>
-        ) : null}
+        <span
+          className={cn(
+            'absolute bottom-3 left-3 z-[2] rounded-full px-2.5 py-0.5 text-[11px] font-semibold shadow-sm',
+            vehicle.status === 'reserved'
+              ? 'bg-[#FCE8E8] text-[#9B1C1C]'
+              : vehicle.status === 'in_transit' || vehicle.status === 'exported'
+                ? 'bg-[#E8F4FB] text-[#0B6A94]'
+                : 'bg-[#E6F5EE] text-[#1B6B45]'
+          )}
+        >
+          {vehicle.status === 'reserved'
+            ? 'Reserved'
+            : vehicle.status === 'in_transit'
+              ? 'In transit'
+              : vehicle.status === 'exported'
+                ? 'Exported'
+                : 'In stock'}
+        </span>
       </Link>
       <div className="flex flex-1 flex-col p-3">
         <p className="text-xs font-medium uppercase tracking-wide text-[var(--jct-muted-2)]">

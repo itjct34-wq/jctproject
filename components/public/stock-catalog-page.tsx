@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PublicShell } from '@/components/public/public-shell';
-import { CountryFlag } from '@/components/public/country-flag';
 import { VehicleCard } from '@/components/public/home/vehicle-card';
 import { supabase } from '@/lib/supabase/client';
 import {
   attachGallery,
-  groupVehiclesBySource,
   selectListedVehicles,
   sourceCountryCode,
   sourceCountryLabel,
@@ -16,7 +14,8 @@ import {
   type VehicleImageRow,
 } from '@/lib/public/vehicles';
 import { STOCK_CATALOGS, type StockCategory } from '@/lib/stock-category';
-import { CarFront, Loader2, Search } from 'lucide-react';
+import { CarFront, Loader2, Search, SlidersHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function StockCatalogPage({ category }: { category: StockCategory }) {
   const catalog = STOCK_CATALOGS[category];
@@ -27,6 +26,9 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
   const [makeFilter, setMakeFilter] = useState('all');
   const [modelFilter, setModelFilter] = useState('');
   const [budgetMax, setBudgetMax] = useState<number | null>(null);
+  const [fuel, setFuel] = useState('all');
+  const [transmission, setTransmission] = useState('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -89,6 +91,16 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
     return Array.from(set).sort();
   }, [vehicles]);
 
+  const fuels = useMemo(() => {
+    const set = new Set(vehicles.map((v) => v.fuel_type).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [vehicles]);
+
+  const transmissions = useMemo(() => {
+    const set = new Set(vehicles.map((v) => v.transmission).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [vehicles]);
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     const modelTerm = modelFilter.trim().toLowerCase();
@@ -101,125 +113,252 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
       if (makeFilter !== 'all' && v.make.toLowerCase() !== makeFilter.toLowerCase()) return false;
       if (modelTerm && !(v.model || '').toLowerCase().includes(modelTerm)) return false;
       if (budgetMax != null && v.listed_price != null && Number(v.listed_price) > budgetMax) return false;
+      if (fuel !== 'all' && (v.fuel_type || '').toLowerCase() !== fuel.toLowerCase()) return false;
+      if (transmission !== 'all' && (v.transmission || '').toLowerCase() !== transmission.toLowerCase()) return false;
       if (!term) return true;
       return [v.make, v.model, v.stock_number, v.part_sku, v.color, v.source_country, String(v.model_year || '')]
         .filter(Boolean)
         .some((s) => String(s).toLowerCase().includes(term));
     });
-  }, [vehicles, q, country, makeFilter, modelFilter, budgetMax]);
+  }, [vehicles, q, country, makeFilter, modelFilter, budgetMax, fuel, transmission]);
 
-  const groups = useMemo(() => groupVehiclesBySource(filtered), [filtered]);
+  const clearFilters = () => {
+    setQ('');
+    setCountry('all');
+    setMakeFilter('all');
+    setModelFilter('');
+    setBudgetMax(null);
+    setFuel('all');
+    setTransmission('all');
+  };
 
   const field =
     'h-11 w-full rounded-xl border border-[var(--jct-border)] bg-white px-3 text-sm text-[var(--jct-navy)] outline-none focus:ring-2 focus:ring-[var(--jct-vermilion)]/25';
+
+  const FilterPanel = (
+    <div className="space-y-5">
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--jct-muted-2)]">Make</p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setMakeFilter('all');
+              setModelFilter('');
+            }}
+            className={cn(
+              'rounded-full border px-2.5 py-1 text-xs font-medium',
+              makeFilter === 'all'
+                ? 'border-[var(--jct-navy)] bg-[var(--jct-navy)] text-white'
+                : 'border-[var(--jct-border)] bg-white text-[var(--jct-navy)]'
+            )}
+          >
+            All
+          </button>
+          {makes.slice(0, 12).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setMakeFilter(m);
+                setModelFilter('');
+              }}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs font-medium',
+                makeFilter === m
+                  ? 'border-[var(--jct-navy)] bg-[var(--jct-navy)] text-white'
+                  : 'border-[var(--jct-border)] bg-white text-[var(--jct-navy)]'
+              )}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--jct-muted-2)]">
+          Max budget (FOB)
+        </label>
+        <select
+          value={budgetMax ?? ''}
+          onChange={(e) => setBudgetMax(e.target.value ? Number(e.target.value) : null)}
+          className={field}
+        >
+          <option value="">Any budget</option>
+          <option value="5000">Up to $5,000</option>
+          <option value="10000">Up to $10,000</option>
+          <option value="15000">Up to $15,000</option>
+          <option value="20000">Up to $20,000</option>
+          <option value="30000">Up to $30,000</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--jct-muted-2)]">
+          Origin
+        </label>
+        <select value={country} onChange={(e) => setCountry(e.target.value)} className={field}>
+          <option value="all">All origins</option>
+          {countries.map(([code, label]) => (
+            <option key={code} value={code}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {fuels.length > 0 && (
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--jct-muted-2)]">
+            Fuel
+          </label>
+          <select value={fuel} onChange={(e) => setFuel(e.target.value)} className={field}>
+            <option value="all">Any fuel</option>
+            {fuels.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {transmissions.length > 0 && (
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--jct-muted-2)]">
+            Transmission
+          </label>
+          <select value={transmission} onChange={(e) => setTransmission(e.target.value)} className={field}>
+            <option value="all">Any transmission</option>
+            {transmissions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--jct-vermilion)] text-sm font-semibold text-white"
+        onClick={() => setFiltersOpen(false)}
+      >
+        Show {filtered.length} results
+      </button>
+      <button
+        type="button"
+        onClick={clearFilters}
+        className="w-full text-center text-sm font-medium text-[var(--jct-vermilion)] underline-offset-2 hover:underline"
+      >
+        Clear all
+      </button>
+    </div>
+  );
 
   return (
     <PublicShell>
       <section className="jct-home-wrap py-10 md:py-14">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--jct-vermilion)]">{catalog.eyebrow}</p>
-            <h1 className="mt-2 font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">{catalog.title}</h1>
-            <p className="mt-3 max-w-2xl text-sm text-[var(--jct-muted)]">{catalog.intro}</p>
+            <nav className="text-xs text-[var(--jct-muted-2)]">
+              <Link href="/" className="hover:text-[var(--jct-navy)]">
+                Home
+              </Link>
+              <span className="mx-1.5">/</span>
+              <span className="text-[var(--jct-navy)]">{catalog.title}</span>
+            </nav>
+            <h1 className="mt-2 font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">
+              {catalog.title}
+            </h1>
+            <p className="mt-2 text-sm text-[var(--jct-muted)]">
+              {loading ? '…' : (
+                <>
+                  <span className="font-semibold text-[var(--jct-navy)]">{filtered.length}</span> vehicles
+                  available — updated today
+                </>
+              )}
+            </p>
           </div>
-          <p className="shrink-0 text-sm text-[var(--jct-muted-2)]">
-            {loading ? '…' : (
-              <>
-                <span className="font-semibold text-[var(--jct-navy)]">{filtered.length}</span> of {vehicles.length} available
-              </>
-            )}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[200px] flex-1 md:w-64">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-[var(--jct-muted-2)]" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search make, model, stock #…"
+                className={`${field} pl-10`}
+              />
+            </div>
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--jct-navy)] bg-[var(--jct-navy)] px-4 text-sm font-semibold text-white md:hidden"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+            </button>
+          </div>
         </div>
 
-        <div className="jct-stock-panel mt-6 p-4 md:p-5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--jct-muted-2)]">Filter by origin</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[280px_1fr]">
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 rounded-2xl border border-[var(--jct-border)] bg-white p-5 shadow-[0_4px_18px_rgba(11,31,51,0.06)]">
+              <p className="mb-4 font-display text-sm font-semibold text-[var(--jct-navy)]">Filters</p>
+              {FilterPanel}
+            </div>
+          </aside>
+
+          <div>
+            {loading ? (
+              <div className="flex items-center justify-center gap-2 py-20 text-[var(--jct-muted-2)]">
+                <Loader2 className="h-5 w-5 animate-spin" /> Loading stock…
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-10 text-center">
+                <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
+                <p className="mt-3 font-medium text-[var(--jct-navy)]">No vehicles match these filters</p>
+                <p className="mt-1 text-sm text-[var(--jct-muted)]">Try clearing filters or ask us to source for you.</p>
+                <button type="button" onClick={clearFilters} className="jct-btn-primary mt-5 px-5">
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {filtered.map((vehicle) => (
+                  <VehicleCard key={vehicle.id} vehicle={vehicle} hrefBase={catalog.path} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Mobile filter sheet */}
+      {filtersOpen ? (
+        <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            onClick={() => setCountry('all')}
-            className={`inline-flex min-h-10 items-center rounded-full border px-3 text-sm ${
-              country === 'all'
-                ? 'border-[var(--jct-navy)] bg-[var(--jct-navy)] text-white'
-                : 'border-[var(--jct-border)] bg-white text-[var(--jct-navy)]'
-            }`}
-          >
-            All origins
-          </button>
-          {countries.map(([code, label]) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => setCountry(code)}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3 text-sm ${
-                country === code
-                  ? 'border-[var(--jct-navy)] bg-[var(--jct-panel)] font-medium text-[var(--jct-navy)]'
-                  : 'border-[var(--jct-border)] bg-white text-[var(--jct-navy)]'
-              }`}
-            >
-              <CountryFlag country={label} code={code} size="sm" />
-              {label}
-            </button>
-          ))}
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close filters"
+            onClick={() => setFiltersOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-display text-base font-semibold text-[var(--jct-navy)]">Filters</p>
+              <button
+                type="button"
+                className="text-sm font-medium text-[var(--jct-muted)]"
+                onClick={() => setFiltersOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            {FilterPanel}
           </div>
-
-        <div className="mt-4 flex flex-col gap-3 border-t border-[var(--jct-border)] pt-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-[var(--jct-muted-2)]" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search make, model, stock #…"
-              className={`${field} pl-10`}
-            />
-          </div>
-          <select value={makeFilter} onChange={(e) => setMakeFilter(e.target.value)} className={`${field} sm:w-48`}>
-            <option value="all">All makes</option>
-            {makeFilter !== 'all' && !makes.includes(makeFilter) && (
-              <option value={makeFilter}>{makeFilter}</option>
-            )}
-            {makes.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
         </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-[var(--jct-muted-2)]">
-            <Loader2 className="h-5 w-5 animate-spin" /> Loading stock…
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="mt-12 rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-10 text-center">
-            <CarFront className="mx-auto h-10 w-10 text-[var(--jct-muted-2)]" />
-            <p className="mt-3 font-medium text-[var(--jct-navy)]">{catalog.emptyTitle}</p>
-            <p className="mt-1 text-sm text-[var(--jct-muted)]">Try clearing filters or contact us for sourcing.</p>
-            <Link href="/contact" className="jct-btn-primary mt-5 px-5">
-              Request sourcing
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-10 space-y-12">
-            {groups.map((group) => (
-              <section key={group.key}>
-                <div className="jct-stock-panel-accent mb-4 flex items-center gap-3 rounded-xl border border-[var(--jct-navy)]/10 bg-[var(--jct-panel)]/50 px-4 py-3">
-                  <CountryFlag country={group.label} code={group.key} size="md" />
-                  <h2 className="font-display text-xl font-semibold text-[var(--jct-navy)]">
-                    {group.label}
-                    <span className="ml-2 rounded-full bg-[var(--jct-navy)] px-2 py-0.5 text-xs font-semibold text-white">
-                      {group.items.length}
-                    </span>
-                  </h2>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {group.items.map((vehicle) => (
-                    <VehicleCard key={vehicle.id} vehicle={vehicle} hrefBase={catalog.path} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
+      ) : null}
     </PublicShell>
   );
 }

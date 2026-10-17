@@ -4,7 +4,7 @@ const ITEMS = [
   { icon: MapPin, title: 'Nagoya export hub', body: 'Auction sourcing and inspection support' },
   { icon: Ship, title: 'RORO and 20/40ft container', body: 'Marine cover and export documents' },
   { icon: Globe2, title: 'Worldwide delivery', body: 'Vessel ETA to your chosen port' },
-  { icon: ShieldCheck, title: 'Verified, company accounts only', body: 'Check any agent online before you pay' },
+  { icon: ShieldCheck, title: 'Verified company accounts only', body: 'Check any agent online before you pay' },
 ];
 
 export function TrustStrip() {

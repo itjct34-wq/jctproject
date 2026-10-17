@@ -205,7 +205,22 @@ function OperationsDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`Welcome, ${firstName}`} description={`${currentDate} — live stock, sales and offices`} />
+      <PageHeader
+        title={`Welcome, ${firstName}`}
+        description={`${currentDate} — live stock, sales and offices`}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/reports">Export</Link>
+            </Button>
+            {canView('vehicles') ? (
+              <Button size="sm" className="bg-brand text-brand-foreground hover:bg-brand/90" asChild>
+                <Link href="/vehicles">Reserve stock</Link>
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground font-medium">Your roles:</span>

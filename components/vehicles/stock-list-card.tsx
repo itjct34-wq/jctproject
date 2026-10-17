@@ -275,7 +275,11 @@ function StockListCardActionsMenu({
   );
 }
 
-/** Always opens downward with internal scroll — never collision-flipped over the card. */
+/**
+ * Prefer opening below the trigger; Radix flips upward near the viewport edge so the
+ * full menu stays visible on laptop heights. Scroll only when content exceeds available space.
+ * Portal (DropdownMenuContent) escapes card overflow; collisionPadding keeps a safe margin.
+ */
 function StockListCardActionsDropdown(props: StockListCardActionsMenuProps) {
   return (
     <DropdownMenu modal={false}>
@@ -295,8 +299,9 @@ function StockListCardActionsDropdown(props: StockListCardActionsMenuProps) {
         side="bottom"
         align="end"
         sideOffset={6}
-        avoidCollisions={false}
-        className="z-[80] w-56 max-h-72 overflow-y-auto overscroll-contain"
+        collisionPadding={16}
+        avoidCollisions
+        className="z-[80] w-56 max-h-[min(70vh,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <StockListCardActionsMenu {...props} />

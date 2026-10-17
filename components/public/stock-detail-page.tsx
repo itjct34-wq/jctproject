@@ -82,73 +82,100 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
             </Link>
           </div>
         ) : (
-          <div className="mt-5 grid gap-6 lg:grid-cols-2">
-            <VehicleGallery images={vehicle.gallery} alt={`${vehicle.make} ${vehicle.model}`} />
-
-            <div className="space-y-4">
+          <div className="mt-5 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
+            <div className="space-y-5">
+              <VehicleGallery images={vehicle.gallery} alt={`${vehicle.make} ${vehicle.model}`} />
               <div>
+                <h2 className="font-display text-lg font-semibold text-[var(--jct-navy)]">Specifications</h2>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+                  {vehicle.model_year ? spec('Year', String(vehicle.model_year), Gauge) : null}
+                  {spec('Make / Model', `${vehicle.make} ${vehicle.model}`, CarFront)}
+                  {vehicle.color ? spec('Colour', vehicle.color, Palette) : null}
+                  {engine ? spec('Engine', engine, Settings2) : null}
+                  {vehicle.transmission ? spec('Transmission', vehicle.transmission, Settings2) : null}
+                  {vehicle.fuel_type ? spec('Fuel', vehicle.fuel_type, Fuel) : null}
+                  {vehicle.mileage_km != null
+                    ? spec('Mileage', `${vehicle.mileage_km.toLocaleString()} km`, Gauge)
+                    : null}
+                  {spec('Source country', source, CarFront)}
+                </dl>
+              </div>
+            </div>
+
+            <aside className="space-y-4 lg:sticky lg:top-24">
+              <div className="rounded-2xl border border-[var(--jct-border)] bg-white p-5 shadow-[0_4px_18px_rgba(11,31,51,0.06)]">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--jct-border)] bg-white px-2.5 py-1">
-                    <CountryFlag country={source} code={sourceCode} size="sm" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">
-                      {source}
-                    </span>
+                  <span className="rounded-full border border-[var(--jct-border)] bg-[var(--jct-panel)] px-2.5 py-1 font-mono text-xs font-semibold text-[var(--jct-navy)]">
+                    {vehicle.stock_number}
+                  </span>
+                  <span className="rounded-full border border-[var(--jct-border)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--jct-navy)]">
+                    RORO
                   </span>
                   <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-wider ${
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                       vehicle.status === 'in_stock'
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                        : 'border-amber-200 bg-amber-50 text-amber-800'
+                        ? 'bg-[#E6F5EE] text-[#1B6B45]'
+                        : 'bg-[#FCE8E8] text-[#9B1C1C]'
                     }`}
                   >
-                    {vehicle.status === 'in_stock' ? 'Available' : 'Reserved'}
+                    {vehicle.status === 'in_stock' ? 'In stock' : 'Reserved'}
                   </span>
                 </div>
-                <h1 className="font-display text-3xl font-bold text-[var(--jct-navy)] md:text-4xl">
+                <div className="mb-2 flex items-center gap-2">
+                  <CountryFlag country={source} code={sourceCode} size="sm" />
+                  <span className="text-xs font-medium text-[var(--jct-muted)]">{source}</span>
+                </div>
+                <h1 className="font-display text-2xl font-bold text-[var(--jct-navy)] md:text-[1.75rem]">
                   {vehicle.make} {vehicle.model}
                   {vehicle.model_grade ? ` ${vehicle.model_grade}` : ''}
                 </h1>
-                <p className="mt-2 text-sm text-[var(--jct-muted)]">
-                  {vehicle.stock_number}
-                  {category === 'parts' && vehicle.part_sku ? ` · ${vehicle.part_sku}` : ''}
-                  {vehicle.model_year ? ` · ${vehicle.model_year}` : ''}
+                <p className="mt-1 text-sm text-[var(--jct-muted)]">
+                  {[vehicle.model_year, vehicle.transmission, vehicle.fuel_type].filter(Boolean).join(' · ')}
                 </p>
-              </div>
-
-              <div className="jct-stock-panel jct-stock-panel-accent p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">FOB USD</p>
-                <p className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--jct-navy)]">
+                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--jct-muted-2)]">
+                  FOB Nagoya
+                </p>
+                <p className="mt-1 font-display text-[2.375rem] font-bold leading-none tracking-tight text-[var(--jct-navy)]">
                   {vehicle.listed_price != null
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency || 'USD')
                     : 'Ask for quote'}
                 </p>
-                <p className="mt-2 text-xs text-[var(--jct-muted)]">C&amp;F / CIF on request · RORO or container</p>
+                <div className="mt-5 border-t border-[var(--jct-border)] pt-5">
+                  <PublicPriceEstimator
+                    listedPrice={vehicle.listed_price}
+                    currency={vehicle.listed_currency || 'USD'}
+                  />
+                </div>
+                <div className="mt-5 hidden flex-col gap-2 md:flex">
+                  <Link
+                    href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--jct-vermilion)] text-sm font-semibold text-white"
+                  >
+                    Request quotation
+                  </Link>
+                  {process.env.NEXT_PUBLIC_WHATSAPP || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? (
+                    <a
+                      href={`https://wa.me/${(process.env.NEXT_PUBLIC_WHATSAPP || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I am interested in ${vehicle.stock_number}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--jct-border)] text-sm font-semibold text-[var(--jct-navy)]"
+                    >
+                      Ask on WhatsApp
+                    </a>
+                  ) : (
+                    <Link
+                      href="/verify-agent"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--jct-border)] text-sm font-semibold text-[var(--jct-navy)]"
+                    >
+                      Verify agent
+                    </Link>
+                  )}
+                </div>
               </div>
-
-              <PublicPriceEstimator listedPrice={vehicle.listed_price} currency={vehicle.listed_currency || 'USD'} />
-
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                {vehicle.model_year ? spec('Year', String(vehicle.model_year), Gauge) : null}
-                {vehicle.color ? spec('Colour', vehicle.color, Palette) : null}
-                {engine ? spec('Engine', engine, Settings2) : null}
-                {vehicle.transmission ? spec('Transmission', vehicle.transmission, Settings2) : null}
-                {vehicle.fuel_type ? spec('Fuel', vehicle.fuel_type, Fuel) : null}
-                {vehicle.mileage_km != null ? spec('Mileage', `${vehicle.mileage_km.toLocaleString()} km`, Gauge) : null}
-                {spec('Source country', source, CarFront)}
-              </dl>
-
-              <div className="hidden flex-wrap gap-3 pt-2 md:flex">
-                <Link
-                  href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
-                  className="jct-btn-primary px-6"
-                >
-                  {catalog.inquireLabel}
-                </Link>
-                <Link href="/verify-agent" className="jct-btn-secondary px-6">
-                  Verify agent
-                </Link>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900">
+                Verified company account — pay only to bank details on your official invoice.
               </div>
-            </div>
+            </aside>
           </div>
         )}
       </section>

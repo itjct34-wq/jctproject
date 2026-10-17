@@ -54,9 +54,16 @@ export async function POST(request:NextRequest){
   const configs=Object.fromEntries((config||[]).map(r=>[r.key,r.value]));
   const currencies=listValue(configs.currencies)||['JPY','USD','EUR','GBP','PKR'];
   const destinations=listValue(configs.freight_destinations)||[];
-  const terms=listValue(configs.incoterms)||['FOB','CFR','CIF','EXW'];
+  const terms=listValue(configs.incoterms)||['FOB','C&F','CFR','CIF','CNF'];
+  const rawTerm=data.incoterm.trim().toUpperCase().replace(/\s+/g,'');
+  const normalizedTerm=rawTerm==='CNF'||rawTerm==='C&F'||rawTerm==='CF'?'C&F':rawTerm==='CFR'?'C&F':data.incoterm.trim();
+  const termAllowed=terms.some((t)=>{
+    const u=t.trim().toUpperCase().replace(/\s+/g,'');
+    const n=normalizedTerm.toUpperCase().replace(/\s+/g,'');
+    return u===n||(n==='C&F'&&(u==='CFR'||u==='CNF'||u==='CF'||u==='C&F'));
+  });
   if(!currencies.includes(data.currency))return NextResponse.json({error:'Please select a supported currency.'},{status:400});
-  if(!terms.includes(data.incoterm))return NextResponse.json({error:'Please select a supported trade term.'},{status:400});
+  if(!termAllowed)return NextResponse.json({error:'Please select a supported trade term.'},{status:400});
   if(data.destination_country&&destinations.length&&!destinations.includes(data.destination_country))return NextResponse.json({error:'Please select a configured destination country.'},{status:400});
   await db.from('inquiry_submission_attempts').insert({ip_hash:ipHash});
   const {data:created,error}=await db.from('inquiries').insert({
@@ -64,7 +71,7 @@ export async function POST(request:NextRequest){
    destination_country:data.destination_country||null,destination_port:data.destination_port||null,
    vehicle_make:data.vehicle_make||null,vehicle_model:data.vehicle_model||null,year_from:data.year_from??null,year_to:data.year_to??null,
    budget_min:data.budget_min??null,budget_max:data.budget_max??null,
-   quantity:data.quantity,currency:data.currency,incoterm:data.incoterm,
+   quantity:data.quantity,currency:data.currency,incoterm:normalizedTerm,
    message:data.message,status:'new',source:'website'
   }).select('inquiry_code').single();
   if(error)return NextResponse.json({error:'Could not save inquiry. Please try again.'},{status:500});

@@ -2,12 +2,12 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import { getPostLoginPath } from '@/lib/nav';
 
@@ -19,6 +19,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,24 +46,61 @@ function LoginForm() {
   };
 
   return (
-    <div className="erp-shell relative flex min-h-[100dvh] items-center justify-center px-4">
-      <div className="relative z-10 w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-border/50 bg-card/80 shadow-glass ring-1 ring-border/40">
-            <span className="h-5 w-5 rounded-md bg-brand/80" aria-hidden />
+    <div className="grid min-h-[100dvh] lg:grid-cols-[55fr_45fr]">
+      {/* 4.4 Left brand panel */}
+      <div className="relative hidden overflow-hidden lg:block">
+        <Image
+          src="/images/hero/export-lot-02.jpg"
+          alt=""
+          fill
+          priority
+          sizes="55vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--jct-navy)]/95 via-[var(--jct-navy)]/88 to-[var(--jct-navy)]/70" />
+        <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14">
+          <div className="inline-flex w-fit items-center rounded-2xl bg-white px-4 py-2.5 shadow-lg">
+            <span className="text-sm font-bold tracking-tight text-[var(--jct-navy)]">ERP</span>
+            <span className="mx-2 h-4 w-px bg-[var(--jct-border)]" />
+            <span className="text-xs font-medium text-[var(--jct-muted)]">Workspace</span>
           </div>
-          <p className="text-xs font-medium text-muted-foreground">Staff sign-in</p>
+          <div className="max-w-lg">
+            <h1 className="font-display text-4xl font-bold leading-tight text-white xl:text-[2.75rem]">
+              One workspace for every export, from auction to{' '}
+              <span className="text-[var(--jct-vermilion)]">arrival</span>.
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-white/75">
+              Stock, invoices, remittances and shipping — role-based access for your team.
+            </p>
+          </div>
+          <p className="text-sm text-white/55">
+            Role-based access · English / 日本語
+          </p>
         </div>
+      </div>
 
-        <Card className="border-border/50 shadow-glass backdrop-blur-xl">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-center text-lg text-foreground">Sign in</CardTitle>
-            <p className="mt-1 text-center text-xs text-muted-foreground">
+      {/* Right form panel */}
+      <div className="erp-shell relative flex items-center justify-center px-4 py-12">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              'radial-gradient(ellipse 60% 50% at 80% 20%, hsl(0 72% 48% / 0.12), transparent 70%)',
+          }}
+          aria-hidden
+        />
+        <div className="relative z-10 w-full max-w-[430px]">
+          <div className="mb-6 text-center lg:hidden">
+            <p className="text-xs font-medium text-muted-foreground">Staff sign-in</p>
+          </div>
+
+          <div className="glass-panel-strong rounded-[1.125rem] border border-border/40 p-6 shadow-glass sm:p-8">
+            <h2 className="text-center text-xl font-semibold text-foreground">Sign in</h2>
+            <p className="mt-1 text-center text-sm text-muted-foreground">
               Access your ERP workspace
             </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               {error ? (
                 <div
                   role="alert"
@@ -82,7 +120,7 @@ function LoginForm() {
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9 text-base md:text-sm"
+                    className="h-11 pl-9 text-base md:text-sm"
                     required
                     autoComplete="email"
                     aria-invalid={error ? true : undefined}
@@ -100,7 +138,7 @@ function LoginForm() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-10 text-base md:text-sm"
+                    className="h-11 pl-9 pr-10 text-base md:text-sm"
                     required
                     autoComplete="current-password"
                   />
@@ -115,7 +153,22 @@ function LoginForm() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <label className="flex cursor-pointer items-center gap-2 text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={keepSignedIn}
+                    onChange={(e) => setKeepSignedIn(e.target.checked)}
+                    className="h-4 w-4 rounded border-input accent-[hsl(var(--brand))]"
+                  />
+                  Keep me signed in
+                </label>
+                <Link href="/login/reset" className="font-medium text-brand hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+
+              <Button type="submit" className="h-11 w-full bg-brand text-brand-foreground hover:bg-brand/90" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -127,13 +180,11 @@ function LoginForm() {
               </Button>
             </form>
 
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              <Link href="/login/reset" className="text-brand hover:underline">
-                Forgot password?
-              </Link>
+            <p className="mt-5 text-center text-xs text-muted-foreground">
+              Need an account? Ask your administrator.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -144,6 +144,16 @@ export function SalesDashboard() {
       <PageHeader
         title={`Welcome, ${firstName}`}
         description={`${currentDate} — your customers, reservations, and selling pipeline`}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/quotations">New quotation</Link>
+            </Button>
+            <Button size="sm" className="bg-brand text-brand-foreground hover:bg-brand/90" asChild>
+              <Link href="/vehicles">Reserve stock</Link>
+            </Button>
+          </div>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-2">

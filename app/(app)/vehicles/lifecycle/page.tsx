@@ -52,6 +52,9 @@ export default function VehiclesLifecyclePage() {
             <Button variant="outline" size="sm" asChild>
               <Link href="/vehicles">Open stock list</Link>
             </Button>
+            <Button size="sm" className="bg-brand text-brand-foreground hover:bg-brand/90" asChild>
+              <Link href="/bulk-upload">Upload stock</Link>
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
               {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
               Refresh
