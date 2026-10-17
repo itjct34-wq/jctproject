@@ -31,7 +31,6 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Vehicle Export',
-  telephone: '+81-70-2241-6356',
   address: {
     '@type': 'PostalAddress',
     addressLocality: 'Nagoya',

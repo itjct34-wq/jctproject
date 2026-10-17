@@ -17,6 +17,8 @@ import { Camera, Loader2, MapPin, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { AvatarCropDialog } from '@/components/shared/avatar-crop-dialog';
+import { AVATAR_OUTPUT_EXT, AVATAR_OUTPUT_TYPE, AVATAR_SOURCE_MAX_BYTES } from '@/lib/avatar-crop';
 
 export default function ProfilePage() {
   const { profile, roles, refreshProfile } = useAuth();
@@ -28,6 +30,8 @@ export default function ProfilePage() {
   const [preferredCurrency, setPreferredCurrency] = useState('USD');
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [office, setOffice] = useState<Office | null>(null);
   const [shift, setShift] = useState<Shift | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,22 +95,36 @@ export default function ProfilePage() {
     await refreshProfile();
   };
 
-  const uploadAvatar = async (file: File) => {
-    if (!profile) return;
+  const openAvatarCrop = (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please choose an image file');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be under 2MB');
+    if (file.size > AVATAR_SOURCE_MAX_BYTES) {
+      toast.error('Image must be under 8MB');
       return;
     }
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    setCropOpen(true);
+  };
+
+  const closeAvatarCrop = (open: boolean) => {
+    setCropOpen(open);
+    if (!open && cropSrc) {
+      URL.revokeObjectURL(cropSrc);
+      setCropSrc(null);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!profile) return;
     setAvatarUploading(true);
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${profile.id}/avatar.${ext}`;
+    const path = `${profile.id}/avatar.${AVATAR_OUTPUT_EXT}`;
     const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, {
       upsert: true,
-      contentType: file.type,
+      contentType: AVATAR_OUTPUT_TYPE,
     });
     if (upErr) {
       if (upErr.message.toLowerCase().includes('bucket') || upErr.message.toLowerCase().includes('not found')) {
@@ -117,6 +135,7 @@ export default function ProfilePage() {
           toast.success('Photo saved. Create a public Storage bucket named avatars for CDN URLs.');
           await refreshProfile();
           setAvatarUploading(false);
+          closeAvatarCrop(false);
         };
         reader.readAsDataURL(file);
         return;
@@ -137,6 +156,7 @@ export default function ProfilePage() {
       return;
     }
     toast.success('Profile photo updated');
+    closeAvatarCrop(false);
     await refreshProfile();
   };
 
@@ -161,9 +181,9 @@ export default function ProfilePage() {
           <CardContent className="space-y-6">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <Avatar className="w-20 h-20">
-                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="" />}
-                  <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
+                <Avatar className="h-20 w-20 rounded-full">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="" className="object-cover" />}
+                  <AvatarFallback className="rounded-full text-lg bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
                 </Avatar>
                 <button
                   type="button"
@@ -181,7 +201,8 @@ export default function ProfilePage() {
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) uploadAvatar(f);
+                    e.target.value = '';
+                    if (f) openAvatarCrop(f);
                   }}
                 />
               </div>
@@ -269,6 +290,14 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      <AvatarCropDialog
+        open={cropOpen}
+        imageSrc={cropSrc}
+        onOpenChange={closeAvatarCrop}
+        onCropped={uploadAvatar}
+        saving={avatarUploading}
+      />
     </div>
   );
 }

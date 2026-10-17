@@ -501,9 +501,9 @@ export default function UsersPage() {
                       <TableRow key={u.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="w-8 h-8">
-                              {u.avatar_url && <AvatarImage src={u.avatar_url} alt="" />}
-                              <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                            <Avatar className="h-8 w-8 rounded-full">
+                              {u.avatar_url && <AvatarImage src={u.avatar_url} alt="" className="object-cover" />}
+                              <AvatarFallback className="rounded-full text-xs bg-primary/10 text-primary font-semibold">
                                 {initials(u.full_name || u.email)}
                               </AvatarFallback>
                             </Avatar>

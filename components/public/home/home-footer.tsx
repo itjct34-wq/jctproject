@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { BrandLogo } from '@/components/public/brand-logo';
 import { CountryFlag } from '@/components/public/country-flag';
 import { DESTINATION_COUNTRIES } from '@/lib/public/countries';
 import { PUBLIC_SOURCE_MARKETS, sourceMarketPath } from '@/lib/public/source-markets';
@@ -9,9 +8,7 @@ export function HomeFooter() {
     <footer className="jct-site-footer text-[var(--jct-muted)]">
       <div className="jct-home-wrap grid gap-8 py-12 md:grid-cols-4">
         <div className="space-y-4 md:col-span-2">
-          <span className="inline-flex rounded-xl bg-white/80 px-2 py-1.5 ring-1 ring-[var(--jct-navy)]/10">
-            <BrandLogo placement="footer" label="Export" />
-          </span>
+          <p className="font-display text-xl font-bold tracking-tight text-[var(--jct-navy)]">Export</p>
           <p className="max-w-md text-sm leading-relaxed text-[var(--jct-muted)]">
             Used vehicle export from Nagoya, Japan. Auction sourcing, inspection support, RORO and container shipping
             under FOB, C&amp;F and CIF.
@@ -48,14 +45,13 @@ export function HomeFooter() {
           </ul>
         </div>
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Contact</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Get in touch</p>
           <ul className="space-y-2 text-sm">
             <li>Nagoya, Aichi 454-0943, Japan</li>
-            <li><a href="tel:+817022416356" className="jct-footer-link">+81 70-2241-6356</a></li>
             <li>
-              <a href="mailto:info@japancirculartrading.com" className="jct-footer-link">
-                info@japancirculartrading.com
-              </a>
+              <Link href="/contact" className="jct-footer-link">
+                Send an inquiry
+              </Link>
             </li>
           </ul>
           <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--jct-navy)]">Staff</p>

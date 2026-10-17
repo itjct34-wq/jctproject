@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { PublicShell } from '@/components/public/public-shell';
 
 export const metadata = {
@@ -30,9 +31,14 @@ export default function AboutPage() {
           <div className="rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-5">
             <p className="text-xs uppercase tracking-wider text-[var(--jct-muted-2)]">Contact</p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--jct-navy)]">
-              +81 70-2241-6356<br />
-              info@japancirculartrading.com
+              Use the inquiry form for sourcing requests and quotes.
             </p>
+            <Link
+              href="/contact"
+              className="mt-3 inline-block text-sm font-medium text-[var(--jct-vermilion)] underline-offset-2 hover:underline"
+            >
+              Contact us
+            </Link>
           </div>
         </div>
       </section>

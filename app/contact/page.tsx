@@ -180,7 +180,7 @@ export default function ContactPage() {
           </form>
         )}
         <p className="mt-6 text-center text-xs text-[var(--jct-muted-2)]">
-          Prefer to speak directly? <a href="tel:+817022416356" className="text-[var(--jct-vermilion)]">+81 70-2241-6356</a>
+          We reply to inquiries through this form. Official payment details appear only on your invoice.
         </p>
       </section>
     </PublicShell>

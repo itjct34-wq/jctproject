@@ -260,11 +260,11 @@ export function TopBar({
               aria-label="User menu"
               className="flex shrink-0 items-center gap-2 rounded-2xl px-1 py-1.5 transition-colors hover:bg-muted/70 sm:px-2"
             >
-              <Avatar className="h-8 w-8 ring-2 ring-border/60">
+              <Avatar className="h-8 w-8 rounded-full ring-2 ring-border/60">
                 {profile?.avatar_url && (
-                  <AvatarImage src={profile.avatar_url} alt={profile.full_name || 'User'} />
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name || 'User'} className="object-cover" />
                 )}
-                <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
+                <AvatarFallback className="rounded-full bg-brand/10 text-xs font-semibold text-brand">
                   {initials}
                 </AvatarFallback>
               </Avatar>

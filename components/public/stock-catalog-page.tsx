@@ -25,6 +25,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
   const [q, setQ] = useState('');
   const [country, setCountry] = useState('all');
   const [makeFilter, setMakeFilter] = useState('all');
+  const [modelFilter, setModelFilter] = useState('');
   const [budgetMax, setBudgetMax] = useState<number | null>(null);
 
   useEffect(() => {
@@ -58,10 +59,12 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const makeParam = params.get('make');
+    const modelParam = params.get('model');
     const qParam = params.get('q');
     const countryParam = params.get('country');
     const budgetParam = params.get('budget_max');
     if (qParam) setQ(qParam);
+    if (modelParam) setModelFilter(modelParam);
     if (countryParam) setCountry(countryParam);
     if (budgetParam) {
       const n = Number(budgetParam);
@@ -88,6 +91,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
+    const modelTerm = modelFilter.trim().toLowerCase();
     return vehicles.filter((v) => {
       if (country !== 'all') {
         const code = sourceCountryCode(v);
@@ -95,13 +99,14 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
         if (code !== country.toLowerCase() && label !== country.toLowerCase()) return false;
       }
       if (makeFilter !== 'all' && v.make.toLowerCase() !== makeFilter.toLowerCase()) return false;
+      if (modelTerm && !(v.model || '').toLowerCase().includes(modelTerm)) return false;
       if (budgetMax != null && v.listed_price != null && Number(v.listed_price) > budgetMax) return false;
       if (!term) return true;
       return [v.make, v.model, v.stock_number, v.part_sku, v.color, v.source_country, String(v.model_year || '')]
         .filter(Boolean)
         .some((s) => String(s).toLowerCase().includes(term));
     });
-  }, [vehicles, q, country, makeFilter, budgetMax]);
+  }, [vehicles, q, country, makeFilter, modelFilter, budgetMax]);
 
   const groups = useMemo(() => groupVehiclesBySource(filtered), [filtered]);
 

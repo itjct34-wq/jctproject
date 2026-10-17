@@ -18,6 +18,8 @@ import { supabase } from '@/lib/supabase/client';
 import type { CompanySettings } from '@/lib/types';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
+import { AvatarCropDialog } from '@/components/shared/avatar-crop-dialog';
+import { AVATAR_OUTPUT_EXT, AVATAR_OUTPUT_TYPE, AVATAR_SOURCE_MAX_BYTES } from '@/lib/avatar-crop';
 
 export default function SettingsPage() {
   const { isAdmin } = usePermissions();
@@ -26,6 +28,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [brandUploading, setBrandUploading] = useState<'logo' | 'hanko' | null>(null);
   const [fullName, setFullName] = useState('');
   const [preferredCurrency, setPreferredCurrency] = useState('USD');
@@ -117,22 +121,36 @@ export default function SettingsPage() {
     if (typeof refreshProfile === 'function') await refreshProfile();
   };
 
-  const uploadAvatar = async (file: File) => {
-    if (!profile) return;
+  const openAvatarCrop = (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please choose an image file');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be under 2MB');
+    if (file.size > AVATAR_SOURCE_MAX_BYTES) {
+      toast.error('Image must be under 8MB');
       return;
     }
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    setCropOpen(true);
+  };
+
+  const closeAvatarCrop = (open: boolean) => {
+    setCropOpen(open);
+    if (!open && cropSrc) {
+      URL.revokeObjectURL(cropSrc);
+      setCropSrc(null);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!profile) return;
     setAvatarUploading(true);
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${profile.id}/avatar.${ext}`;
+    const path = `${profile.id}/avatar.${AVATAR_OUTPUT_EXT}`;
     const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, {
       upsert: true,
-      contentType: file.type,
+      contentType: AVATAR_OUTPUT_TYPE,
     });
     if (upErr) {
       // Fallback: store as data URL if bucket missing
@@ -144,6 +162,7 @@ export default function SettingsPage() {
           toast.success('Avatar saved (inline). Create public "avatars" Storage bucket for CDN URLs.');
           if (typeof refreshProfile === 'function') await refreshProfile();
           setAvatarUploading(false);
+          closeAvatarCrop(false);
         };
         reader.readAsDataURL(file);
         return;
@@ -164,6 +183,7 @@ export default function SettingsPage() {
       return;
     }
     toast.success('Profile photo updated');
+    closeAvatarCrop(false);
     if (typeof refreshProfile === 'function') await refreshProfile();
   };
 
@@ -273,9 +293,9 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <Avatar className="w-20 h-20">
-                    {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="" />}
-                    <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
+                  <Avatar className="h-20 w-20 rounded-full">
+                    {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="" className="object-cover" />}
+                    <AvatarFallback className="rounded-full text-lg bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
                   </Avatar>
                   <button
                     type="button"
@@ -293,13 +313,17 @@ export default function SettingsPage() {
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f) uploadAvatar(f);
+                      e.target.value = '';
+                      if (f) openAvatarCrop(f);
                     }}
                   />
                 </div>
                 <div className="text-sm text-muted-foreground">
                   <p className="font-medium text-foreground">{profile?.email}</p>
-                  <p className="mt-1">JPG/PNG up to 2MB. Create a public Storage bucket named <code className="text-xs">avatars</code> for best results.</p>
+                  <p className="mt-1">
+                    Crop to a circle before save. Source up to 8MB; saved as 512×512 JPEG. Create a public Storage
+                    bucket named <code className="text-xs">avatars</code> for best results.
+                  </p>
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-2">
@@ -542,6 +566,14 @@ export default function SettingsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AvatarCropDialog
+        open={cropOpen}
+        imageSrc={cropSrc}
+        onOpenChange={closeAvatarCrop}
+        onCropped={uploadAvatar}
+        saving={avatarUploading}
+      />
     </div>
   );
 }

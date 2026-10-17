@@ -165,9 +165,9 @@ export default function UserProfilePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-4">
-              <Avatar className="w-20 h-20">
-                {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt="" />}
-                <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
+              <Avatar className="h-20 w-20 rounded-full">
+                {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt="" className="object-cover" />}
+                <AvatarFallback className="rounded-full text-lg bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <p className="font-medium truncate">{profile.email}</p>
