@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 
 /**
  * QR code for invoice verification links.
- * Renders a high-resolution PNG so print/PDF stays scannable.
+ * Renders an inline data-URL PNG so print/PDF (including about:blank iframe
+ * clones) never depends on a third-party image host or a network race.
  */
 export function InvoiceQRCode({
   value,
@@ -15,11 +17,36 @@ export function InvoiceQRCode({
   size?: number;
   className?: string;
 }) {
-  const src = useMemo(() => {
-    const encoded = encodeURIComponent(value);
+  const [src, setSrc] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
     const pixels = Math.max(240, size * 4);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=${pixels}x${pixels}&ecc=H&margin=1&color=000000&bgcolor=FFFFFF&data=${encoded}`;
+
+    void QRCode.toDataURL(value, {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: pixels,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    }).then((url) => {
+      if (!cancelled) setSrc(url);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [value, size]);
+
+  if (!src) {
+    return (
+      <span
+        className={`invoice-qr inline-block rounded-sm border-2 border-slate-900 bg-white p-1 ${className}`}
+        style={{ width: size, height: size }}
+        aria-hidden
+        data-qr-pending="true"
+      />
+    );
+  }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -31,6 +58,7 @@ export function InvoiceQRCode({
       className={`invoice-qr rounded-sm border-2 border-slate-900 bg-white p-1 ${className}`}
       loading="eager"
       decoding="sync"
+      data-qr-ready="true"
     />
   );
 }

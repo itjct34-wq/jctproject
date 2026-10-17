@@ -7,6 +7,80 @@
  * (e.g. …/invoices). Browsers may still inject headers/footers (date, page x of y)
  * from the print dialog — users should uncheck "Headers and footers" if those appear.
  */
+
+async function waitForImages(root: ParentNode, timeoutMs = 8000) {
+  const images = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          const done = () => {
+            img.removeEventListener('load', done);
+            img.removeEventListener('error', done);
+            resolve();
+          };
+          img.addEventListener('load', done);
+          img.addEventListener('error', done);
+          // decode() helps when the browser already has bytes but layout is pending
+          void img.decode().then(done).catch(done);
+          window.setTimeout(done, timeoutMs);
+        })
+    )
+  );
+}
+
+/** Inline http(s)/blob images as data URLs so about:blank clones do not re-fetch. */
+async function inlineImagesAsDataUrls(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    images.map(async (img) => {
+      const src = img.currentSrc || img.src;
+      if (!src || src.startsWith('data:')) return;
+      try {
+        if (img.complete && img.naturalWidth > 0) {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(img, 0, 0);
+          img.src = canvas.toDataURL('image/png');
+          return;
+        }
+      } catch {
+        // Canvas tainted (cross-origin without CORS) — fall through to fetch.
+      }
+      try {
+        const res = await fetch(src, { mode: 'cors', credentials: 'omit' });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        if (dataUrl) img.src = dataUrl;
+      } catch {
+        // Keep original src; waitForImages will still try.
+      }
+    })
+  );
+}
+
+async function waitForQrReady(root: HTMLElement, timeoutMs = 5000) {
+  const pending = () => root.querySelector('[data-qr-pending="true"]');
+  if (!pending()) return;
+  const start = Date.now();
+  while (pending() && Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+
 export async function printDocumentPdf(fileName: string) {
   const previousTitle = document.title;
   const safeName =
@@ -20,17 +94,10 @@ export async function printDocumentPdf(fileName: string) {
   document.title = safeName;
   const root = document.querySelector<HTMLElement>('.invoice-print-root');
   if (root) {
-    const images = Array.from(root.querySelectorAll('img'));
-    await Promise.all(
-      images.map(async (img) => {
-        if (img.complete && img.naturalWidth > 0) return;
-        try {
-          await img.decode();
-        } catch {
-          // Continue printing if an optional logo or QR provider is unavailable.
-        }
-      })
-    );
+    await waitForQrReady(root);
+    await waitForImages(root);
+    await inlineImagesAsDataUrls(root);
+    await waitForImages(root);
   }
 
   let iframe: HTMLIFrameElement | null = null;
@@ -119,8 +186,10 @@ export async function printDocumentPdf(fileName: string) {
       prepareSheetScale(layer);
 
       await Promise.all(styleLoads);
+      // Cloned <img> nodes re-decode even for data: URLs — wait in the iframe too.
+      await waitForImages(layer);
       iwin.addEventListener('afterprint', restore, { once: true });
-      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 180)));
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 80)));
       iwin.print();
       window.setTimeout(restore, 60000);
       return;
@@ -138,10 +207,11 @@ export async function printDocumentPdf(fileName: string) {
     document.body.appendChild(layer);
     document.body.classList.add('printing-document');
     prepareSheetScale(layer);
+    await waitForImages(layer);
   }
 
   window.addEventListener('afterprint', restore, { once: true });
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 180)));
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 80)));
   window.print();
   window.setTimeout(restore, 60000);
 }
