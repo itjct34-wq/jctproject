@@ -43,6 +43,7 @@ type CustomerRow = Pick<
   | 'default_currency'
   | 'assigned_to'
   | 'company_name'
+  | 'port_of_discharge'
 >;
 
 type Props = {
@@ -303,6 +304,9 @@ export function ReserveVehicleDialog({
     setConsigneePhone(selectedCustomer.phone || '');
     setConsigneeEmail(selectedCustomer.email || '');
     setDestinationCountry(selectedCustomer.country || '');
+    if (selectedCustomer.port_of_discharge) {
+      setDestinationPort(selectedCustomer.port_of_discharge);
+    }
 
     // Keep reservation quote/invoice in USD (FOB workflow). Do not flip to customer JPY.
     setQuotedCurrency('USD');

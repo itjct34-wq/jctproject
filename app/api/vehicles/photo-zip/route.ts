@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireInventoryStaff } from '@/lib/admin-auth';
 import { inspectVehiclePhotoZip, MAX_PHOTO_BYTES, MAX_PHOTO_ZIP_BYTES } from '@/lib/utils/vehicle-photo-zip';
 import { chassisStorageFolder, imageContentType } from '@/lib/utils/chassis';
+import { pickPrimaryImageUrl, type VehicleImageRole } from '@/lib/vehicles/image-role';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,22 +42,34 @@ export async function POST(request: NextRequest) {
     (vehicles || []) as { id: string; chassis_number: string; stock_number?: string | null; part_sku?: string | null }[]
   );
 
-  const attached: { chassis: string; photos: number }[] = [];
+  const attached: { chassis: string; photos: number; roles: Record<string, number> }[] = [];
   for (const match of inspected.matches) {
     if (!match.vehicleId) continue;
     const folder = chassisStorageFolder(match.chassis || match.folder);
     const { data: existing } = await admin
       .from('vehicle_images')
-      .select('id, sort_order, is_primary')
+      .select('id, sort_order, is_primary, image_url, image_role')
       .eq('vehicle_id', match.vehicleId);
     const existingCount = existing?.length || 0;
-    const rows: { vehicle_id: string; image_url: string; sort_order: number; is_primary: boolean }[] = [];
+    const hasPublicPrimary = (existing || []).some(
+      (r) => r.is_primary && r.image_role !== 'auction_sheet'
+    );
+    const rows: {
+      vehicle_id: string;
+      image_url: string;
+      sort_order: number;
+      is_primary: boolean;
+      image_role: VehicleImageRole;
+    }[] = [];
+    const roleCounts: Record<string, number> = {};
     for (let p = 0; p < match.photos.length; p++) {
       const photo = match.photos[p];
       const blob = await photo.asyncBlob();
       if (blob.size > MAX_PHOTO_BYTES) continue;
       const safe = photo.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80);
-      const path = `${folder}/${String(existingCount + p + 1).padStart(3, '0')}-${Date.now()}-${safe}`;
+      const rolePrefix =
+        photo.role === 'auction_sheet' ? 'A' : photo.role === 'front' ? 'F' : photo.role === 'back' ? 'B' : 'G';
+      const path = `${folder}/${rolePrefix}-${String(existingCount + p + 1).padStart(3, '0')}-${Date.now()}-${safe}`;
       const buffer = Buffer.from(await blob.arrayBuffer());
       const { error: upErr } = await admin.storage.from('vehicle-images').upload(path, buffer, {
         upsert: true,
@@ -68,18 +81,36 @@ export async function POST(request: NextRequest) {
         vehicle_id: match.vehicleId,
         image_url: pub.publicUrl,
         sort_order: existingCount + rows.length,
-        is_primary: existingCount === 0 && rows.length === 0,
+        is_primary: false,
+        image_role: photo.role,
       });
+      roleCounts[photo.role] = (roleCounts[photo.role] || 0) + 1;
     }
     if (rows.length === 0) continue;
-    await admin.from('vehicle_images').insert(rows);
-    if (existingCount === 0) {
-      await admin.from('vehicles').update({
-        primary_image_url: rows[0].image_url,
-        updated_at: new Date().toISOString(),
-      }).eq('id', match.vehicleId);
+    if (!hasPublicPrimary) {
+      const cover = pickPrimaryImageUrl(rows);
+      if (cover) {
+        for (const row of rows) row.is_primary = row.image_url === cover;
+      }
     }
-    attached.push({ chassis: match.chassis || match.folder, photos: rows.length });
+    await admin.from('vehicle_images').insert(rows);
+    if (existingCount === 0 || !hasPublicPrimary) {
+      const cover = pickPrimaryImageUrl([
+        ...(existing || []).map((r) => ({
+          image_url: r.image_url as string,
+          image_role: (r.image_role as string) || 'gallery',
+          is_primary: r.is_primary,
+        })),
+        ...rows,
+      ]);
+      if (cover) {
+        await admin.from('vehicles').update({
+          primary_image_url: cover,
+          updated_at: new Date().toISOString(),
+        }).eq('id', match.vehicleId);
+      }
+    }
+    attached.push({ chassis: match.chassis || match.folder, photos: rows.length, roles: roleCounts });
   }
 
   return NextResponse.json({

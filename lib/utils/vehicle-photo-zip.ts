@@ -6,6 +6,11 @@ import {
   isJunkZipPath,
   normalizeChassis,
 } from '@/lib/utils/chassis';
+import {
+  classifyVehicleImageFileName,
+  roleSortRank,
+  type VehicleImageRole,
+} from '@/lib/vehicles/image-role';
 
 export const MAX_PHOTO_ZIP_BYTES = 200 * 1024 * 1024;
 export const MAX_PHOTOS_PER_VEHICLE = 30;
@@ -28,6 +33,7 @@ export function vehiclePhotoFolderKey(
 export type ZipPhotoEntry = {
   path: string;
   name: string;
+  role: VehicleImageRole;
   asyncBlob: () => Promise<Blob>;
 };
 
@@ -45,9 +51,18 @@ function folderSegments(path: string): { folders: string[]; fileName: string } {
   return { folders, fileName };
 }
 
+function sortPhotos(photos: ZipPhotoEntry[]) {
+  photos.sort((a, b) => {
+    const roleDiff = roleSortRank(a.role) - roleSortRank(b.role);
+    if (roleDiff !== 0) return roleDiff;
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
 export async function inspectVehiclePhotoZip(
   file: File,
-  vehicles: VehicleChassisRow[]
+  vehicles: VehicleChassisRow[],
+  opts?: { preferVehicleId?: string | null }
 ): Promise<{ matches: ZipFolderMatch[]; unmatchedFolders: string[]; skipped: string[] }> {
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const byNorm = new Map<string, VehicleChassisRow>();
@@ -60,6 +75,7 @@ export async function inspectVehiclePhotoZip(
 
   const groups = new Map<string, ZipFolderMatch>();
   const skipped: string[] = [];
+  const preferId = opts?.preferVehicleId || null;
 
   const entries = Object.values(zip.files);
   for (const entry of entries) {
@@ -68,22 +84,40 @@ export async function inspectVehiclePhotoZip(
     if (isJunkZipPath(path)) continue;
     const { folders, fileName } = folderSegments(path);
     if (!isImageFileName(fileName)) continue;
-    if (folders.length === 0) {
-      skipped.push(`${fileName} (not in a chassis or SKU folder)`);
-      continue;
-    }
 
     let vehicle: VehicleChassisRow | null = null;
-    let folderLabel = folders[folders.length - 1];
-    for (const part of folders) {
-      const hit = byNorm.get(normalizeChassis(part));
-      if (hit) {
-        vehicle = hit;
-        folderLabel = part;
-        break;
+    let folderLabel = folders[folders.length - 1] || '(root)';
+
+    if (folders.length === 0) {
+      // Root-level images: only attach when inspecting for a single known vehicle.
+      if (preferId) {
+        vehicle = vehicles.find((v) => v.id === preferId) || null;
+        folderLabel = vehicle ? vehiclePhotoFolderKey(vehicle) || folderLabel : folderLabel;
+      } else {
+        skipped.push(`${fileName} (not in a chassis or SKU folder)`);
+        continue;
+      }
+    } else {
+      for (const part of folders) {
+        const hit = byNorm.get(normalizeChassis(part));
+        if (hit) {
+          vehicle = hit;
+          folderLabel = part;
+          break;
+        }
+      }
+      if (preferId && vehicle && vehicle.id !== preferId) {
+        skipped.push(`${path} (folder matches a different unit)`);
+        continue;
+      }
+      if (preferId && !vehicle) {
+        // Nested ZIP for one stock unit: treat unmatched nested photos as this vehicle
+        // only when every image folder segment fails to match another unit.
+        vehicle = vehicles.find((v) => v.id === preferId) || null;
       }
     }
 
+    const role = classifyVehicleImageFileName(fileName);
     const groupKey = vehicle ? `id:${vehicle.id}` : `unmatched:${normalizeChassis(folderLabel) || folderLabel}`;
     let group = groups.get(groupKey);
     if (!group) {
@@ -98,12 +132,13 @@ export async function inspectVehiclePhotoZip(
     group.photos.push({
       path,
       name: fileName,
+      role,
       asyncBlob: () => entry.async('blob'),
     });
   }
 
   for (const group of groups.values()) {
-    group.photos.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    sortPhotos(group.photos);
     if (group.photos.length > MAX_PHOTOS_PER_VEHICLE) {
       skipped.push(`${group.folder}: kept first ${MAX_PHOTOS_PER_VEHICLE} of ${group.photos.length} photos`);
       group.photos = group.photos.slice(0, MAX_PHOTOS_PER_VEHICLE);
@@ -111,9 +146,11 @@ export async function inspectVehiclePhotoZip(
   }
 
   const matches = [...groups.values()].filter((g) => g.vehicleId);
-  const unmatchedFolders = [...groups.values()].filter((g) => !g.vehicleId).map((g) => `${g.folder} (${g.photos.length} photos)`);
+  const unmatchedFolders = [...groups.values()]
+    .filter((g) => !g.vehicleId)
+    .map((g) => `${g.folder} (${g.photos.length} photos)`);
 
   return { matches, unmatchedFolders, skipped };
 }
 
-export { chassisStorageFolder, imageContentType };
+export { chassisStorageFolder, imageContentType, classifyVehicleImageFileName };

@@ -22,8 +22,14 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { ErpEmptyState } from '@/components/shared/erp-empty-state';
 import { type GalleryImage, MultiImageUpload } from '@/components/shared/multi-image-upload';
 import { loadVehicleImages, saveVehicleImages } from '@/lib/utils/vehicle-images';
+import {
+  uploadVehiclePhotoZipForId,
+  VehiclePhotoZipUpload,
+} from '@/components/vehicles/vehicle-photo-zip-upload';
+import { pickPrimaryImageUrl } from '@/lib/vehicles/image-role';
 import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
 import { FobFormulaFields } from '@/components/vehicles/fob-formula-fields';
+import { StockSourcingFields } from '@/components/vehicles/stock-sourcing-fields';
 import { EditCourierDialog } from '@/components/vehicles/edit-courier-dialog';
 import { EditShippingDialog } from '@/components/vehicles/edit-shipping-dialog';
 import { AssignStockDialog } from '@/components/vehicles/assign-stock-dialog';
@@ -87,6 +93,7 @@ type CustomerListRow = Pick<
   | 'default_currency'
   | 'assigned_to'
   | 'company_name'
+  | 'port_of_discharge'
 >;
 type VehiclePayAgg = { count: number; allocated: number; remittances: VehicleRemittanceRef[] };
 
@@ -97,6 +104,7 @@ const STOCK_STATUS_OPTIONS = [
   { value: 'partial_paid', label: 'Partial Paid' },
   { value: 'paid', label: 'Paid' },
   { value: 'delivered', label: 'Delivered' },
+  { value: 'hidden', label: 'Hidden' },
 ];
 
 const emptyListFilters = (): StockListFiltersValue => ({
@@ -115,7 +123,7 @@ function profileDisplayName(p: ProfileNameRow | undefined) {
 
 const statusLabels: Record<Vehicle['status'], string> = {
   in_stock: 'In stock', reserved: 'Reserved', sold: 'Sold', in_transit: 'In transit',
-  exported: 'Exported', on_hold: 'On hold', archived: 'Archived',
+  exported: 'Exported', on_hold: 'On hold', archived: 'Archived', hidden: 'Hidden',
 };
 
 const emptyForm = {
@@ -127,6 +135,12 @@ const emptyForm = {
   sold_price: '',
   incoterm: 'FOB' as VehicleIncoterm,
   notes: '', primary_image_url: '', source_country_code: 'JP',
+  source_supplier: '',
+  shipping_port_of_loading: '',
+  yard_id: '',
+  location: '',
+  destination_country: '',
+  bid_requester_id: '',
   payment_status: 'available' as VehiclePaymentStatus,
   shipping_status: 'not_booked' as VehicleShippingStatus,
   status: 'in_stock' as Vehicle['status'],
@@ -171,6 +185,8 @@ function VehiclesPage() {
   const canCreateVehicle = can('vehicles', 'create');
   const canEditVehicle = can('vehicles', 'edit');
   const canDeleteVehicle = can('vehicles', 'delete');
+  const canHideVehicle = can('vehicles', 'edit');
+  const canUnhideVehicle = isAdmin() || hasRole('manager');
   const canMakeAvailable = isAdmin();
   const canReserveStock = canReserveByPerm();
   const canEditShipping = canEditShippingByPerm();
@@ -208,9 +224,12 @@ function VehiclesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [hideOpen, setHideOpen] = useState(false);
   const [makeAvailableOpen, setMakeAvailableOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
+  const [auctionSheetFile, setAuctionSheetFile] = useState<File | null>(null);
+  const [pendingPhotoZip, setPendingPhotoZip] = useState<File | null>(null);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [bidRequesterOpen, setBidRequesterOpen] = useState(false);
@@ -226,7 +245,7 @@ function VehiclesPage() {
       supabase
         .from('customers')
         .select(
-          'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name'
+          'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name, port_of_discharge'
         )
         .order('full_name')
         .limit(250),
@@ -249,12 +268,12 @@ function VehiclesPage() {
       ),
     ];
 
-    const [missCustRes, salesRes, itemRes, docsRes] = await Promise.all([
+    const [missCustRes, salesRes, itemRes, docsRes, auctionImgRes] = await Promise.all([
       missingCustomerIds.length
         ? supabase
             .from('customers')
             .select(
-              'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name'
+              'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name, port_of_discharge'
             )
             .in('id', missingCustomerIds)
         : Promise.resolve({ data: [] as CustomerListRow[] }),
@@ -281,6 +300,13 @@ function VehiclesPage() {
               'dhl',
             ])
         : Promise.resolve({ data: [] as Array<{ entity_id: string; doc_kind: string | null }> }),
+      vehicleIds.length
+        ? supabase
+            .from('vehicle_images')
+            .select('vehicle_id')
+            .in('vehicle_id', vehicleIds)
+            .eq('image_role', 'auction_sheet')
+        : Promise.resolve({ data: [] as Array<{ vehicle_id: string }> }),
     ]);
     if (missCustRes.data?.length) customerRows = [...customerRows, ...missCustRes.data];
     setCustomers(customerRows);
@@ -290,6 +316,11 @@ function VehiclesPage() {
       if (!row.doc_kind) continue;
       const list = docMap[row.entity_id] || (docMap[row.entity_id] = []);
       if (!list.includes(row.doc_kind)) list.push(row.doc_kind);
+    }
+    // ZIP A. / A_ auction sheets live on vehicle_images.image_role.
+    for (const row of auctionImgRes.data || []) {
+      const list = docMap[row.vehicle_id] || (docMap[row.vehicle_id] = []);
+      if (!list.includes('auction_sheet')) list.push('auction_sheet');
     }
     setVehicleDocKinds(docMap);
 
@@ -318,7 +349,7 @@ function VehiclesPage() {
       const { data: moreCust } = await supabase
         .from('customers')
         .select(
-          'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name'
+          'id, full_name, customer_code, country, city, address_line1, phone, email, default_currency, assigned_to, company_name, port_of_discharge'
         )
         .in('id', missingCustomerIds);
       if (moreCust?.length) {
@@ -328,11 +359,23 @@ function VehiclesPage() {
     }
 
     const names: Record<string, string> = {};
-    if (agentIds.size) {
+    const { data: allStaff } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, email, is_active')
+      .eq('is_active', true)
+      .order('full_name')
+      .limit(300);
+    for (const p of (allStaff || []) as (ProfileNameRow & { is_active?: boolean })[]) {
+      const label = profileDisplayName(p);
+      if (label) names[p.id] = label;
+    }
+    // Ensure any inactive agents still on stock rows remain labeled.
+    const missingAgents = [...agentIds].filter((id) => !names[id]);
+    if (missingAgents.length) {
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, display_name, email')
-        .in('id', [...agentIds]);
+        .in('id', missingAgents);
       for (const p of (profiles || []) as ProfileNameRow[]) {
         const label = profileDisplayName(p);
         if (label) names[p.id] = label;
@@ -462,6 +505,8 @@ function VehiclesPage() {
       const pay = effectivePaymentStatus(v);
       const ship = effectiveShippingStatus(v);
       const allocated = vehiclePays[v.id]?.allocated || 0;
+      // Soft-hidden units stay out of default stock unless Status = Hidden.
+      if (v.status === 'hidden' && statusFilter !== 'hidden') return false;
       let matchesStatus = true;
       if (statusFilter === 'available') matchesStatus = pay === 'available';
       else if (statusFilter === 'reserved') matchesStatus = pay === 'reserved';
@@ -469,6 +514,7 @@ function VehiclesPage() {
       else if (statusFilter === 'partial_paid') matchesStatus = pay === 'partial_paid';
       else if (statusFilter === 'paid') matchesStatus = pay === 'paid';
       else if (statusFilter === 'delivered') matchesStatus = ship === 'delivered';
+      else if (statusFilter === 'hidden') matchesStatus = v.status === 'hidden';
       else if (statusFilter !== 'all') {
         matchesStatus = workflowStage(v) === statusFilter || v.status === statusFilter;
       }
@@ -617,6 +663,12 @@ function VehiclesPage() {
       notes: stripEngineFromNotes(v.notes),
       primary_image_url: v.primary_image_url || '',
       source_country_code: v.source_country_code || resolveSourceCountry(v.source_country)?.code || 'JP',
+      source_supplier: v.source_supplier || '',
+      shipping_port_of_loading: v.shipping_port_of_loading || '',
+      yard_id: v.yard_id || '',
+      location: v.location || '',
+      destination_country: v.destination_country || '',
+      bid_requester_id: v.bid_requester_id || '',
       payment_status: effectivePaymentStatus(v),
       shipping_status: effectiveShippingStatus(v),
       status: v.status,
@@ -630,6 +682,8 @@ function VehiclesPage() {
       stock_number: nextVehicleStockNumber(vehicles.map((v) => v.stock_number)),
     });
     setGallery([]);
+    setAuctionSheetFile(null);
+    setPendingPhotoZip(null);
     setCreateOpen(true);
   };
 
@@ -660,12 +714,19 @@ function VehiclesPage() {
       purchase_price: formState.purchase_price ? Number(formState.purchase_price) : null,
       expense_jpy: formState.expense_jpy === '' ? FIXED_EXPENSE_JPY : Number(formState.expense_jpy) || 0,
       tt_rate: formState.tt_rate === '' ? DEFAULT_TT_RATE : Number(formState.tt_rate) || DEFAULT_TT_RATE,
+      fob_jpy: fob ? Math.round(fob.fobJpy) : null,
       fob_usd: fob ? Math.round(fob.fobUsd) : null,
       listed_price: fob ? Math.round(fob.fobUsd) : null,
       listed_currency: 'USD',
       notes: mergeEngineIntoNotes(formState.notes, formState.engine),
       source_country: origin?.name || 'Japan',
       source_country_code: origin?.code || 'JP',
+      source_supplier: formState.source_supplier.trim() || null,
+      shipping_port_of_loading: formState.shipping_port_of_loading.trim() || null,
+      yard_id: formState.yard_id || null,
+      location: formState.location.trim() || null,
+      destination_country: formState.destination_country.trim() || null,
+      bid_requester_id: formState.bid_requester_id || null,
     };
     return { chassis, category, payload };
   };
@@ -682,7 +743,7 @@ function VehiclesPage() {
       return;
     }
     setSubmitting(true);
-    const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
+    const primary = pickPrimaryImageUrl(gallery);
     const insertPayload: Record<string, unknown> = {
       ...payload,
       primary_image_url: primary,
@@ -691,10 +752,12 @@ function VehiclesPage() {
       payment_status: form.payment_status,
       shipping_status: form.shipping_status,
       incoterm: form.incoterm || 'FOB',
-      ...(form.status === 'on_hold' || form.status === 'archived' ? { status: form.status } : {}),
+      ...(form.status === 'on_hold' || form.status === 'archived' || form.status === 'hidden'
+        ? { status: form.status }
+        : {}),
     };
     let { data, error } = await supabase.from('vehicles').insert(insertPayload).select().maybeSingle();
-    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd/i.test(error.message)) {
+    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|fob_jpy|yard_id|destination_country/i.test(error.message)) {
       const rest = { ...insertPayload };
       delete rest.source_country_code;
       delete rest.stock_category;
@@ -702,6 +765,9 @@ function VehiclesPage() {
       delete rest.expense_jpy;
       delete rest.tt_rate;
       delete rest.fob_usd;
+      delete rest.fob_jpy;
+      delete rest.yard_id;
+      delete rest.destination_country;
       ({ data, error } = await supabase.from('vehicles').insert(rest).select().maybeSingle());
     }
     if (error) { setSubmitting(false); toast.error(error.message); return; }
@@ -710,10 +776,30 @@ function VehiclesPage() {
         toast.error(err instanceof Error ? err.message : 'Photos save failed');
       }
     }
+    if (data && auctionSheetFile && profile) {
+      const { uploadRecordAttachment } = await import('@/components/shared/record-attachments');
+      await uploadRecordAttachment('vehicles', (data as Vehicle).id, auctionSheetFile, profile.id, {
+        docKind: 'auction_sheet',
+      });
+    }
+    if (data && pendingPhotoZip) {
+      try {
+        const zipRes = await uploadVehiclePhotoZipForId((data as Vehicle).id, pendingPhotoZip, {
+          chassis_number: String(payload.chassis_number || ''),
+          stock_number: String(insertPayload.stock_number || ''),
+          part_sku: (payload.part_sku as string | null) || null,
+        });
+        if (zipRes.photos > 0) toast.success(`ZIP: ${zipRes.photos} photo(s) attached`);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Photos ZIP failed');
+      }
+    }
     setSubmitting(false);
     toast.success('Stock added');
     setCreateOpen(false);
     setGallery([]);
+    setAuctionSheetFile(null);
+    setPendingPhotoZip(null);
     await loadVehicles();
   };
 
@@ -736,7 +822,7 @@ function VehiclesPage() {
       toast.error(category === 'parts' ? 'Part number, stock no., or chassis is required' : 'Chassis, make, and model are required');
       return;
     }
-    const primary = gallery.find((g) => g.is_primary)?.image_url || gallery[0]?.image_url || null;
+    const primary = pickPrimaryImageUrl(gallery);
     // Booking/courier/customer stay on Edit Shipping / Reserve; term + vehicle cost are editable here.
     const updatePayload: Record<string, unknown> = {
       ...payload,
@@ -751,16 +837,19 @@ function VehiclesPage() {
     if (form.payment_status !== 'available') {
       updatePayload.sold_price = form.sold_price.trim() ? Number(form.sold_price) : null;
     }
-    if (form.status === 'on_hold' || form.status === 'archived') {
+    if (form.status === 'on_hold' || form.status === 'archived' || form.status === 'hidden') {
       updatePayload.status = form.status;
     }
     let { error } = await supabase.from('vehicles').update(updatePayload).eq('id', selected.id);
-    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd/i.test(error.message)) {
+    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|fob_jpy|yard_id|destination_country/i.test(error.message)) {
       const rest = { ...updatePayload };
       delete rest.source_country_code;
       delete rest.stock_category;
       delete rest.part_sku;
       delete rest.expense_jpy;
+      delete rest.fob_jpy;
+      delete rest.yard_id;
+      delete rest.destination_country;
       delete rest.tt_rate;
       delete rest.fob_usd;
       ({ error } = await supabase.from('vehicles').update(rest).eq('id', selected.id));
@@ -793,6 +882,91 @@ function VehiclesPage() {
     if (error) { toast.error(error.message); return; }
     toast.success('Deleted');
     setDeleteOpen(false);
+    setSelected(null);
+    await loadVehicles();
+  };
+
+  const confirmHide = async () => {
+    if (!selected) return;
+    if (!canHideVehicle) {
+      toast.error('You do not have permission to hide stock');
+      return;
+    }
+    if (selected.status === 'hidden') {
+      toast.message('Already hidden');
+      setHideOpen(false);
+      return;
+    }
+    setSubmitting(true);
+    const fromStatus = selected.status;
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ status: 'hidden', updated_at: new Date().toISOString() })
+      .eq('id', selected.id);
+    if (!error && profile?.id) {
+      await supabase.from('vehicle_status_history').insert({
+        vehicle_id: selected.id,
+        from_status: fromStatus,
+        to_status: 'hidden',
+        note: 'Soft-hidden from stock lists and reports',
+        changed_by: profile.id,
+      });
+    }
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Hidden from stock and reports');
+    setHideOpen(false);
+    setSelected(null);
+    await loadVehicles();
+  };
+
+  const confirmUnhide = async (vehicle?: Vehicle | null) => {
+    const target = vehicle || selected;
+    if (!target) return;
+    if (!canUnhideVehicle) {
+      toast.error('Only admin or manager can unhide stock');
+      return;
+    }
+    if (target.status !== 'hidden') {
+      toast.message('Not hidden');
+      return;
+    }
+    // Match payment/shipping so sync_vehicle_legacy_status does not force payment → available.
+    const pay = effectivePaymentStatus(target);
+    const ship = effectiveShippingStatus(target);
+    const restoredStatus: Vehicle['status'] =
+      ship === 'delivered'
+        ? 'exported'
+        : ship === 'shipped'
+          ? 'in_transit'
+          : pay === 'available'
+            ? 'in_stock'
+            : pay === 'paid'
+              ? 'sold'
+              : 'reserved';
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ status: restoredStatus, updated_at: new Date().toISOString() })
+      .eq('id', target.id);
+    if (!error && profile?.id) {
+      await supabase.from('vehicle_status_history').insert({
+        vehicle_id: target.id,
+        from_status: 'hidden',
+        to_status: restoredStatus,
+        note: 'Unhidden — listing status restored from payment/shipping',
+        changed_by: profile.id,
+      });
+    }
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Restored to stock');
     setSelected(null);
     await loadVehicles();
   };
@@ -990,10 +1164,11 @@ function VehiclesPage() {
     await loadVehicles();
   };
 
+  const visibleCatalog = catalogVehicles.filter((v) => v.status !== 'hidden');
   const stats = {
-    total: catalogVehicles.length,
-    available: catalogVehicles.filter((v) => effectivePaymentStatus(v) === 'available').length,
-    reserved: catalogVehicles.filter((v) => effectivePaymentStatus(v) !== 'available').length,
+    total: visibleCatalog.length,
+    available: visibleCatalog.filter((v) => effectivePaymentStatus(v) === 'available').length,
+    reserved: visibleCatalog.filter((v) => effectivePaymentStatus(v) !== 'available').length,
   };
 
   const workflowFormSections = (mode: 'create' | 'edit') => {
@@ -1129,6 +1304,24 @@ function VehiclesPage() {
         onChange={(patch) => setForm({ ...form, ...patch })}
         disabled={!canEditVehicle && mode === 'edit'}
       />
+      <StockSourcingFields
+        form={{
+          source_supplier: form.source_supplier,
+          shipping_port_of_loading: form.shipping_port_of_loading,
+          yard_id: form.yard_id,
+          location: form.location,
+          destination_country: form.destination_country,
+          bid_requester_id: form.bid_requester_id,
+        }}
+        onChange={(patch) => setForm({ ...form, ...patch })}
+        staff={Object.entries(agentNames).map(([id, label]) => ({ id, label }))}
+        disabled={!canEditVehicle && mode === 'edit'}
+        auctionSheetFile={auctionSheetFile}
+        onAuctionSheetFile={setAuctionSheetFile}
+        vehicleId={mode === 'edit' ? selected?.id : null}
+        profileId={profile?.id}
+        onAuctionSheetUploaded={() => void loadVehicles()}
+      />
       <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
         <h3 className="text-xs font-semibold">Vehicle specs</h3>
         <VehicleSpecFields form={form} onChange={(patch) => setForm({ ...form, ...patch })} showPhotos={false} />
@@ -1148,7 +1341,23 @@ function VehiclesPage() {
         </div>
       </section>
       <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
-        <h3 className="text-xs font-semibold">Photos</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold">Photos</h3>
+          <VehiclePhotoZipUpload
+            vehicleId={mode === 'edit' ? selected?.id || null : null}
+            chassisNumber={form.chassis_number}
+            stockNumber={form.stock_number}
+            partSku={form.part_sku}
+            pendingZip={pendingPhotoZip}
+            onPendingZip={setPendingPhotoZip}
+            onGalleryReload={setGallery}
+            disabled={!canEditVehicle && mode === 'edit'}
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          ZIP folder = chassis/stock/SKU (e.g. <code>RU3-123123/</code>). Files: <code>A.</code>/<code>A_</code> auction (ERP only),
+          {' '}<code>F.</code> front, <code>B.</code> back.
+        </p>
         <MultiImageUpload
           folder={chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number)}
           images={gallery}
@@ -1280,6 +1489,21 @@ function VehiclesPage() {
                   onShipping={canEditShipping ? () => openShippingEdit(v) : undefined}
                   onCourier={canEditCourier ? () => openCourierEdit(v) : undefined}
                   onDelete={canDeleteVehicle ? () => { setSelected(v); setDeleteOpen(true); } : undefined}
+                  onHide={
+                    canHideVehicle && v.status !== 'hidden'
+                      ? () => {
+                          setSelected(v);
+                          setHideOpen(true);
+                        }
+                      : undefined
+                  }
+                  onUnhide={
+                    canUnhideVehicle && v.status === 'hidden'
+                      ? () => {
+                          void confirmUnhide(v);
+                        }
+                      : undefined
+                  }
                   onMarkCommissionPaid={
                     canMarkCommissionPaid && effectiveCommissionStatus(v) === 'due'
                       ? () => { void markCommissionPaid(v.id); }
@@ -1320,6 +1544,7 @@ function VehiclesPage() {
           !!selected &&
           !editOpen &&
           !deleteOpen &&
+          !hideOpen &&
           !reserveOpen &&
           !assignOpen &&
           !bidRequesterOpen &&
@@ -1337,6 +1562,8 @@ function VehiclesPage() {
         canEditVehicle={canEditVehicle}
         canEditShipping={canEditShipping}
         canDeleteVehicle={canDeleteVehicle}
+        canHideVehicle={canHideVehicle}
+        canUnhideVehicle={canUnhideVehicle}
         canMarkCommissionPaid={canMarkCommissionPaid}
         canDeallocateRemittance={canDeallocateRemittance}
         submitting={submitting}
@@ -1346,6 +1573,10 @@ function VehiclesPage() {
         }}
         onBooking={() => openShippingEdit()}
         onDelete={() => setDeleteOpen(true)}
+        onHide={() => setHideOpen(true)}
+        onUnhide={() => {
+          void confirmUnhide();
+        }}
         onMarkCommissionPaid={() => {
           if (selected) void markCommissionPaid(selected.id);
         }}
@@ -1400,6 +1631,15 @@ function VehiclesPage() {
       />
 
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete vehicle?" description="Removes available stock only. Reserved or invoiced units are blocked." confirmLabel="Delete" destructive loading={submitting} onConfirm={confirmDelete} />
+      <ConfirmDialog
+        open={hideOpen}
+        onOpenChange={setHideOpen}
+        title="Hide vehicle from stock?"
+        description="Soft-hides this unit: it stays in the database but drops out of default stock lists and report aggregates. Use Status → Hidden to find it again. Admin or manager can unhide."
+        confirmLabel="Hide"
+        loading={submitting}
+        onConfirm={confirmHide}
+      />
       <ConfirmDialog
         open={makeAvailableOpen}
         onOpenChange={setMakeAvailableOpen}

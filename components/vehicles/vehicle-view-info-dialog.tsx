@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { format } from 'date-fns';
-import { CarFront, Loader2, Pencil, Ship, Tag, Trash2 } from 'lucide-react';
+import { CarFront, Eye, EyeOff, Loader2, Pencil, Ship, Tag, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +40,9 @@ import {
   soldProfitUsd,
 } from '@/lib/vehicle-lifecycle';
 import { toast } from 'sonner';
+import { loadVehicleImages } from '@/lib/utils/vehicle-images';
+import { vehicleImageRoleLabel, type VehicleImageRole } from '@/lib/vehicles/image-role';
+import type { GalleryImage } from '@/components/shared/multi-image-upload';
 
 export const VIEW_INFO_TABS = [
   'details',
@@ -99,6 +102,8 @@ type Props = {
   canEditVehicle: boolean;
   canEditShipping: boolean;
   canDeleteVehicle: boolean;
+  canHideVehicle?: boolean;
+  canUnhideVehicle?: boolean;
   canMarkCommissionPaid: boolean;
   canDeallocateRemittance?: boolean;
   submitting?: boolean;
@@ -106,6 +111,8 @@ type Props = {
   onEdit: () => void;
   onBooking: () => void;
   onDelete: () => void;
+  onHide?: () => void;
+  onUnhide?: () => void;
   onMarkCommissionPaid: () => void;
   onDeallocateRemittance?: (row: VehicleRemittanceRef) => void;
   onDocsChanged?: () => void;
@@ -187,6 +194,8 @@ export function VehicleViewInfoDialog({
   canEditVehicle,
   canEditShipping,
   canDeleteVehicle,
+  canHideVehicle = false,
+  canUnhideVehicle = false,
   canMarkCommissionPaid,
   canDeallocateRemittance = false,
   submitting,
@@ -194,6 +203,8 @@ export function VehicleViewInfoDialog({
   onEdit,
   onBooking,
   onDelete,
+  onHide,
+  onUnhide,
   onMarkCommissionPaid,
   onDeallocateRemittance,
   onDocsChanged,
@@ -211,9 +222,24 @@ export function VehicleViewInfoDialog({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [companyLetterhead, setCompanyLetterhead] = useState<CompanyLetterheadSettings | null>(null);
+  const [gallery, setGallery] = useState<GalleryImage[]>([]);
 
   useEffect(() => {
     if (open) setTab(VIEW_INFO_DEFAULT_TAB);
+  }, [open, vehicle?.id]);
+
+  useEffect(() => {
+    if (!open || !vehicle?.id) {
+      setGallery([]);
+      return;
+    }
+    let cancelled = false;
+    void loadVehicleImages(vehicle.id).then((imgs) => {
+      if (!cancelled) setGallery(imgs);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [open, vehicle?.id]);
 
   useEffect(() => {
@@ -490,6 +516,39 @@ export function VehicleViewInfoDialog({
                   </div>
                 )}
               </div>
+              {gallery.length > 0 ? (
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  {(['auction_sheet', 'front', 'back', 'gallery'] as VehicleImageRole[]).map((role) => {
+                    const items = gallery.filter((g) => (g.image_role || 'gallery') === role);
+                    if (!items.length) return null;
+                    return (
+                      <div key={role} className="space-y-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {vehicleImageRoleLabel(role)}
+                          {role === 'auction_sheet' ? ' · ERP only' : ''}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {items.map((img) => (
+                            <a
+                              key={img.id || img.image_url}
+                              href={img.image_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={cn(
+                                'h-14 w-[4.5rem] overflow-hidden rounded border bg-muted sm:h-16 sm:w-20',
+                                role === 'auction_sheet' && 'ring-1 ring-amber-500/50'
+                              )}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className={PAYMENT_STATUS_STYLES[effectivePaymentStatus(vehicle)]}>
@@ -558,6 +617,18 @@ export function VehicleViewInfoDialog({
                     <Button size="sm" variant="outline" onClick={onBooking}>
                       <Ship className="mr-1 h-3.5 w-3.5" />
                       Booking
+                    </Button>
+                  ) : null}
+                  {canHideVehicle && vehicle.status !== 'hidden' && onHide ? (
+                    <Button size="sm" variant="outline" onClick={onHide}>
+                      <EyeOff className="mr-1 h-3.5 w-3.5" />
+                      Hide
+                    </Button>
+                  ) : null}
+                  {canUnhideVehicle && vehicle.status === 'hidden' && onUnhide ? (
+                    <Button size="sm" variant="outline" onClick={onUnhide} disabled={submitting}>
+                      <Eye className="mr-1 h-3.5 w-3.5" />
+                      Unhide
                     </Button>
                   ) : null}
                   {canDeleteVehicle ? (

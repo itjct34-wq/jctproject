@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DocumentPrintPreview } from '@/components/documents/document-print-preview';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -64,6 +65,7 @@ const emptyForm = {
   currency: 'USD',
   valid_until: '',
   notes: '',
+  port_of_discharge: '',
 };
 
 type LineDraft = {
@@ -129,7 +131,7 @@ function QuotationsPageInner() {
       supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(250),
       supabase
         .from('customers')
-        .select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2')
+        .select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2, port_of_discharge')
         .order('full_name')
         .limit(250),
       supabase
@@ -250,6 +252,7 @@ function QuotationsPageInner() {
         currency: form.currency,
         valid_until: form.valid_until || null,
         notes: form.notes.trim() || null,
+        port_of_discharge: form.port_of_discharge.trim() || null,
         created_by: profile.id,
       })
       .select()
@@ -292,6 +295,7 @@ function QuotationsPageInner() {
       currency: selected.currency,
       valid_until: selected.valid_until || '',
       notes: selected.notes || '',
+      port_of_discharge: selected.port_of_discharge || '',
     });
     const mapped = rows.map((item) => {
       const bits = decodeInvoiceVehicle(item.description);
@@ -340,6 +344,7 @@ function QuotationsPageInner() {
         currency: form.currency,
         valid_until: form.valid_until || null,
         notes: form.notes.trim() || null,
+        port_of_discharge: form.port_of_discharge.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selected.id);
@@ -365,6 +370,7 @@ function QuotationsPageInner() {
       valid_until: form.valid_until || null,
       notes: form.notes.trim() || null,
       freight_notes: freightNotes,
+      port_of_discharge: form.port_of_discharge.trim() || null,
     };
     setSelected(updated);
     setQuotations((items) => items.map((i) => (i.id === updated.id ? updated : i)));
@@ -470,7 +476,17 @@ function QuotationsPageInner() {
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-0.5">
           <Label>Customer *</Label>
-          <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
+          <Select
+            value={form.customer_id}
+            onValueChange={(v) => {
+              const c = customers.find((x) => x.id === v);
+              setForm({
+                ...form,
+                customer_id: v,
+                port_of_discharge: c?.port_of_discharge || form.port_of_discharge,
+              });
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select customer" />
             </SelectTrigger>
@@ -482,6 +498,14 @@ function QuotationsPageInner() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-0.5">
+          <Label>Port of discharge</Label>
+          <Input
+            value={form.port_of_discharge}
+            onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })}
+            placeholder="Autofills from customer"
+          />
         </div>
         <div className="space-y-0.5">
           <Label>Price type</Label>
@@ -844,27 +868,12 @@ function QuotationsPageInner() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-        <DialogContent fullscreen className="print:max-w-none print:border-0 print:shadow-none">
-          <DialogHeader className="print:hidden">
-            <DialogTitle>Print quotation</DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="overflow-x-auto print:overflow-visible">
-              <div className="min-w-[720px] print:min-w-0">
-                <CommercialQuotationTemplate
-                  quotation={selected}
-                  items={printItems}
-                  customer={customerOf(selected.customer_id)}
-                  company={companyLetterhead}
-                  vehicles={vehicles}
-                  salesAgent={profile?.full_name || profile?.email}
-                  verificationUrl={selected.verification_token ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/') : undefined}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter className="print:hidden flex-wrap gap-2">
+      <DocumentPrintPreview
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+        title="Print quotation"
+        footer={
+          <>
             <Button variant="outline" onClick={() => setPrintOpen(false)}>
               Close
             </Button>
@@ -893,9 +902,25 @@ function QuotationsPageInner() {
               <Printer className="mr-1.5 h-4 w-4" />
               Print / PDF
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        {selected ? (
+          <CommercialQuotationTemplate
+            quotation={selected}
+            items={printItems}
+            customer={customerOf(selected.customer_id)}
+            company={companyLetterhead}
+            vehicles={vehicles}
+            salesAgent={profile?.full_name || profile?.email}
+            verificationUrl={
+              selected.verification_token
+                ? buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/')
+                : undefined
+            }
+          />
+        ) : null}
+      </DocumentPrintPreview>
 
       <ConfirmDialog
         open={deleteOpen}

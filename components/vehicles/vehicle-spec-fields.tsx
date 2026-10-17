@@ -1,11 +1,14 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MultiImageUpload, type GalleryImage } from '@/components/shared/multi-image-upload';
 import { STOCK_CATEGORIES, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
+import { supabase } from '@/lib/supabase/client';
+import { fetchVehicleMakes, fetchVehicleModels, type VehicleMakeRow, type VehicleModelRow } from '@/lib/shipping-catalog';
 import type { Vehicle } from '@/lib/types';
 
 export type VehicleSpecForm = {
@@ -41,6 +44,26 @@ type Props = {
 export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChange, showPhotos = true }: Props) {
   const folder = chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number);
   const parts = form.stock_category === 'parts';
+  const [makes, setMakes] = useState<VehicleMakeRow[]>([]);
+  const [models, setModels] = useState<VehicleModelRow[]>([]);
+
+  useEffect(() => {
+    void fetchVehicleMakes(supabase).then(({ data }) => setMakes(data));
+  }, []);
+
+  const makeId = useMemo(
+    () => makes.find((m) => m.name.toLowerCase() === form.make.trim().toLowerCase())?.id || null,
+    [makes, form.make]
+  );
+
+  useEffect(() => {
+    if (!makeId) {
+      setModels([]);
+      return;
+    }
+    void fetchVehicleModels(supabase, makeId).then(({ data }) => setModels(data));
+  }, [makeId]);
+
   return (
     <>
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -89,10 +112,16 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
           <Label className="text-xs">Make *</Label>
           <Input
             value={form.make}
-            onChange={(e) => onChange({ make: e.target.value })}
+            onChange={(e) => onChange({ make: e.target.value, model: '' })}
             placeholder="Make"
             required
+            list="vehicle-make-catalog"
           />
+          <datalist id="vehicle-make-catalog">
+            {makes.map((m) => (
+              <option key={m.id} value={m.name} />
+            ))}
+          </datalist>
         </div>
         <div className="space-y-0.5">
           <Label className="text-xs">Model *</Label>
@@ -101,7 +130,13 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             onChange={(e) => onChange({ model: e.target.value })}
             placeholder="Model"
             required
+            list="vehicle-model-catalog"
           />
+          <datalist id="vehicle-model-catalog">
+            {models.map((m) => (
+              <option key={m.id} value={m.name} />
+            ))}
+          </datalist>
         </div>
         <div className="space-y-0.5">
           <Label className="text-xs">Colour</Label>

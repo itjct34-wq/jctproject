@@ -36,6 +36,7 @@ export type VehicleImageRow = {
   image_url: string;
   sort_order: number | null;
   is_primary: boolean | null;
+  image_role?: string | null;
 };
 
 export function publicEngineFromNotes(notes: string | null | undefined): string | null {
@@ -87,6 +88,8 @@ export function coverPhoto(vehicle: Pick<PublicVehicle, 'gallery' | 'primary_ima
 export function attachGallery(vehicles: Omit<PublicVehicle, 'gallery'>[], images: VehicleImageRow[]): PublicVehicle[] {
   const byId = new Map<string, string[]>();
   for (const row of sortGalleryRows(images)) {
+    // Auction sheets (A. / A_) must never appear on the public site.
+    if (row.image_role === 'auction_sheet') continue;
     const list = byId.get(row.vehicle_id) || [];
     if (row.image_url && !list.includes(row.image_url)) list.push(row.image_url);
     byId.set(row.vehicle_id, list);
@@ -159,6 +162,15 @@ export function listedVehicleCategory(vehicle: Pick<PublicVehicle, 'stock_catego
 
 export async function loadVehicleGallery(db: SupabaseClient, vehicleIds: string[]): Promise<VehicleImageRow[]> {
   if (!vehicleIds.length) return [];
+  const withRole = await db
+    .from('vehicle_images')
+    .select('vehicle_id, image_url, sort_order, is_primary, image_role')
+    .in('vehicle_id', vehicleIds)
+    .neq('image_role', 'auction_sheet')
+    .order('sort_order', { ascending: true });
+  if (!withRole.error && withRole.data) return withRole.data as VehicleImageRow[];
+
+  // Fallback when image_role column is not applied yet.
   const { data, error } = await db
     .from('vehicle_images')
     .select('vehicle_id, image_url, sort_order, is_primary')

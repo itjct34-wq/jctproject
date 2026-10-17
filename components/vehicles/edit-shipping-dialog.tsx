@@ -83,6 +83,9 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
   const [pendingDelete, setPendingDelete] = useState<AttachmentListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [lineOpts, setLineOpts] = useState<string[]>([]);
+  const [vesselOpts, setVesselOpts] = useState<string[]>([]);
+  const [voyageOpts, setVoyageOpts] = useState<string[]>([]);
 
   const reloadExisting = async () => {
     if (!vehicle) return;
@@ -100,6 +103,19 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
     void reloadExisting();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when dialog opens for this vehicle
   }, [open, vehicle]);
+
+  useEffect(() => {
+    if (!open) return;
+    void Promise.all([
+      supabase.from('shipping_lines').select('name').eq('status', 'active').order('name').limit(300),
+      supabase.from('vessels').select('name').eq('status', 'active').order('name').limit(300),
+      supabase.from('voyages').select('voyage_number').eq('status', 'active').order('voyage_number').limit(300),
+    ]).then(([l, v, vo]) => {
+      setLineOpts((l.data || []).map((r: { name: string }) => r.name));
+      setVesselOpts((v.data || []).map((r: { name: string }) => r.name));
+      setVoyageOpts((vo.data || []).map((r: { voyage_number: string }) => r.voyage_number));
+    });
+  }, [open]);
 
   const reset = () => {
     if (!vehicle) return;
@@ -181,13 +197,40 @@ export function EditShippingDialog({ open, onOpenChange, vehicle, onSaved }: Pro
         <form onSubmit={submit} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Ship Company - 船舶会社" required>
-              <Input value={form.shipping_line} onChange={(e) => set('shipping_line', e.target.value)} />
+              <Input
+                value={form.shipping_line}
+                onChange={(e) => set('shipping_line', e.target.value)}
+                list="shipping-line-opts"
+              />
+              <datalist id="shipping-line-opts">
+                {lineOpts.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
             </Field>
             <Field label="Vessel Name - 船名" required>
-              <Input value={form.shipping_vessel_name} onChange={(e) => set('shipping_vessel_name', e.target.value)} />
+              <Input
+                value={form.shipping_vessel_name}
+                onChange={(e) => set('shipping_vessel_name', e.target.value)}
+                list="shipping-vessel-opts"
+              />
+              <datalist id="shipping-vessel-opts">
+                {vesselOpts.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
             </Field>
             <Field label="Voyage Number - 航海番号" required>
-              <Input value={form.shipping_voyage_number} onChange={(e) => set('shipping_voyage_number', e.target.value)} />
+              <Input
+                value={form.shipping_voyage_number}
+                onChange={(e) => set('shipping_voyage_number', e.target.value)}
+                list="shipping-voyage-opts"
+              />
+              <datalist id="shipping-voyage-opts">
+                {voyageOpts.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
             </Field>
             <Field label="Ship Estimated Departure - 船の出発予定時刻" required>
               <Input type="date" value={form.shipping_etd} onChange={(e) => set('shipping_etd', e.target.value)} />

@@ -2,7 +2,7 @@
 
 ## Two tracks (do not mix)
 
-ERP uses **orthogonal** payment and shipping tracks on `vehicles` (migration **`025_vehicle_payment_shipping_rls.sql`**). Legacy **`vehicles.status`** remains for public listing and history; it is **synced** from the two tracks when `payment_status` or `shipping_status` changes (except `on_hold` / `archived` overrides).
+ERP uses **orthogonal** payment and shipping tracks on `vehicles` (migration **`025_vehicle_payment_shipping_rls.sql`**). Legacy **`vehicles.status`** remains for public listing and history; it is **synced** from the two tracks when `payment_status` or `shipping_status` changes (except `on_hold` / `archived` / `hidden` overrides — see **`docs/VEHICLE_HIDE.md`**).
 
 ### Payment track — `payment_status`
 
@@ -47,6 +47,7 @@ Still required for public filters and existing reports:
 | `exported` | `paid` + `shipping_status = delivered` |
 | `on_hold` | Manual ops block (not auto-overwritten by sync trigger) |
 | `archived` | Retired record |
+| `hidden` | Soft-hide — excluded from default stock lists and reports (see `docs/VEHICLE_HIDE.md`) |
 
 Defined originally in migration `003_vehicle_inventory.sql`; sync trigger in **`025`**.
 
@@ -81,8 +82,12 @@ Defined originally in migration `003_vehicle_inventory.sql`; sync trigger in **`
 
 ## Images
 
-- **`vehicle_images.sort_order`** and **`is_primary`** control gallery order.
-- Upload path: manual ERP or bulk ZIP import → **`vehicle-images`** storage.
+- **`vehicle_images.sort_order`**, **`is_primary`**, and **`image_role`** control gallery order and visibility.
+- **`image_role`**: `auction_sheet` | `front` | `back` | `gallery` (from ZIP/file basename prefix).
+- Naming (basename, case-insensitive): `A.` / `A_` → auction sheet (ERP only); `F.` / `F_` → front; `B.` / `B_` → back; else gallery.
+- Public site and anon RLS exclude **`auction_sheet`**. Cover (`primary_image_url`) never uses auction sheets; prefers front.
+- Upload path: ERP create/edit, photos ZIP on stock form, or bulk ZIP import → **`vehicle-images`** storage.
+- ZIP layout: top-level or nested folder matching chassis / stock number / part SKU (e.g. `RU3-123123/F.1.jpg`).
 
 ## UI helpers
 

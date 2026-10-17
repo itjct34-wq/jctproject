@@ -257,6 +257,8 @@ export interface Customer {
   city: string | null;
   address_line1: string | null;
   address_line2: string | null;
+  /** Default port of discharge for invoices / quotes / reserves. */
+  port_of_discharge?: string | null;
   tax_id: string | null;
   default_currency: string;
   status: 'lead' | 'active' | 'inactive' | 'blocked';
@@ -328,8 +330,14 @@ export interface Vehicle {
   purchase_currency: string;
   expense_jpy?: number | null;
   tt_rate?: number | null;
+  /** Bid + 10% + expense (JPY). */
+  fob_jpy?: number | null;
   fob_usd?: number | null;
   sold_price?: number | null;
+  /** Intended buyer destination country. */
+  destination_country?: string | null;
+  /** Catalog yard (filtered by export port). */
+  yard_id?: string | null;
   incoterm?: 'FOB' | 'C&F' | 'CIF' | null;
   freight_mode?: 'roro' | 'container' | null;
   commission_pkr?: number | null;
@@ -338,7 +346,7 @@ export interface Vehicle {
   commission_paid_by?: string | null;
   listed_price: number | null;
   listed_currency: string;
-  status: 'in_stock' | 'reserved' | 'sold' | 'in_transit' | 'exported' | 'on_hold' | 'archived';
+  status: 'in_stock' | 'reserved' | 'sold' | 'in_transit' | 'exported' | 'on_hold' | 'archived' | 'hidden';
   payment_status?: 'available' | 'reserved' | 'partial_paid' | 'paid';
   shipping_status?: 'not_booked' | 'booked' | 'shipped' | 'delivered';
   customer_id?: string | null;
@@ -383,12 +391,16 @@ export interface Vehicle {
   updated_at: string;
 }
 
+export type VehicleImageRole = 'gallery' | 'front' | 'back' | 'auction_sheet';
+
 export interface VehicleImage {
   id: string;
   vehicle_id: string;
   image_url: string;
   sort_order: number;
   is_primary: boolean;
+  /** ZIP/file prefix role: A=auction_sheet (ERP only), F=front, B=back, else gallery. */
+  image_role: VehicleImageRole;
   created_at: string;
 }
 
@@ -557,7 +569,73 @@ export interface Quotation {
   valid_until: string | null;
   notes: string | null;
   freight_notes: string | null;
+  port_of_discharge?: string | null;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShippingLine {
+  id: string;
+  name: string;
+  code: string | null;
+  country: string | null;
+  status: 'active' | 'inactive';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Vessel {
+  id: string;
+  name: string;
+  shipping_line_id: string | null;
+  imo_number: string | null;
+  status: 'active' | 'inactive';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Voyage {
+  id: string;
+  voyage_number: string;
+  vessel_id: string | null;
+  shipping_line_id: string | null;
+  etd: string | null;
+  eta: string | null;
+  status: 'active' | 'inactive' | 'completed';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleMake {
+  id: string;
+  name: string;
+  status: 'active' | 'inactive';
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleModel {
+  id: string;
+  make_id: string;
+  name: string;
+  status: 'active' | 'inactive';
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Yard {
+  id: string;
+  name: string;
+  port_name: string;
+  status: 'active' | 'inactive';
+  notes: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

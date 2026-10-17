@@ -90,6 +90,7 @@ export function CommercialQuotationTemplate({
       shipmentType="RORO"
       shipmentMode="RORO Vessel"
       shipmentTerm={quotation.price_type === 'CNF' ? 'C&F' : quotation.price_type}
+      portOfDischarge={quotation.port_of_discharge}
       lines={lines}
       vehicles={vehicles}
       vehiclesTotal={subtotal}

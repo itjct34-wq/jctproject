@@ -82,8 +82,10 @@ export default function ReportsPage() {
     </div>
   );
 
-  const activeVehicles = filtered.vehicles.filter((v) => v.status === 'in_stock');
-  const soldVehicles = filtered.vehicles.filter((v) => v.status === 'sold');
+  // Soft-hidden units stay out of report KPIs and stock tables.
+  const reportVehicles = filtered.vehicles.filter((v) => v.status !== 'hidden');
+  const activeVehicles = reportVehicles.filter((v) => v.status === 'in_stock');
+  const soldVehicles = reportVehicles.filter((v) => v.status === 'sold');
   const totalSalesRevenue = filtered.sales.filter((s) => s.status !== 'cancelled').reduce((sum, s) => sum + (Number(s.sale_price) || 0), 0);
   const totalOutstanding = filtered.invoices.filter((i) => i.payment_status === 'unpaid' || i.payment_status === 'partial').reduce((sum, i) => sum + (Number(i.total) || 0), 0);
   const totalPayments = filtered.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);

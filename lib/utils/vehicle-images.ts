@@ -1,14 +1,33 @@
 import { supabase } from '@/lib/supabase/client';
 import type { GalleryImage } from '@/components/shared/multi-image-upload';
+import { pickPrimaryImageUrl, type VehicleImageRole } from '@/lib/vehicles/image-role';
 
 export async function loadVehicleImages(vehicleId: string): Promise<GalleryImage[]> {
   const { data, error } = await supabase
     .from('vehicle_images')
-    .select('id, image_url, sort_order, is_primary')
+    .select('id, image_url, sort_order, is_primary, image_role')
     .eq('vehicle_id', vehicleId)
     .order('sort_order', { ascending: true });
-  if (error) return [];
-  return (data || []) as GalleryImage[];
+  if (error) {
+    // Older DBs without image_role still load the gallery.
+    const fallback = await supabase
+      .from('vehicle_images')
+      .select('id, image_url, sort_order, is_primary')
+      .eq('vehicle_id', vehicleId)
+      .order('sort_order', { ascending: true });
+    if (fallback.error) return [];
+    return (fallback.data || []).map((row) => ({
+      ...(row as GalleryImage),
+      image_role: 'gallery' as VehicleImageRole,
+    }));
+  }
+  return (data || []).map((row) => ({
+    id: row.id as string,
+    image_url: row.image_url as string,
+    sort_order: row.sort_order as number,
+    is_primary: Boolean(row.is_primary),
+    image_role: ((row.image_role as VehicleImageRole) || 'gallery') as VehicleImageRole,
+  }));
 }
 
 /** Append / update gallery without wiping existing rows first. */
@@ -22,8 +41,11 @@ export async function saveVehicleImages(vehicleId: string, images: GalleryImage[
   const keepIds = new Set(images.map((img) => img.id).filter((id): id is string => Boolean(id)));
   const existingIds = (existing || []).map((row) => row.id as string);
 
-  const primaryIdx = images.findIndex((img) => img.is_primary);
-  const primaryAt = primaryIdx >= 0 ? primaryIdx : 0;
+  const publicIdx = images.findIndex(
+    (img) => img.is_primary && img.image_role !== 'auction_sheet'
+  );
+  const fallbackIdx = images.findIndex((img) => img.image_role !== 'auction_sheet');
+  const primaryAt = publicIdx >= 0 ? publicIdx : fallbackIdx;
 
   const toInsert = images
     .map((img, idx) => ({ img, idx }))
@@ -32,7 +54,8 @@ export async function saveVehicleImages(vehicleId: string, images: GalleryImage[
       vehicle_id: vehicleId,
       image_url: img.image_url,
       sort_order: idx,
-      is_primary: idx === primaryAt,
+      is_primary: primaryAt >= 0 && idx === primaryAt,
+      image_role: img.image_role || 'gallery',
     }));
 
   if (toInsert.length) {
@@ -47,8 +70,9 @@ export async function saveVehicleImages(vehicleId: string, images: GalleryImage[
       .from('vehicle_images')
       .update({
         sort_order: idx,
-        is_primary: idx === primaryAt,
+        is_primary: primaryAt >= 0 && idx === primaryAt,
         image_url: img.image_url,
+        image_role: img.image_role || 'gallery',
       })
       .eq('id', img.id)
       .eq('vehicle_id', vehicleId);
@@ -74,10 +98,16 @@ export async function saveVehicleImages(vehicleId: string, images: GalleryImage[
 
   const { data: rows, error: reloadError } = await supabase
     .from('vehicle_images')
-    .select('image_url, is_primary, sort_order')
+    .select('image_url, is_primary, sort_order, image_role')
     .eq('vehicle_id', vehicleId)
     .order('sort_order', { ascending: true });
   if (reloadError) throw reloadError;
-  const primary = (rows || []).find((r) => r.is_primary)?.image_url || rows?.[0]?.image_url || null;
+  const primary = pickPrimaryImageUrl(
+    (rows || []).map((r) => ({
+      image_url: r.image_url as string,
+      image_role: (r.image_role as string) || 'gallery',
+      is_primary: r.is_primary,
+    }))
+  );
   await supabase.from('vehicles').update({ primary_image_url: primary }).eq('id', vehicleId);
 }

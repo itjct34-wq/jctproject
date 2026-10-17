@@ -182,7 +182,7 @@ export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
           `1. In Bulk upload, choose ${kindLabel}, then source country and load port. Those apply to every row.`,
           '2. Fill chassis, make, model, colour, year, km, transmission, fuel, price.',
           '3. Do not paste image URLs. After import, upload one ZIP: a folder per chassis with jpg/png photos.',
-          '4. Folder name = chassis (hyphens optional). Example: K13-1231234/001.jpg',
+          '4. Folder = chassis (e.g. RU3-123123/). Files: A./A_ auction (ERP only), F. front, B. back.',
           '5. Leave stock_number blank to auto-number. Delete the sample rows before you save.',
         ];
   notes.forEach((line, i) => {
@@ -202,7 +202,7 @@ export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
   styleHeaderRow(headerRow);
   const colWidths = kind === 'auctions'
     ? [18, 14, 16, 12, 14, 14, 14, 12, 12, 28]
-    : [18, 14, 16, 16, 12, 12, 14, 12, 14, 12, 16, 28];
+    : [18, 14, 16, 16, 12, 12, 14, 12, 14, 12, 14, 16, 16, 18, 16, 22, 14, 28];
   headers.forEach((_, i) => {
     sheet.getColumn(i + 1).width = colWidths[i] || 14;
   });
@@ -287,17 +287,25 @@ export const VEHICLE_CSV_HEADERS = [
   'listed_price',
   'listed_currency',
   'stock_number',
+  'source_supplier',
+  'shipping_port_of_loading',
+  'location',
+  'destination_country',
+  'bid_requester',
+  'purchase_price',
   'notes',
 ];
 
 export const VEHICLE_CSV_SAMPLES: string[][] = [
   [
     'K13-1231234', 'Nissan', 'March', 'Yellow-Green', '2016', '91000',
-    'automatic', 'petrol', '4900', 'USD', '', '',
+    'automatic', 'petrol', '4900', 'USD', '', 'USS NAGOYA', 'Nagoya, Japan',
+    'Nagoya Main Yard', 'Pakistan', 'agent@example.com', '450000', '',
   ],
   [
     'NZE141000001', 'Toyota', 'Axio', 'Silver', '2018', '62000',
-    'cvt', 'petrol', '7200', 'USD', '', '',
+    'cvt', 'petrol', '7200', 'USD', '', 'USS TOKYO', 'Yokohama, Japan',
+    'Yokohama Main Yard', 'Kenya', '', '620000', '',
   ],
 ];
 

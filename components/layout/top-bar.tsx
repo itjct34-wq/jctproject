@@ -14,6 +14,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { LanguageSwitcher } from '@/components/layout/language-switcher';
 import { Bell, Search, Settings, LogOut, Menu, ChevronDown, User } from 'lucide-react';
 import { ROLE_COLORS } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ import type { Notification } from '@/lib/types';
 import { format } from 'date-fns';
 import { ErpMark } from '@/components/brand/erp-mark';
 import { NAV_GROUPS } from '@/lib/nav';
+import { NAV_ITEM_I18N, useI18n } from '@/lib/i18n/locale-provider';
 
 function notificationHref(n: Notification): string | null {
   if (!n.related_module) return null;
@@ -45,20 +47,23 @@ function notificationHref(n: Notification): string | null {
   return base;
 }
 
-function pageTitleFromPath(pathname: string): string {
+function pageTitleFromPath(pathname: string, t: (path: string, fallback?: string) => string): string {
   for (const group of NAV_GROUPS) {
     for (const item of group.items) {
       const path = item.href.split('?')[0];
-      if (pathname === path || pathname.startsWith(`${path}/`)) return item.label;
+      if (pathname === path || pathname.startsWith(`${path}/`)) {
+        return t(NAV_ITEM_I18N[item.href] || item.label, item.label);
+      }
     }
   }
-  if (pathname.startsWith('/profile')) return 'My profile';
+  if (pathname.startsWith('/profile')) return t('common.myProfile');
   return 'ERP';
 }
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
   const { profile, roles, signOut } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -66,7 +71,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const [searchQ, setSearchQ] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const today = format(new Date(), 'EEEE, MMM d, yyyy');
-  const pageTitle = pageTitleFromPath(pathname);
+  const pageTitle = pageTitleFromPath(pathname, t);
 
   useEffect(() => {
     if (!profile) return;
@@ -124,22 +129,22 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
   const bellLabel =
     unreadCount > 0
-      ? `Notifications, ${unreadCount} unread`
-      : 'Notifications, no unread';
+      ? `${t('common.notifications')}, ${unreadCount}`
+      : t('common.notifications');
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-3 shadow-glass-sm backdrop-blur-xl supports-[backdrop-filter]:bg-card/45 sm:gap-3 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/30 bg-card/55 px-3 shadow-glass-sm backdrop-blur-2xl supports-[backdrop-filter]:bg-card/40 sm:gap-3 sm:px-4">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
-        className="lg:hidden -ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-muted/70"
+        className="lg:hidden -ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-muted/70 active:scale-95"
       >
         <Menu className="h-5 w-5" />
       </button>
 
       <div className="flex min-w-0 items-center gap-2 lg:hidden">
         <ErpMark size="sm" compact showWordmark={false} />
-        <p className="truncate text-sm font-semibold text-foreground">{pageTitle}</p>
+        <p className="truncate text-sm font-semibold tracking-tight text-foreground">{pageTitle}</p>
       </div>
 
       <div className="hidden items-center text-sm text-muted-foreground md:flex">
@@ -158,52 +163,53 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <Input
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
-            placeholder="Search vehicles…"
-            className="h-9 rounded-full border-border/50 bg-card/70 pl-10 shadow-glass-sm backdrop-blur-md focus-visible:bg-card"
-            aria-label="Search vehicles"
+            placeholder={t('common.searchVehicles')}
+            className="h-10 rounded-full border-border/40 bg-card/65 pl-10 shadow-glass-sm backdrop-blur-xl focus-visible:bg-card/90"
+            aria-label={t('common.searchVehicles')}
           />
         </form>
       </div>
 
-      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+      <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
         <button
           type="button"
-          aria-label="Search"
-          className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-muted/70 md:hidden"
+          aria-label={t('common.search')}
+          className="flex h-11 w-11 items-center justify-center rounded-2xl hover:bg-muted/70 md:hidden"
           onClick={() => setMobileSearchOpen((v) => !v)}
         >
           <Search className="h-5 w-5 text-muted-foreground" />
         </button>
 
+        <LanguageSwitcher className="hidden sm:inline-flex" />
         <ThemeToggle />
 
         <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
           <DropdownMenuTrigger asChild>
             <button
               aria-label={bellLabel}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-muted/70 md:h-9 md:w-9"
+              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-muted/70 md:h-9 md:w-9 md:rounded-xl"
             >
               <Bell className="h-5 w-5 text-muted-foreground" />
               {unreadCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-xs font-bold text-brand-foreground">
+                <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-xs font-bold text-brand-foreground shadow-sm">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[calc(100vw-1.5rem)] max-w-[20rem] p-0">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="text-sm font-semibold">Notifications</span>
+          <DropdownMenuContent align="end" className="w-[calc(100vw-1.5rem)] max-w-[20rem] border-border/50 bg-card/95 p-0 shadow-glass backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+              <span className="text-sm font-semibold">{t('common.notifications')}</span>
               {unreadCount > 0 && (
                 <button type="button" onClick={markAllRead} className="text-xs text-brand hover:underline">
-                  Mark all read
+                  {t('common.markAllRead')}
                 </button>
               )}
             </div>
             <div className="max-h-80 overflow-y-auto scrollbar-thin">
               {notifications.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No notifications yet
+                  {t('common.noNotifications')}
                 </div>
               ) : (
                 notifications.map((n) => (
@@ -243,7 +249,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                 ))
               )}
             </div>
-            <div className="border-t border-border p-2">
+            <div className="border-t border-border/60 p-2">
               <DropdownMenuItem
                 className="justify-center text-sm font-medium text-brand"
                 onSelect={() => {
@@ -251,7 +257,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
                   router.push('/notifications');
                 }}
               >
-                View all notifications
+                {t('common.viewAll')}
               </DropdownMenuItem>
             </div>
           </DropdownMenuContent>
@@ -261,7 +267,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <DropdownMenuTrigger asChild>
             <button
               aria-label="User menu"
-              className="flex shrink-0 items-center gap-2 rounded-xl px-1 py-1.5 transition-colors hover:bg-muted/70 sm:px-2"
+              className="flex shrink-0 items-center gap-2 rounded-2xl px-1 py-1.5 transition-colors hover:bg-muted/70 sm:px-2"
             >
               <Avatar className="h-8 w-8 ring-2 ring-border/60">
                 {profile?.avatar_url && (
@@ -304,23 +310,26 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/profile')}>
               <User className="mr-2 h-4 w-4" />
-              My profile
+              {t('common.myProfile')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
-              System Settings
+              {t('common.systemSettings')}
             </DropdownMenuItem>
+            <div className="px-2 py-1.5 sm:hidden">
+              <LanguageSwitcher compact={false} className="w-full justify-start border border-border/50" />
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
+              {t('common.signOut')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
       {mobileSearchOpen ? (
-        <div className="absolute inset-x-0 top-full z-40 border-b border-border/50 bg-card p-3 shadow-md md:hidden">
+        <div className="absolute inset-x-0 top-full z-40 border-b border-border/40 bg-card/90 p-3 shadow-glass backdrop-blur-xl md:hidden">
           <form
             className="relative"
             onSubmit={(e) => {
@@ -333,9 +342,9 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
               autoFocus
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="Search vehicles…"
-              className="h-11 pl-10 text-base"
-              aria-label="Search vehicles"
+              placeholder={t('common.searchVehicles')}
+              className="h-12 pl-10 text-base"
+              aria-label={t('common.searchVehicles')}
             />
           </form>
         </div>

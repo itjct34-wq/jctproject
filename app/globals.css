@@ -45,19 +45,20 @@
     --chart-4: 38 92% 46%;
     --chart-5: 220 14% 46%;
     --chart-6: 262 40% 52%;
-    --radius: 1rem;
-    /* Glass system — Liquid Glass showcase intensity */
-    --glass-bg: 0 0% 100% / 0.68;
-    --glass-bg-strong: 0 0% 100% / 0.86;
-    --glass-border: 0 0% 100% / 0.65;
-    --glass-border-muted: 220 14% 70% / 0.42;
-    --glass-blur: 22px;
-    --glass-shadow: 0 10px 40px hsl(220 22% 12% / 0.1), 0 1px 0 hsl(0 0% 100% / 0.7) inset;
-    --glass-shadow-sm: 0 4px 18px hsl(220 22% 12% / 0.07);
-    --shell-glow: radial-gradient(ellipse 80% 50% at 10% -10%, hsl(0 72% 48% / 0.1), transparent 50%),
-      radial-gradient(ellipse 60% 40% at 90% 0%, hsl(199 78% 42% / 0.08), transparent 45%),
-      linear-gradient(165deg, hsl(220 18% 97%) 0%, hsl(220 14% 94%) 48%, hsl(220 16% 96%) 100%);
-    --sidebar-glass: 220 18% 10% / 0.92;
+    --radius: 1.125rem;
+    /* Glass system — intensified Liquid Glass (Gen Z / multinational) */
+    --glass-bg: 0 0% 100% / 0.58;
+    --glass-bg-strong: 0 0% 100% / 0.78;
+    --glass-border: 0 0% 100% / 0.72;
+    --glass-border-muted: 220 14% 70% / 0.38;
+    --glass-blur: 28px;
+    --glass-shadow: 0 14px 48px hsl(220 22% 12% / 0.12), 0 1px 0 hsl(0 0% 100% / 0.75) inset;
+    --glass-shadow-sm: 0 6px 22px hsl(220 22% 12% / 0.08);
+    --shell-glow: radial-gradient(ellipse 85% 55% at 8% -12%, hsl(0 72% 48% / 0.12), transparent 52%),
+      radial-gradient(ellipse 65% 45% at 92% 0%, hsl(199 78% 42% / 0.1), transparent 48%),
+      radial-gradient(ellipse 50% 35% at 50% 100%, hsl(220 18% 88% / 0.55), transparent 60%),
+      linear-gradient(165deg, hsl(220 20% 97%) 0%, hsl(220 14% 93%) 48%, hsl(220 16% 96%) 100%);
+    --sidebar-glass: 220 20% 9% / 0.88;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-muted: 0 0% 100%;
     --sidebar-muted-foreground: 220 10% 68%;
@@ -101,17 +102,17 @@
     --chart-4: 38 92% 52%;
     --chart-5: 220 10% 70%;
     --chart-6: 262 45% 62%;
-    --glass-bg: 220 16% 14% / 0.5;
-    --glass-bg-strong: 220 16% 14% / 0.72;
-    --glass-border: 0 0% 100% / 0.12;
-    --glass-border-muted: 0 0% 100% / 0.08;
-    --glass-blur: 26px;
-    --glass-shadow: 0 14px 44px hsl(0 0% 0% / 0.4), 0 1px 0 hsl(0 0% 100% / 0.08) inset;
-    --glass-shadow-sm: 0 4px 22px hsl(0 0% 0% / 0.28);
-    --shell-glow: radial-gradient(ellipse 70% 45% at 15% -5%, hsl(0 72% 48% / 0.2), transparent 50%),
-      radial-gradient(ellipse 55% 40% at 85% 5%, hsl(199 78% 42% / 0.14), transparent 45%),
-      linear-gradient(165deg, hsl(220 20% 8%) 0%, hsl(220 18% 6%) 100%);
-    --sidebar-glass: 220 18% 8% / 0.94;
+    --glass-bg: 220 16% 14% / 0.42;
+    --glass-bg-strong: 220 16% 14% / 0.68;
+    --glass-border: 0 0% 100% / 0.14;
+    --glass-border-muted: 0 0% 100% / 0.1;
+    --glass-blur: 32px;
+    --glass-shadow: 0 18px 52px hsl(0 0% 0% / 0.45), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
+    --glass-shadow-sm: 0 6px 26px hsl(0 0% 0% / 0.32);
+    --shell-glow: radial-gradient(ellipse 75% 50% at 12% -8%, hsl(0 72% 48% / 0.22), transparent 52%),
+      radial-gradient(ellipse 60% 42% at 88% 4%, hsl(199 78% 42% / 0.16), transparent 48%),
+      linear-gradient(165deg, hsl(220 22% 8%) 0%, hsl(220 18% 5%) 100%);
+    --sidebar-glass: 220 20% 7% / 0.9;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-muted: 0 0% 100%;
     --sidebar-muted-foreground: 220 10% 68%;
@@ -124,8 +125,13 @@
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-sans), var(--font-jp), ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    letter-spacing: -0.011em;
     overflow-x: clip;
+  }
+  html[lang='ja'] body {
+    letter-spacing: 0;
   }
   /* Remove the 300ms tap delay and double-tap zoom on interactive elements */
   a, button, [role="button"], input, select, textarea, label { touch-action: manipulation; }
@@ -204,18 +210,20 @@
 }
 .erp-shell .erp-filter-panel {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
+  border: 1px solid hsl(var(--glass-border-muted));
+  background: hsl(var(--glass-bg));
   box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   @apply p-2.5 sm:p-3;
 }
 .erp-shell .erp-sidebar {
   background: hsl(var(--sidebar-glass));
   border-right-color: hsl(var(--sidebar-border) / 0.12);
   color: hsl(var(--sidebar-foreground));
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--glass-shadow), inset -1px 0 0 hsl(0 0% 100% / 0.04);
+  backdrop-filter: blur(calc(var(--glass-blur) + 6px));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px));
   --foreground: var(--sidebar-foreground);
   --muted-foreground: var(--sidebar-muted-foreground);
   --muted: var(--sidebar-muted);
@@ -225,22 +233,28 @@
 .erp-shell .erp-sidebar .border-border\/60 { border-color: hsl(var(--sidebar-border) / 0.12); }
 .erp-shell .erp-list-panel {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
+  border: 1px solid hsl(var(--glass-border-muted));
+  background: hsl(var(--glass-bg-strong));
   box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: blur(calc(var(--glass-blur) - 6px));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) - 6px));
   overflow: hidden;
 }
 .erp-shell .erp-summary-panel {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
+  border: 1px solid hsl(var(--glass-border-muted));
+  background: hsl(var(--glass-bg));
   box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 .erp-shell .erp-stat-card {
   border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
+  border: 1px solid hsl(var(--glass-border-muted));
+  background: hsl(var(--glass-bg));
   box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 .erp-shell .erp-filter-bar input,
 .erp-shell .erp-filter-panel input,
@@ -880,6 +894,144 @@
 }
 .erp-shell [role='dialog']:not([data-dialog-workform='true']) .gap-4 {
   gap: 0.5rem;
+}
+
+/* Full-screen print / PDF preview (invoices, quotations, auction invoices) */
+[data-dialog-preview='true'] {
+  display: flex !important;
+  flex-direction: column;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+[data-dialog-preview='true'] > [data-slot='dialog-header'] {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  flex-shrink: 0;
+  min-height: 3.25rem;
+  padding: 0.625rem 3.25rem 0.625rem 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+}
+[data-dialog-preview='true'] .document-preview-toolbar {
+  border-bottom: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--background));
+}
+[data-dialog-preview='true'] .document-preview-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior: contain;
+  background: #d8dee6;
+  padding: 0.75rem 0.5rem 1.25rem;
+}
+@media (min-width: 640px) {
+  [data-dialog-preview='true'] .document-preview-stage {
+    padding: 1rem 1.25rem 1.5rem;
+  }
+}
+[data-dialog-preview='true'] .document-preview-fit {
+  margin: 0 auto;
+  overflow: hidden;
+}
+[data-dialog-preview='true'] .document-preview-canvas {
+  margin: 0 auto;
+}
+[data-dialog-preview='true'] .document-preview-canvas .invoice-print-root {
+  width: 210mm;
+  max-width: 210mm;
+  margin: 0;
+  box-shadow: 0 8px 28px rgb(15 23 42 / 0.18);
+}
+[data-dialog-preview='true'] .document-preview-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0 !important;
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.96);
+  backdrop-filter: blur(8px);
+}
+@media print {
+  [data-dialog-preview='true'] .document-preview-stage,
+  [data-dialog-preview='true'] .document-preview-fit,
+  [data-dialog-preview='true'] .document-preview-canvas {
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+    height: auto !important;
+    width: auto !important;
+    transform: none !important;
+  }
+}
+
+/* Full-screen print / PDF preview — usable on phone + desktop */
+[data-dialog-preview='true'] {
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+[data-dialog-preview='true'] > [data-slot='dialog-header'],
+[data-dialog-preview='true'] .document-preview-toolbar,
+[data-dialog-preview='true'] .document-preview-footer {
+  flex-shrink: 0;
+  background: hsl(var(--background));
+}
+[data-dialog-preview='true'] .document-preview-toolbar {
+  border-bottom: 1px solid hsl(var(--border));
+}
+[data-dialog-preview='true'] .document-preview-footer {
+  border-top: 1px solid hsl(var(--border));
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0 !important;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+}
+[data-dialog-preview='true'] .document-preview-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior: contain;
+  background: #d8dee6;
+  padding: 0.75rem;
+}
+@media (min-width: 640px) {
+  [data-dialog-preview='true'] .document-preview-stage {
+    padding: 1.25rem;
+  }
+}
+[data-dialog-preview='true'] .document-preview-fit {
+  margin: 0 auto;
+  overflow: hidden;
+}
+[data-dialog-preview='true'] .document-preview-canvas {
+  will-change: transform;
+}
+[data-dialog-preview='true'] .document-preview-canvas .invoice-print-root {
+  max-width: none !important;
+  width: 210mm !important;
+  margin: 0 !important;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.18);
+}
+@media print {
+  [data-dialog-preview='true'] .document-preview-stage,
+  [data-dialog-preview='true'] .document-preview-fit,
+  [data-dialog-preview='true'] .document-preview-canvas {
+    overflow: visible !important;
+    height: auto !important;
+    width: auto !important;
+    transform: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
 }
 
 .invoice-print-root {

@@ -92,7 +92,7 @@ export default function SalesPage() {
     setLoading(true);
     const [sRes, cRes, vRes] = await Promise.all([
       supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(250),
-      supabase.from('customers').select('id, full_name, customer_code, email, phone, country, city').order('full_name').limit(250),
+      supabase.from('customers').select('id, full_name, customer_code, email, phone, country, city, port_of_discharge').order('full_name').limit(250),
       supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, status, payment_status, reserved_by, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url').order('created_at', { ascending: false }).limit(250),
     ]);
     if (sRes.error) toast.error(`Unable to load sales: ${sRes.error.message}`);
@@ -576,7 +576,17 @@ export default function SalesPage() {
             <div className="grid gap-1.5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Customer *</Label>
-                <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
+                <Select
+                  value={form.customer_id}
+                  onValueChange={(v) => {
+                    const c = customers.find((x) => x.id === v);
+                    setForm({
+                      ...form,
+                      customer_id: v,
+                      port_of_discharge: c?.port_of_discharge || form.port_of_discharge,
+                    });
+                  }}
+                >
                   <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                   <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent>
                 </Select>

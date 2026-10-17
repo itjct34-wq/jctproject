@@ -142,6 +142,8 @@ export type StockListCardProps = {
   onShipping?: () => void;
   onCourier?: () => void;
   onDelete?: () => void;
+  onHide?: () => void;
+  onUnhide?: () => void;
   onMarkCommissionPaid?: () => void;
 };
 
@@ -157,6 +159,8 @@ type StockListCardActionsMenuProps = Pick<
   | 'onShipping'
   | 'onCourier'
   | 'onDelete'
+  | 'onHide'
+  | 'onUnhide'
   | 'onMarkCommissionPaid'
 >;
 
@@ -184,6 +188,8 @@ function StockListCardActionsMenu({
   onShipping,
   onCourier,
   onDelete,
+  onHide,
+  onUnhide,
   onMarkCommissionPaid,
 }: StockListCardActionsMenuProps) {
   return (
@@ -238,19 +244,29 @@ function StockListCardActionsMenu({
           ) : null}
         </>
       ) : null}
-      {onMakeAvailable || onDelete ? (
+      {onHide || onUnhide || onMakeAvailable || onDelete ? (
         <>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-            Danger
+            Visibility
           </DropdownMenuLabel>
-          {onMakeAvailable ? (
-            <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
-          ) : null}
-          {onDelete ? (
-            <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
-              Delete
-            </DropdownMenuItem>
+          {onHide ? <DropdownMenuItem onSelect={onHide}>Hide from stock</DropdownMenuItem> : null}
+          {onUnhide ? <DropdownMenuItem onSelect={onUnhide}>Unhide</DropdownMenuItem> : null}
+          {onMakeAvailable || onDelete ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Danger
+              </DropdownMenuLabel>
+              {onMakeAvailable ? (
+                <DropdownMenuItem onSelect={onMakeAvailable}>Make available</DropdownMenuItem>
+              ) : null}
+              {onDelete ? (
+                <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </>
           ) : null}
         </>
       ) : null}
@@ -310,6 +326,8 @@ export function StockListCard({
   onShipping,
   onCourier,
   onDelete,
+  onHide,
+  onUnhide,
   onMarkCommissionPaid,
 }: StockListCardProps) {
   const pay = effectivePaymentStatus(v);
@@ -363,6 +381,8 @@ export function StockListCard({
       onShipping ||
       onCourier ||
       onDelete ||
+      onHide ||
+      onUnhide ||
       onMarkCommissionPaid ||
       invoice
   );
@@ -485,6 +505,14 @@ export function StockListCard({
               {place.country ? <span className="text-sky-700">{place.country}</span> : null}
             </p>
           ) : null}
+          {v.source_supplier ? (
+            <p className="font-semibold uppercase tracking-wide text-slate-700">{v.source_supplier}</p>
+          ) : null}
+          {v.destination_country ? (
+            <p className="font-semibold uppercase tracking-wide text-amber-800">
+              Destination {v.destination_country}
+            </p>
+          ) : null}
           {v.location ? <p className="text-slate-600">{v.location}</p> : null}
           {dateLabel ? <p className="text-slate-500">{dateLabel}</p> : null}
           {vehicleCost != null ? (
@@ -542,7 +570,6 @@ export function StockListCard({
               </span>
             </p>
           ) : null}
-          {v.source_supplier ? <p className="uppercase text-slate-500">{v.source_supplier}</p> : null}
         </div>
 
         {/* Money boxes — wrap inside this column only; never spill into the actions rail */}
@@ -751,6 +778,8 @@ export function StockListCard({
                     onShipping={onShipping}
                     onCourier={onCourier}
                     onDelete={onDelete}
+                    onHide={onHide}
+                    onUnhide={onUnhide}
                     onMarkCommissionPaid={onMarkCommissionPaid}
                   />
                 ) : null}
@@ -786,6 +815,8 @@ export function StockListCard({
                     onShipping={onShipping}
                     onCourier={onCourier}
                     onDelete={onDelete}
+                    onHide={onHide}
+                    onUnhide={onUnhide}
                     onMarkCommissionPaid={onMarkCommissionPaid}
                   />
                 ) : null}

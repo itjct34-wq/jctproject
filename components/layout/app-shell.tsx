@@ -7,6 +7,7 @@ import { TopBar } from '@/components/layout/top-bar';
 import { MobileTabBar } from '@/components/layout/mobile-tab-bar';
 import { useAuth } from '@/lib/auth-provider';
 import { ErpMark } from '@/components/brand/erp-mark';
+import { useI18n } from '@/lib/i18n/locale-provider';
 import { Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
@@ -15,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const { user, loading } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -42,11 +44,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="erp-shell flex min-h-[100dvh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/50 bg-card/80 px-8 py-10 shadow-glass backdrop-blur-xl">
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-border/40 bg-card/70 px-8 py-10 shadow-glass backdrop-blur-2xl">
           <ErpMark size="lg" compact showWordmark={false} />
           <div className="flex items-center gap-2 text-muted-foreground" role="status" aria-live="polite">
             <Loader2 className="h-4 w-4 animate-spin text-brand" />
-            <span className="text-sm">Loading…</span>
+            <span className="text-sm tracking-tight">{t('common.loading')}</span>
           </div>
         </div>
       </div>
@@ -63,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-xl focus:bg-brand focus:px-3 focus:py-2 focus:text-sm focus:text-brand-foreground"
       >
-        Skip to main content
+        {t('common.skipToMain')}
       </a>
 
       <div className="hidden lg:flex">
@@ -73,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent
           side="left"
-          className="w-72 max-w-[85vw] border-0 bg-transparent p-0 [&>button]:hidden"
+          className="w-72 max-w-[85vw] border-0 bg-transparent p-0 shadow-none [&>button]:hidden"
           onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
           onTouchEnd={(e) => {
             if (touchStartX == null) return;
@@ -96,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <TopBar onMenuClick={() => setMobileOpen(true)} />
         <main
           id="main-content"
-          className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-3 pb-24 sm:p-4 md:p-5 lg:p-6 lg:pb-6"
+          className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-5 lg:p-6 lg:pb-6"
         >
           <div className="animate-glass-in">{children}</div>
         </main>

@@ -2,11 +2,12 @@ import { resolveSourceCountryFromRow } from '@/lib/source-countries';
 import { parseStockCategory } from '@/lib/stock-category';
 import { normalizeChassis } from '@/lib/utils/chassis';
 import { parseOptionalNumber, splitImageUrls } from '@/lib/utils/csv-import';
+import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const TRANSMISSIONS = new Set(['automatic', 'manual', 'cvt', 'other']);
 const FUELS = new Set(['petrol', 'diesel', 'hybrid', 'electric', 'other']);
-const STATUSES = new Set(['in_stock', 'reserved', 'sold', 'in_transit', 'exported', 'on_hold', 'archived']);
+const STATUSES = new Set(['in_stock', 'reserved', 'sold', 'in_transit', 'exported', 'on_hold', 'archived', 'hidden']);
 
 function mapTransmission(raw: string): string | null | 'invalid' {
   const v = raw.trim().toLowerCase();
@@ -69,6 +70,27 @@ export async function importVehicleSpreadsheetRows(
   const existingByNorm = new Map<string, string>();
   for (const row of existingRows || []) {
     existingByNorm.set(normalizeChassis((row as { chassis_number: string }).chassis_number), (row as { id: string }).id);
+  }
+
+  const { data: profileRows } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, display_name')
+    .eq('is_active', true)
+    .limit(500);
+  const profileByEmail = new Map<string, string>();
+  const profileByName = new Map<string, string>();
+  for (const p of profileRows || []) {
+    const row = p as { id: string; email: string | null; full_name: string | null; display_name: string | null };
+    if (row.email) profileByEmail.set(row.email.trim().toLowerCase(), row.id);
+    const name = (row.display_name || row.full_name || '').trim().toLowerCase();
+    if (name) profileByName.set(name, row.id);
+  }
+
+  const { data: yardRows } = await supabase.from('yards').select('id, name, port_name').eq('status', 'active');
+  const yardByName = new Map<string, { id: string; name: string; port_name: string }>();
+  for (const y of yardRows || []) {
+    const row = y as { id: string; name: string; port_name: string };
+    yardByName.set(row.name.trim().toLowerCase(), row);
   }
 
   for (let i = 0; i < rows.length; i++) {
@@ -140,6 +162,22 @@ export async function importVehicleSpreadsheetRows(
     }
 
     const images = splitImageUrls(r);
+    const bidRequesterRaw = (r.bid_requester || r.bid_requester_email || r.bid_requester_id || '').trim();
+    let bidRequesterId: string | null = null;
+    if (bidRequesterRaw) {
+      bidRequesterId =
+        profileByEmail.get(bidRequesterRaw.toLowerCase()) ||
+        profileByName.get(bidRequesterRaw.toLowerCase()) ||
+        null;
+    }
+    const yardRaw = (r.location || r.yard || '').trim();
+    const yard = yardRaw ? yardByName.get(yardRaw.toLowerCase()) : null;
+    const expense = FIXED_EXPENSE_JPY;
+    const fob =
+      purchase.value != null && purchase.value > 0
+        ? calcFobFromBid(purchase.value, expense, DEFAULT_TT_RATE)
+        : null;
+
     const payload: Record<string, unknown> = {
       chassis_number: chassis,
       stock_category: category,
@@ -155,12 +193,20 @@ export async function importVehicleSpreadsheetRows(
       fuel_type: fuel,
       source_country: country.name,
       source_country_code: country.code,
-      source_supplier: r.source_supplier?.trim() || null,
+      source_supplier: r.source_supplier?.trim() || r.auction_house?.trim() || null,
+      shipping_port_of_loading: r.shipping_port_of_loading?.trim() || r.source_port?.trim() || null,
+      destination_country: r.destination_country?.trim() || null,
+      bid_requester_id: bidRequesterId,
       purchase_price: purchase.value,
       purchase_currency: (r.purchase_currency || 'JPY').trim().toUpperCase() || 'JPY',
-      listed_price: listed.value,
+      expense_jpy: expense,
+      tt_rate: DEFAULT_TT_RATE,
+      fob_jpy: fob ? Math.round(fob.fobJpy) : null,
+      fob_usd: fob ? Math.round(fob.fobUsd) : null,
+      listed_price: listed.value ?? (fob ? Math.round(fob.fobUsd) : null),
       listed_currency: (r.listed_currency || 'USD').trim().toUpperCase() || 'USD',
-      location: r.location?.trim() || defaults?.location?.trim() || null,
+      location: yard?.name || yardRaw || defaults?.location?.trim() || null,
+      yard_id: yard?.id || null,
       arrival_date: r.arrival_date?.trim() || null,
       status,
       notes: r.notes?.trim() || null,

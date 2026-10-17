@@ -29,7 +29,7 @@ export function ErpMark({
     <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
       <span
         className={cn(
-          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-white/20',
+          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/95 shadow-glass-sm ring-1 ring-white/35 backdrop-blur-md',
           s.box
         )}
       >
@@ -45,7 +45,9 @@ export function ErpMark({
       {showWordmark ? (
         <div className={cn('min-w-0', wordmarkClassName)}>
           <p className="truncate text-sm font-semibold tracking-tight text-white">JCT ERP</p>
-          <p className="truncate text-xs text-white/55">Operations</p>
+          <p className="truncate text-[11px] font-medium uppercase tracking-[0.14em] text-white/50">
+            Operations
+          </p>
         </div>
       ) : null}
       <span className="sr-only">JCT ERP</span>

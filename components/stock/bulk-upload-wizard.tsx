@@ -618,7 +618,11 @@ export function BulkUploadWizard() {
               <p className="text-sm text-muted-foreground">
                 {isAuction
                   ? 'Photos are optional for auction stock. You can skip this and open Auction Stock.'
-                  : <>One ZIP. Inside: a folder per unit (chassis, stock number, or part SKU) with jpg/png/webp. Example: <code>K13-1231234/001.jpg</code>. Max {Math.round(MAX_PHOTO_ZIP_BYTES / 1024 / 1024)}MB.</>}
+                  : <>
+                      One ZIP. Folder per unit (chassis / stock / SKU), e.g. <code>RU3-123123/</code>.
+                      Name files: <code>A.</code>/<code>A_</code> auction sheet (ERP only), <code>F.</code> front, <code>B.</code> back.
+                      Max {Math.round(MAX_PHOTO_ZIP_BYTES / 1024 / 1024)}MB.
+                    </>}
               </p>
               <Button type="button" size="sm" onClick={() => zipRef.current?.click()} disabled={zipLoading}>
                 <FolderArchive className="mr-1.5 h-4 w-4" />
@@ -655,6 +659,17 @@ export function BulkUploadWizard() {
                 {matches.map((m) => (
                   <p key={`${m.vehicleId}-${m.folder}`} className="text-xs text-muted-foreground">
                     {m.folder} → {m.chassis} · {m.photos.length} photo(s)
+                    {(() => {
+                      const a = m.photos.filter((p) => p.role === 'auction_sheet').length;
+                      const f = m.photos.filter((p) => p.role === 'front').length;
+                      const b = m.photos.filter((p) => p.role === 'back').length;
+                      const bits = [
+                        a ? `${a}A` : '',
+                        f ? `${f}F` : '',
+                        b ? `${b}B` : '',
+                      ].filter(Boolean);
+                      return bits.length ? ` · ${bits.join('/')}` : '';
+                    })()}
                   </p>
                 ))}
               </div>

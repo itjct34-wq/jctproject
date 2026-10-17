@@ -59,13 +59,18 @@ export function FobFormulaFields({ bidJpy, expenseJpy, ttRate, onChange, disable
           />
         </div>
       </div>
-      <div className="grid gap-1.5 rounded-md border border-border bg-background p-2 text-xs sm:grid-cols-5">
+      <div className="grid gap-1.5 rounded-md border border-border bg-background p-2 text-xs sm:grid-cols-3 lg:grid-cols-6">
         <FormulaCell label="Bid" value={`¥${Math.round(preview.bidJpy).toLocaleString()}`} />
         <FormulaCell label="10%" value={`¥${Math.round(preview.markupJpy).toLocaleString()}`} />
         <FormulaCell label="Expense" value={`¥${Math.round(preview.expenseJpy).toLocaleString()}`} />
+        <FormulaCell
+          label="FOB JPY"
+          value={hasBid ? `¥${Math.round(preview.fobJpy).toLocaleString()}` : '—'}
+          emphasize
+        />
         <FormulaCell label="TT" value={String(preview.ttRate)} />
         <FormulaCell
-          label="Vehicle cost"
+          label="FOB USD"
           value={hasBid ? `$${Math.round(preview.fobUsd).toLocaleString()}` : '—'}
           emphasize
         />

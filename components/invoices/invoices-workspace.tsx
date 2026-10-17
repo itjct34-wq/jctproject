@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DocumentPrintPreview } from '@/components/documents/document-print-preview';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -128,13 +129,26 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     'id' | 'invoice_prefix' | 'invoice_next_number' | 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'
   > | null>(null);
   const [printShowQr, setPrintShowQr] = useState(true);
+  const [vesselOptions, setVesselOptions] = useState<string[]>([]);
   const deepLinkHandled = useRef<string | null>(null);
+
+  useEffect(() => {
+    void supabase
+      .from('vessels')
+      .select('name')
+      .eq('status', 'active')
+      .order('name')
+      .limit(300)
+      .then(({ data }) => {
+        setVesselOptions((data || []).map((r: { name: string }) => r.name).filter(Boolean));
+      });
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const [iRes, cRes, vRes, setRes] = await Promise.all([
       supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(250),
-      supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2').order('full_name').limit(250),
+      supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2, port_of_discharge').order('full_name').limit(250),
       supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, fob_usd, sold_price, model_year, transmission').order('created_at', { ascending: false }).limit(250),
       supabase
         .from('company_settings')
@@ -632,6 +646,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                       guest_country: c?.country || '',
                       guest_city: c?.city || '',
                       guest_address: c?.address_line1 || '',
+                      port_of_discharge: c?.port_of_discharge || form.port_of_discharge,
                     });
                   }}
                 >
@@ -738,7 +753,23 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               </Select>
             </div>
             <div className="space-y-0.5"><Label>Port of loading</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Port of discharge</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} /></div>
+            <div className="space-y-0.5"><Label>Port of discharge</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} placeholder="From customer when selected" /></div>
+            <div className="space-y-0.5">
+              <Label>Vessel</Label>
+              <Input
+                className="h-8 min-h-8 text-xs"
+                value={form.vessel_name}
+                onChange={(e) => setForm({ ...form, vessel_name: e.target.value })}
+                list="invoice-vessel-names"
+                placeholder="From Configuration → Vessels"
+              />
+              <datalist id="invoice-vessel-names">
+                {vesselOptions.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+            </div>
+            <div className="space-y-0.5"><Label>B/L number</Label><Input className="h-8 min-h-8 text-xs" value={form.bl_number} onChange={(e) => setForm({ ...form, bl_number: e.target.value })} /></div>
             {freightPolicy.allowFreight ? (
               <>
                 <div className="space-y-0.5 lg:col-span-2">
@@ -1037,49 +1068,23 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       {lineItemForm(createOpen, () => setCreateOpen(false), submitCreate, isAuction ? 'New auction deposit invoice' : 'New invoice')}
       {lineItemForm(editOpen, () => setEditOpen(false), submitEdit, isAuction ? 'Edit auction deposit invoice' : 'Edit invoice')}
       <ConfirmDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete invoice?" description="This will permanently remove the invoice and its line items." onConfirm={confirmDelete} loading={submitting} />
-      <Dialog open={printOpen} onOpenChange={closePrintPreview}>
-        <DialogContent fullscreen className="print:max-w-none print:shadow-none print:border-0">
-          <DialogHeader className="print:hidden">
-            <DialogTitle>{isAuction ? 'Auction deposit invoice preview' : 'Commercial Invoice Preview'}</DialogTitle>
-          </DialogHeader>
-          <div className="print:hidden flex flex-wrap items-center gap-4 rounded-md border border-border/60 p-3 text-sm">
+      <DocumentPrintPreview
+        open={printOpen}
+        onOpenChange={closePrintPreview}
+        title={isAuction ? 'Auction deposit invoice preview' : 'Commercial Invoice Preview'}
+        toolbar={
+          <div className="flex flex-wrap items-center gap-3 rounded-md border border-border/60 p-2.5 text-sm">
             <label className="flex items-center gap-2">
               <Switch checked={printShowQr} onCheckedChange={setPrintShowQr} />
               QR code {printShowQr ? 'on' : 'off'}
             </label>
             <p className="text-xs text-muted-foreground">
-              Document date uses the invoice issue date
-              {selected?.issue_date ? ` (${String(selected.issue_date).slice(0, 10)})` : ''}.
-              One A4 page. In the print dialog, turn off Headers and footers if a URL or page
-              count still appears.
+              Pinch or scroll to pan. Print uses A4 — turn off browser Headers and footers if a URL appears.
             </p>
           </div>
-          {selected && (
-            <div className="overflow-x-auto print:overflow-visible">
-              <div className="min-w-[720px] print:min-w-0">
-                <CommercialInvoiceTemplate
-                  invoice={selected}
-                  items={items}
-                  customer={customers.find((c) => c.id === selected.customer_id) || null}
-                  company={
-                    companySettings
-                      ? {
-                          company_name: companySettings.company_name,
-                          legal_name: companySettings.legal_name,
-                          logo_url: companySettings.logo_url,
-                          hanko_url: companySettings.hanko_url,
-                        }
-                      : null
-                  }
-                  vehicles={vehicles}
-                  salesAgent={selected.sales_agent_name || form.sales_agent || null}
-                  showQr={printShowQr}
-                  variant={isAuction ? 'auction_deposit' : 'commercial'}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter className="print:hidden flex-wrap gap-2">
+        }
+        footer={
+          <>
             <Button variant="outline" onClick={() => closePrintPreview(false)}>Close</Button>
             {selected?.verification_token && (
               <Button variant="outline" onClick={copyVerifyLink}>
@@ -1104,9 +1109,31 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <Button onClick={() => void printDocumentPdf(selected?.invoice_code || 'Invoice')}>
               <Printer className="h-4 w-4 mr-2" /> Print / PDF
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        {selected ? (
+          <CommercialInvoiceTemplate
+            invoice={selected}
+            items={items}
+            customer={customers.find((c) => c.id === selected.customer_id) || null}
+            company={
+              companySettings
+                ? {
+                    company_name: companySettings.company_name,
+                    legal_name: companySettings.legal_name,
+                    logo_url: companySettings.logo_url,
+                    hanko_url: companySettings.hanko_url,
+                  }
+                : null
+            }
+            vehicles={vehicles}
+            salesAgent={selected.sales_agent_name || form.sales_agent || null}
+            showQr={printShowQr}
+            variant={isAuction ? 'auction_deposit' : 'commercial'}
+          />
+        ) : null}
+      </DocumentPrintPreview>
     </div>
   );
 }

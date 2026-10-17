@@ -34,11 +34,20 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
       const ids = rows.map((row) => row.id);
       let images: VehicleImageRow[] = [];
       if (ids.length) {
-        const { data: gallery } = await supabase
+        const withRole = await supabase
           .from('vehicle_images')
-          .select('vehicle_id, image_url, sort_order, is_primary')
-          .in('vehicle_id', ids);
-        images = (gallery || []) as VehicleImageRow[];
+          .select('vehicle_id, image_url, sort_order, is_primary, image_role')
+          .in('vehicle_id', ids)
+          .neq('image_role', 'auction_sheet');
+        if (!withRole.error && withRole.data) {
+          images = withRole.data as VehicleImageRow[];
+        } else {
+          const fallback = await supabase
+            .from('vehicle_images')
+            .select('vehicle_id, image_url, sort_order, is_primary')
+            .in('vehicle_id', ids);
+          images = (fallback.data || []) as VehicleImageRow[];
+        }
       }
       setVehicles(attachGallery(rows, images));
       setLoading(false);
