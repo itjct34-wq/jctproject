@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ERP</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: system-ui, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: grid;
+        place-items: center;
+      }
+    </style>
+    <!-- Live ERP is loaded via capacitor.config.ts server.url -->
+    <script>
+      // Fallback if the remote server.url is unavailable.
+      location.replace('https://jctproject.vercel.app/login');
+    </script>
+  </head>
+  <body>
+    <p>Opening ERP…</p>
+  </body>
+</html>

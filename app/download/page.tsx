@@ -1,3 +1,5 @@
+import { existsSync } from 'fs';
+import path from 'path';
 import Link from 'next/link';
 import { PublicShell } from '@/components/public/public-shell';
 import { Smartphone, MonitorDown } from 'lucide-react';
@@ -5,13 +7,27 @@ import { Smartphone, MonitorDown } from 'lucide-react';
 export const metadata = {
   title: 'Download ERP app — Android',
   description:
-    'Install the ERP workspace on Android via progressive web app, or build a native wrapper with Capacitor.',
+    'Install the ERP workspace on Android via Add to Home Screen, or sideload a Capacitor APK when available.',
 };
 
-/** Set NEXT_PUBLIC_ANDROID_APK_URL when a release APK is hosted. */
-const APK_URL = process.env.NEXT_PUBLIC_ANDROID_APK_URL || '';
+/** GitHub source for native build instructions (shipped with the android/ tree). */
+const ANDROID_README_URL =
+  'https://github.com/itjct34-wq/jctproject/blob/main/android/README.md';
+
+function resolveApkUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_ANDROID_APK_URL?.trim();
+  if (fromEnv) return fromEnv;
+
+  for (const name of ['erp.apk', 'erp-android.apk'] as const) {
+    const localFile = path.join(process.cwd(), 'public', 'downloads', name);
+    if (existsSync(localFile)) return `/downloads/${name}`;
+  }
+
+  return '';
+}
 
 export default function DownloadPage() {
+  const APK_URL = resolveApkUrl();
   const apkReady = Boolean(APK_URL);
 
   return (
@@ -24,24 +40,29 @@ export default function DownloadPage() {
           ERP on Android
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--jct-muted)]">
-          Staff can run the ERP as an installable Android experience today. There is no Play Store listing
-          yet — use Add to Home Screen (recommended), or build a Capacitor APK from this repository when you
-          need a sideloadable package.
+          There is no Play Store listing yet. Staff should install the ERP as a web app from{' '}
+          <Link href="/login" className="font-medium text-[var(--jct-vermilion)] hover:underline">
+            /login
+          </Link>
+          . A sideloadable APK is optional and only listed when a build is actually hosted.
         </p>
 
         <div className="mt-10 space-y-5">
-          <div className="rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] p-5 sm:p-6">
+          <div className="rounded-2xl border-2 border-[var(--jct-navy)]/20 bg-[var(--jct-panel)] p-5 sm:p-6">
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--jct-navy)]/8 text-[var(--jct-navy)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--jct-navy)] text-white">
                 <Smartphone className="h-5 w-5" aria-hidden />
               </span>
               <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-[var(--jct-navy)]">
-                  Option 1 — Install as a web app (PWA)
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--jct-vermilion)]">
+                  Recommended
+                </p>
+                <h2 className="mt-1 text-lg font-semibold text-[var(--jct-navy)]">
+                  Install ERP (PWA / Add to Home Screen)
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--jct-muted)]">
-                  Best path right now. Opens full-screen like an app, uses the site icon, and works offline
-                  for cached shells once installed.
+                  Opens full-screen like an app, uses the site icon, and reaches the authenticated ERP
+                  shell — not the public storefront.
                 </p>
                 <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-[var(--jct-navy)]">
                   <li>Open Chrome on your Android phone</li>
@@ -52,14 +73,20 @@ export default function DownloadPage() {
                       className="font-medium text-[var(--jct-vermilion)] underline-offset-2 hover:underline"
                     >
                       /login
-                    </Link>{' '}
-                    (or your ERP dashboard after sign-in)
+                    </Link>
                   </li>
                   <li>
-                    Tap the browser menu → <strong>Install app</strong> or <strong>Add to Home screen</strong>
+                    Tap the browser menu → <strong>Install app</strong> or{' '}
+                    <strong>Add to Home screen</strong>
                   </li>
                   <li>Launch from the home screen icon</li>
                 </ol>
+                <Link
+                  href="/login"
+                  className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--jct-navy)] px-5 text-sm font-semibold text-white"
+                >
+                  Open ERP login
+                </Link>
               </div>
             </div>
           </div>
@@ -71,31 +98,41 @@ export default function DownloadPage() {
               </span>
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-[var(--jct-navy)]">
-                  Option 2 — Capacitor Android APK (sideload)
+                  Capacitor Android APK (sideload)
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--jct-muted)]">
-                  A Capacitor Android wrapper scaffold lives under{' '}
-                  <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs">android/</code> (see{' '}
-                  <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs">android/README.md</code>).
-                  Build locally or in CI, then host the APK. No Play Store publish is configured in-repo.
+                  Optional native wrapper (`com.jct.erp`) that loads{' '}
+                  <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs">
+                    https://jctproject.vercel.app/login
+                  </code>{' '}
+                  and blocks public marketing routes.
                 </p>
                 {apkReady ? (
                   <a
                     href={APK_URL}
                     className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--jct-navy)] px-5 text-sm font-semibold text-white"
+                    download={APK_URL.startsWith('/') ? 'erp.apk' : undefined}
                   >
                     Download Android APK
                   </a>
                 ) : (
-                  <>
-                    <span className="mt-4 inline-flex min-h-12 cursor-not-allowed items-center justify-center rounded-xl border-2 border-dashed border-[var(--jct-navy)]/25 bg-white/70 px-4 text-sm font-semibold text-[var(--jct-navy)] opacity-70">
-                      Download APK — coming soon
-                    </span>
-                    <p className="mt-2 text-xs text-[var(--jct-muted-2)]">
-                      Set <code>NEXT_PUBLIC_ANDROID_APK_URL</code> or place a file at{' '}
-                      <code>public/downloads/erp-android.apk</code> after building with Capacitor.
+                  <div className="mt-4 rounded-xl border border-[var(--jct-border)] bg-white/60 p-4 text-sm text-[var(--jct-navy)]">
+                    <p className="font-semibold">No APK is hosted yet</p>
+                    <p className="mt-1.5 leading-relaxed text-[var(--jct-muted)]">
+                      Build the debug APK on a machine with <strong>Android Studio</strong> (Gradle
+                      downloads from this deploy environment failed). Follow the steps in{' '}
+                      <a
+                        href={ANDROID_README_URL}
+                        className="font-medium text-[var(--jct-vermilion)] underline-offset-2 hover:underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        android/README.md
+                      </a>
+                      , then either place <code className="rounded bg-black/5 px-1 py-0.5 text-xs">public/downloads/erp.apk</code>{' '}
+                      or set <code className="rounded bg-black/5 px-1 py-0.5 text-xs">NEXT_PUBLIC_ANDROID_APK_URL</code>.
                     </p>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

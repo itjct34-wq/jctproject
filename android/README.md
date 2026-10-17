@@ -1,59 +1,80 @@
-# Android app (Capacitor)
+# Android app (Capacitor) — ERP only
 
-Wraps the hosted ERP web app in a native Android shell. Prefer the **PWA / Add to Home Screen** path on `/download` until you need a sideloadable APK or Play Store build.
+Native shell for the **hosted ERP**, not the public marketing site.
+
+| Setting | Value |
+| --- | --- |
+| App id | `com.jct.erp` |
+| App name | **ERP** |
+| Entry URL | `https://jctproject.vercel.app/login` |
+| Config | repo-root `capacitor.config.ts` |
+
+The WebView starts at `/login`. Marketing paths (`/`, `/inventory`, `/about`, …) are redirected back to login via `ErpWebViewClient` + injected path guard in `MainActivity`.
 
 ## Prerequisites
 
 - Node.js 20+
-- JDK 17+
-- Android Studio (SDK + platform tools)
-- A deployed ERP URL (e.g. production or staging)
+- **Android Studio** (Hedgehog or newer) with:
+  - Android SDK Platform 35+ (or current compileSdk)
+  - Android SDK Build-Tools
+  - JDK 17 (Android Studio bundled JBR is fine)
+- Network access to `https://jctproject.vercel.app`
 
-## One-time setup
+## Recommended: build APK in Android Studio
 
-From the repo root:
+Gradle distribution downloads from this agent environment timed out. **Use Android Studio** so the IDE manages the Gradle wrapper and SDK.
 
-```bash
-npm install @capacitor/core @capacitor/cli @capacitor/android --save-dev
-npx cap init "ERP" "com.jct.erp" --web-dir=out
-```
+### Exact steps
 
-This project is Next.js (SSR). Capacitor should load the **live site**, not a static export:
+1. From the repo root (one-time or after Cap config changes):
 
-1. Copy `android/capacitor.config.example.ts` to `capacitor.config.ts` at the repo root.
-2. Set `server.url` to your deployed origin (HTTPS).
-3. Generate the native project:
+   ```bash
+   npm install
+   npx cap sync android
+   ```
 
-```bash
-npx cap add android
-npx cap sync android
-npx cap open android
-```
+2. Open **Android Studio** → **Open** → select the `android/` folder (not the repo root).
 
-## Build a release APK / AAB
+3. Wait for Gradle sync to finish (Studio downloads the Gradle distribution and dependencies).
 
-In Android Studio:
+4. If prompted, accept SDK licenses / install missing SDK packages.
 
-1. Open the `android/` folder Capacitor created.
-2. **Build → Generate Signed Bundle / APK**.
-3. For Play: upload the **AAB**. For sideload: distribute the **APK**.
+5. Menu: **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
 
-Or from CLI (after Gradle sync):
+6. When done, click **locate** in the notification, or open:
+
+   `android/app/build/outputs/apk/debug/app-debug.apk`
+
+7. Optional — host for `/download`:
+
+   ```bash
+   # from repo root
+   copy android\app\build\outputs\apk\debug\app-debug.apk public\downloads\erp.apk
+   ```
+
+   Or upload the APK and set `NEXT_PUBLIC_ANDROID_APK_URL` to that HTTPS URL (preferred for production).
+
+8. Install on a phone: enable **Install unknown apps**, transfer the APK, open it. Or:
+
+   ```bash
+   adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+   ```
+
+## CLI alternative (same machine as Android Studio)
+
+After Studio has synced Gradle once:
 
 ```bash
 cd android
-./gradlew assembleRelease
+.\gradlew.bat assembleDebug
 ```
 
-APK output is typically under `android/app/build/outputs/apk/release/`.
+## What staff should use today
 
-## Host the download
+Until an APK is hosted, use **Add to Home Screen** from `/login` (see the public `/download` page). That is the primary Android path.
 
-1. Upload the APK to object storage or `public/downloads/erp-android.apk`.
-2. Set `NEXT_PUBLIC_ANDROID_APK_URL` to that HTTPS URL.
-3. The public page `/download` will enable the Download CTA.
+## Do not commit
 
-## Notes
-
-- Company / Mono Garam marks stay on **printed documents** only; the Android splash should use the neutral ERP icon from `public/icons/`.
-- Do not commit keystore files or signing passwords.
+- `android/local.properties`
+- Keystores / signing passwords
+- `*.apk` / `*.aab` under `android/app/build/`

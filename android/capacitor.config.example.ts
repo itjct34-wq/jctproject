@@ -1,16 +1,19 @@
 /**
- * Copy to repo-root `capacitor.config.ts` and set `server.url` to your deployed ERP origin.
- * Capacitor loads the live Next.js app (not a static export).
- *
- * After `npm i @capacitor/core @capacitor/cli @capacitor/android`, you can type this as CapacitorConfig.
+ * Example mirror of repo-root `capacitor.config.ts`.
+ * Capacitor loads the hosted ERP (HTTPS), not a static Next export.
  */
 const config = {
   appId: 'com.jct.erp',
   appName: 'ERP',
-  webDir: 'public',
+  webDir: 'native-www',
   server: {
-    url: 'https://YOUR_ERP_HOST',
+    url: 'https://jctproject.vercel.app/login',
     cleartext: false,
+    allowNavigation: [
+      'jctproject.vercel.app',
+      '*.supabase.co',
+      'omlejtzwodudghqqgaiz.supabase.co',
+    ],
   },
   android: {
     allowMixedContent: false,
