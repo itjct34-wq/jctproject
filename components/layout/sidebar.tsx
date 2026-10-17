@@ -118,11 +118,11 @@ export function Sidebar({ collapsed, onToggle, mobile = false, onNavigate }: Sid
           });
           if (visibleItems.length === 0) return null;
 
-          const isExpanded = expandedGroup === group.label;
+          const isExpanded = group.flat || expandedGroup === group.label;
 
           return (
             <div key={group.label} className="mb-1">
-              {!collapsed && (
+              {!collapsed && !group.flat && (
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.label)}

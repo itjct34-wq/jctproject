@@ -50,6 +50,8 @@ export interface NavGroup {
   label: string;
   items: NavItem[];
   salesNavHidden?: boolean;
+  /** When true, sidebar lists items as direct links with no section header/chevron. */
+  flat?: boolean;
 }
 
 /** Roles that keep the full ERP sidebar (not sales-only). */
@@ -79,6 +81,7 @@ export function getPostLoginPath(roleNames: RoleName[]): string {
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
+    flat: true,
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
     ],
