@@ -1,9 +1,14 @@
 name: Android ERP APK
 
-# Manual only until an APK is verified. After a successful run, set
-# NEXT_PUBLIC_ANDROID_APK_URL to the release asset URL so /download enables the CTA.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'native-www/**'
+      - '.github/workflows/android-apk.yml'
 
 permissions:
   contents: write
@@ -11,7 +16,7 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -20,13 +25,30 @@ jobs:
           node-version: '20'
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android SDK command-line tools
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${HOME}/android-sdk"
+          mkdir -p "$SDK_ROOT/cmdline-tools"
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o /tmp/cmdtools.zip
+          unzip -q /tmp/cmdtools.zip -d "$SDK_ROOT/cmdline-tools"
+          rm -rf "$SDK_ROOT/cmdline-tools/latest"
+          mv "$SDK_ROOT/cmdline-tools/cmdline-tools" "$SDK_ROOT/cmdline-tools/latest"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
+          echo "sdk.dir=$SDK_ROOT" > android/local.properties
 
       - name: Install JS deps
         run: npm ci
@@ -36,7 +58,7 @@ jobs:
 
       - name: Assemble debug APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Stage APK
         run: |
@@ -65,6 +87,7 @@ jobs:
           body: |
             Debug sideload APK for the ERP shell (`com.jct.erp`).
             Opens `https://jctproject.vercel.app/login` only — marketing routes blocked.
+            Set NEXT_PUBLIC_ANDROID_APK_URL to this asset URL to enable /download.
           files: public/downloads/erp.apk
           make_latest: true
         env:
