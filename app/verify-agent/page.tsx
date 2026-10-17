@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { PublicShell } from '@/components/public/public-shell';
 import { BadgeCheck, Loader2, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
 
@@ -122,8 +123,12 @@ export default function VerifyAgentPage() {
               Code was valid at {new Date().toLocaleTimeString()} (verification expires with the 30-second time window).
             </p>
             <div className="mt-5 flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[var(--jct-border)] bg-white text-lg font-bold text-[var(--jct-navy)]">
-                {agent.photo_url ? <img src={agent.photo_url} alt="" className="h-full w-full object-cover" /> : agent.full_name.slice(0, 2).toUpperCase()}
+              <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[var(--jct-border)] bg-white text-lg font-bold text-[var(--jct-navy)]">
+                {agent.photo_url ? (
+                  <Image src={agent.photo_url} alt="" fill sizes="64px" className="object-cover" />
+                ) : (
+                  agent.full_name.slice(0, 2).toUpperCase()
+                )}
               </div>
               <div>
                 <p className="text-xl font-bold text-[var(--jct-navy)]">{agent.full_name}</p>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 /** Public gallery autoplay interval (loop). Pause on hover/focus and after thumb clicks. */
@@ -94,8 +95,9 @@ export function VehicleGallery({ images, alt }: Props) {
         onClick={() => setOpen(true)}
         className="relative block w-full overflow-hidden rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)]"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={current} alt={alt} className="aspect-[16/11] w-full object-cover" />
+        <span className="relative block aspect-[16/11] w-full">
+          <Image src={current} alt={alt} fill sizes="(max-width: 768px) 100vw, 60vw" className="object-cover" priority />
+        </span>
         {count > 1 ? (
           <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-1 text-xs font-medium text-white">
             {active + 1} / {count} · tap to enlarge
@@ -118,8 +120,7 @@ export function VehicleGallery({ images, alt }: Props) {
                 i === active ? 'border-[var(--jct-vermilion)] ring-1 ring-[var(--jct-vermilion)]' : 'border-[var(--jct-border)]'
               }`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="h-full w-full object-cover" />
+              <Image src={url} alt="" fill sizes="72px" className="object-cover" />
             </button>
           ))}
         </div>
@@ -156,6 +157,7 @@ export function VehicleGallery({ images, alt }: Props) {
                 <ChevronLeft className="h-6 w-6" />
               </button>
             ) : null}
+            {/* Lightbox uses <img> so object-contain works without a fixed aspect box */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={current} alt={alt} className="max-h-full max-w-full object-contain" />
             {count > 1 ? (

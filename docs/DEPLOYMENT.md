@@ -27,6 +27,10 @@ The repository also contains **`netlify.toml`** and `@netlify/plugin-nextjs` for
 | `NEXT_PUBLIC_SITE_URL` | Vercel + local | Canonical URL for sitemap / invoice QR |
 | `NEXT_PUBLIC_APP_URL` | Vercel + local | Alternate public origin |
 | `CRON_SECRET` | Vercel (server) | Bearer token for `/api/cron/*` keep-alive routes |
+| `UPSTASH_REDIS_REST_URL` | Vercel (server), optional | Distributed API rate limiting |
+| `UPSTASH_REDIS_REST_TOKEN` | Vercel (server), optional | Distributed API rate limiting |
+
+Without Upstash, rate limits still run in-memory per serverless instance (weaker under multi-instance load). See [SECURITY.md](SECURITY.md).
 
 Do not store service role keys in client bundles or public docs. Template: `.env.example`.
 

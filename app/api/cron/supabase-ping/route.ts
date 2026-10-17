@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enforceRateLimit } from '@/lib/security/enforce-rate-limit';
 import {
   assertCronAuthorized,
   runSupabasePing,
@@ -12,6 +13,8 @@ export const dynamic = 'force-dynamic';
  * Secure with CRON_SECRET (Authorization: Bearer <CRON_SECRET>).
  */
 async function handle(request: NextRequest) {
+  const gate = await enforceRateLimit(request, 'cron-ping', 'cron');
+  if (gate.blocked) return gate.blocked;
   if (!assertCronAuthorized(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { makeMonogram } from '@/lib/public/catalog';
 import type { HomeMakeRow } from '@/lib/public/home-data';
 
@@ -24,9 +25,16 @@ export function MakeList({ makes }: { makes: HomeMakeRow[] }) {
               href={`/inventory?make=${encodeURIComponent(make.name)}`}
               className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[var(--jct-border)] bg-white px-3 py-3 hover:border-[var(--jct-navy)]/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
             >
-              <span className="flex h-12 w-[72px] shrink-0 items-center justify-center rounded-md bg-[var(--jct-panel)]">
+              <span className="relative flex h-12 w-[72px] shrink-0 items-center justify-center rounded-md bg-[var(--jct-panel)]">
                 {make.logoPath ? (
-                  <img src={make.logoPath} alt="" aria-hidden="true" className="max-h-10 max-w-[64px] object-contain" />
+                  <Image
+                    src={make.logoPath}
+                    alt=""
+                    width={64}
+                    height={40}
+                    aria-hidden="true"
+                    className="max-h-10 max-w-[64px] object-contain"
+                  />
                 ) : (
                   <span className="font-display text-sm font-semibold text-[var(--jct-muted)]" aria-hidden="true">
                     {makeMonogram(make.name)}

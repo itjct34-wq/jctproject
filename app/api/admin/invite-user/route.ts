@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/admin-auth';
+import { enforceRateLimit } from '@/lib/security/enforce-rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,8 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const gate = await enforceRateLimit(request, 'admin-invite', 'adminApi');
+  if (gate.blocked) return gate.blocked;
   const auth = await requireAdmin(request);
   if (auth instanceof NextResponse) return auth;
   const { admin } = auth;

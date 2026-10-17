@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
+import { enforceRateLimit } from '@/lib/security/enforce-rate-limit';
 import { getSupabaseUrl } from '@/lib/supabase/env';
 import { runSupabasePing } from '@/lib/system-health/supabase-ping';
 
@@ -16,6 +17,8 @@ function hostFromEnv(): string {
 
 /** GET: last ping summary + recent history (admin only). */
 export async function GET(request: NextRequest) {
+  const gate = await enforceRateLimit(request, 'admin-system-health', 'adminApi');
+  if (gate.blocked) return gate.blocked;
   const auth = await requireAdmin(request);
   if (auth instanceof NextResponse) return auth;
   const { admin } = auth;
@@ -72,6 +75,8 @@ export async function GET(request: NextRequest) {
 
 /** POST: run a manual connectivity ping (admin only). */
 export async function POST(request: NextRequest) {
+  const gate = await enforceRateLimit(request, 'admin-system-health-post', 'adminApi');
+  if (gate.blocked) return gate.blocked;
   const auth = await requireAdmin(request);
   if (auth instanceof NextResponse) return auth;
 

@@ -24,6 +24,7 @@ If you need a schema change, add a **new** timestamped file after the highest ap
 | **042** | `20261016240000_042_user_permissions_overrides.sql` | `user_permissions` grant/deny, `has_permission` + `get_my_permissions()`, fine-grained stock/remittance keys, role seed alignment |
 | **050** | `20261017040000_050_vehicle_hidden_status.sql` | Soft-hide: `vehicles.status = hidden`; sync trigger treats like on_hold/archived |
 | **053** | `20261017070000_053_vehicle_image_role.sql` | `vehicle_images.image_role` (A/F/B ZIP roles); anon RLS hides `auction_sheet` |
+| **054** | `20261017223015_revoke_anon_rpc_hardening.sql` | Re-revoke anon EXECUTE on staff/trigger SECURITY DEFINER helpers; document rate-limit tables |
 
 ## CLI
 

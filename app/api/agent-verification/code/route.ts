@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { agentTotp, generateAgentTotpSecret } from '@/lib/server/agent-totp';
+import { enforceRateLimit } from '@/lib/security/enforce-rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const gate = await enforceRateLimit(request, 'agent-code', 'agentCode');
+  if (gate.blocked) return gate.blocked;
   const header = request.headers.get('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

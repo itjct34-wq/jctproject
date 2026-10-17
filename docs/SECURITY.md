@@ -21,8 +21,49 @@
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public (browser); must respect RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server only** — API routes, admin user creation |
 | `AGENT_TOTP_SECRET` | **Server only** — fallback for agent HMAC codes |
+| `CRON_SECRET` | **Server only** — Bearer for `/api/cron/*` |
+| `UPSTASH_REDIS_REST_URL` | **Server only** — optional distributed rate limits |
+| `UPSTASH_REDIS_REST_TOKEN` | **Server only** — optional distributed rate limits |
 
 Do not commit `.env.local` or paste live JWTs into documentation. Build-time placeholders in `lib/supabase/env.ts` exist only so `next build` can prerender without real env.
+
+## HTTP security headers (Helmet-equivalent)
+
+`next.config.js` and `middleware.ts` set:
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (camera/mic/geo/payment disabled)
+- `Strict-Transport-Security` in production
+- `Content-Security-Policy` with report-friendly defaults
+
+**CSP tradeoffs:** `script-src` / `style-src` allow `'unsafe-inline'` (and scripts allow `'unsafe-eval'`) so Next.js App Router + Tailwind/Radix keep working without a nonce pipeline. `img-src` allows `https: data: blob:` for Supabase photos, crop previews, and QR data URLs. Tighten later with nonces if needed. Do not enable a strict CSP that blocks print/QR or Capacitor WebViews loading the HTTPS origin.
+
+## API rate limiting
+
+Sensitive routes use `lib/security/rate-limit.ts` (`@upstash/ratelimit` when Upstash env is set; otherwise in-memory per instance):
+
+| Route | Preset |
+|-------|--------|
+| `POST /api/auth/login` | 10 / 15 min / IP |
+| `POST /api/public/inquiries` | 8 / 10 min (plus existing DB attempt table) |
+| `POST /api/public/verify-agent` | 20 / 15 min (plus DB attempts) |
+| `GET /api/public/verify-invoice` | 60 / 10 min |
+| `/api/admin/*` (invite, update-user, system-health) | 60 / 5 min |
+| `/api/cron/*` | 30 / hour |
+| `GET /api/agent-verification/code` | 120 / 5 min |
+
+Login goes through `/api/auth/login` (rate-limited) then `supabase.auth.setSession` on the client so ERP cookies and Capacitor sessions stay intact.
+
+## Database advisor notes
+
+Supabase security advisors (project `omlejtzwodudghqqgaiz`):
+
+- **RLS on / no policies** for `inquiry_submission_attempts` and `agent_verification_attempts` is intentional (service-role only).
+- Migration **054** re-revokes anon `EXECUTE` on trigger/staff SECURITY DEFINER helpers; keeps `verify_invoice` / `verify_quotation` for public QR flows.
+- Performance advisor lists many unindexed FKs on newer tables — address hot paths only; do not mass-index drive-by.
+- Enable **Auth leaked password protection** in the Supabase dashboard (HaveIBeenPwned).
 
 ## Storage
 

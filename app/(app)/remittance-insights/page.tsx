@@ -1,15 +1,29 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
-import { RemittanceInsights } from '@/components/payments/remittance-insights';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ERP_LIST_LIMIT } from '@/lib/erp/list-page';
 import { filterRemittancesByDateRange } from '@/lib/remittance';
 import { supabase } from '@/lib/supabase/client';
 import type { Payment, PaymentAllocation } from '@/lib/types';
 import { toast } from 'sonner';
+
+const RemittanceInsights = dynamic(
+  () =>
+    import('@/components/payments/remittance-insights').then((m) => m.RemittanceInsights),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Loading charts…
+      </div>
+    ),
+  }
+);
 
 type InsightPayment = Payment & {
   payment_allocations?: Pick<PaymentAllocation, 'allocate_amount'>[] | null;

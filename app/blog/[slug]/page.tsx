@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { PublicShell } from '@/components/public/public-shell';
 import { supabase } from '@/lib/supabase/client';
@@ -64,8 +65,16 @@ export default function BlogPostPage() {
               {post.author_name ? ` · ${post.author_name}` : ''}
             </p>
             {post.cover_image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={post.cover_image_url} alt="" className="mt-8 max-h-80 w-full rounded-2xl border border-[var(--jct-border)] object-cover" />
+              <span className="relative mt-8 block h-80 w-full overflow-hidden rounded-2xl border border-[var(--jct-border)]">
+                <Image
+                  src={post.cover_image_url}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 100vw, 720px"
+                  className="object-cover"
+                  priority
+                />
+              </span>
             )}
             <div className="mt-8 max-w-none whitespace-pre-wrap text-sm leading-relaxed text-[var(--jct-muted)]">
               {post.body}

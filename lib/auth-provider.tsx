@@ -146,7 +146,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfileAndRoles]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    let access_token: string;
+    let refresh_token: string;
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        access_token?: string;
+        refresh_token?: string;
+      };
+      if (!res.ok || !payload.access_token || !payload.refresh_token) {
+        return { error: payload.error || 'Invalid email or password' };
+      }
+      access_token = payload.access_token;
+      refresh_token = payload.refresh_token;
+    } catch {
+      return { error: 'Login service temporarily unavailable' };
+    }
+
+    const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
     if (error) return { error: error.message };
     if (data.user) {
       await loadProfileAndRoles(data.user.id);

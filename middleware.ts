@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { isErpPagePath, isProtectedApiPath } from '@/lib/auth/erp-paths';
 import { readAccessTokenFromRequest } from '@/lib/auth/session-cookie';
+import { applySecurityHeaders } from '@/lib/security/headers';
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env';
 
 async function sessionUserId(request: NextRequest): Promise<string | null> {
@@ -23,19 +24,26 @@ async function sessionUserId(request: NextRequest): Promise<string | null> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const needsAuth = isErpPagePath(pathname) || isProtectedApiPath(pathname);
-  if (!needsAuth) return NextResponse.next();
+
+  if (!needsAuth) {
+    return applySecurityHeaders(NextResponse.next());
+  }
 
   const userId = await sessionUserId(request);
-  if (userId) return NextResponse.next();
+  if (userId) {
+    return applySecurityHeaders(NextResponse.next());
+  }
 
   if (isProtectedApiPath(pathname)) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    return applySecurityHeaders(
+      NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    );
   }
 
   const login = request.nextUrl.clone();
   login.pathname = '/login';
   login.searchParams.set('redirect', pathname);
-  return NextResponse.redirect(login);
+  return applySecurityHeaders(NextResponse.redirect(login));
 }
 
 export const config = {

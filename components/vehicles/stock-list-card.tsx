@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -439,9 +440,9 @@ export function StockListCard({
       >
         {/* Thumb */}
         <div className="shrink-0 pt-0.5">
-          <div className="h-[88px] w-[120px] overflow-hidden rounded-md bg-white/80 ring-1 ring-black/10 sm:h-[100px] sm:w-[140px]">
+          <div className="relative h-[88px] w-[120px] overflow-hidden rounded-md bg-white/80 ring-1 ring-black/10 sm:h-[100px] sm:w-[140px]">
             {v.primary_image_url ? (
-              <img src={v.primary_image_url} alt="" className="h-full w-full object-cover" />
+              <Image src={v.primary_image_url} alt="" fill sizes="140px" className="object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-400">
                 <CarFront className="h-8 w-8" />

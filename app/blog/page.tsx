@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { PublicShell } from '@/components/public/public-shell';
 import { supabase } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -56,10 +57,15 @@ export default function BlogIndexPage() {
                 href={`/blog/${post.slug}`}
                 className="group overflow-hidden rounded-2xl border border-[var(--jct-border)] bg-white hover:border-[var(--jct-navy)]/30"
               >
-                <div className="h-36 overflow-hidden bg-[var(--jct-panel)]">
+                <div className="relative h-36 overflow-hidden bg-[var(--jct-panel)]">
                   {post.cover_image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={post.cover_image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <Image
+                      src={post.cover_image_url}
+                      alt=""
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                   ) : (
                     <div className="h-full w-full bg-[var(--jct-navy)]" />
                   )}

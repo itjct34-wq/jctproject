@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { z } from 'zod';
+import { enforceRateLimit } from '@/lib/security/enforce-rate-limit';
 import { createServerClient } from '@/lib/supabase/server';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -34,6 +35,8 @@ function listValue(value:unknown):string[]|null{
 }
 export async function POST(request:NextRequest){
  try{
+  const gate=await enforceRateLimit(request,'public-inquiry','publicInquiry');
+  if(gate.blocked)return gate.blocked;
   const body=await request.json();
   if(typeof body.website_url==='string'&&body.website_url.trim())return NextResponse.json({error:'Invalid submission'},{status:400});
   const parsed=schema.safeParse(body);

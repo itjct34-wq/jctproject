@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { createServerClient } from '@/lib/supabase/server';
 import { generateAgentTotpSecret, verifyAgentTotp } from '@/lib/server/agent-totp';
+import { enforceRateLimit } from '@/lib/security/enforce-rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const gate = await enforceRateLimit(request, 'verify-agent', 'verifyAgent');
+    if (gate.blocked) return gate.blocked;
     const body = await request.json();
     const agentCode = typeof body.agent_code === 'string' ? body.agent_code.trim().toUpperCase() : '';
     const code = typeof body.code === 'string' ? body.code.trim() : '';
