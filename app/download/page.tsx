@@ -14,6 +14,10 @@ export const metadata = {
 const ANDROID_README_URL =
   'https://github.com/itjct34-wq/jctproject/blob/main/android/README.md';
 
+/** Published by `.github/workflows/android-apk.yml` (tag `erp-apk-latest`). */
+const GITHUB_RELEASE_APK_URL =
+  'https://github.com/itjct34-wq/jctproject/releases/download/erp-apk-latest/erp.apk';
+
 function resolveApkUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_ANDROID_APK_URL?.trim();
   if (fromEnv) return fromEnv;
@@ -23,7 +27,8 @@ function resolveApkUrl(): string {
     if (existsSync(localFile)) return `/downloads/${name}`;
   }
 
-  return '';
+  // Sideload APK from CI release (works on production once the workflow has run).
+  return GITHUB_RELEASE_APK_URL;
 }
 
 export default function DownloadPage() {

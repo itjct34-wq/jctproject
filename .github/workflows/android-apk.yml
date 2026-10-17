@@ -1,0 +1,76 @@
+name: Android ERP APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'native-www/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install JS deps
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Stage APK
+        run: |
+          mkdir -p public/downloads
+          cp android/app/build/outputs/apk/debug/app-debug.apk public/downloads/erp.apk
+          ls -lh public/downloads/erp.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: erp-android-apk
+          path: public/downloads/erp.apk
+          if-no-files-found: error
+
+      - name: Replace previous erp-apk-latest release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete erp-apk-latest --yes --cleanup-tag || true
+
+      - name: Publish GitHub Release (sideload APK)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: erp-apk-latest
+          name: ERP Android APK
+          body: |
+            Debug sideload APK for the ERP shell (`com.jct.erp`).
+            Opens `https://jctproject.vercel.app/login` only — marketing routes blocked.
+          files: public/downloads/erp.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
