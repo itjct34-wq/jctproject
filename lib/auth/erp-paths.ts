@@ -43,6 +43,8 @@ export function isProtectedApiPath(pathname: string): boolean {
   if (pathname.startsWith('/api/public/')) return false;
   // Cron routes authenticate via CRON_SECRET Bearer token, not session cookies.
   if (pathname.startsWith('/api/cron/')) return false;
+  // Temporary one-shot migration bootstrap (ONESHOT_MIGRATION_TOKEN); remove after use.
+  if (pathname === '/api/admin/apply-procurement-055') return false;
   // Login is rate-limited server-side; must remain reachable without a session.
   if (pathname === '/api/auth/login' || pathname.startsWith('/api/auth/login/')) return false;
   return true;
