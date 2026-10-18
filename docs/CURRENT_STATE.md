@@ -7,7 +7,7 @@ Verified checkpoint for developers and operators. Update when infra, branch, or 
 | Item | Value |
 |------|--------|
 | Workspace | `jctproject` (Next.js monolith) |
-| Active branch | **`feat/vehicle-commercial-workflow`** |
+| Active branch | **`main`** |
 | Entry README | [README.md](../README.md) |
 | Docs | `docs/*.md` (this set) |
 

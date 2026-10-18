@@ -1298,8 +1298,8 @@ function VehiclesPage() {
     const showSoldCostField = mode === 'edit' && form.payment_status !== 'available';
     return (
     <>
-      <section className="space-y-1.5 rounded-xl border-2 border-sky-500/50 bg-sky-50/80 p-2 dark:bg-sky-950/20">
-        <h3 className="text-xs font-semibold tracking-wide text-sky-800 dark:text-sky-200">
+      <section className="space-y-1.5 rounded-xl border-2 border-[var(--jct-navy)]/25 bg-[var(--jct-panel)] p-2">
+        <h3 className="text-xs font-semibold tracking-wide text-[var(--jct-navy)]">
           Vehicle cost &amp; FOB term
         </h3>
         <p className="text-xs text-muted-foreground">
@@ -1420,7 +1420,7 @@ function VehiclesPage() {
       </section>
       {isThirdPartyPage ? (
         <section className="space-y-1.5 rounded-xl border-2 border-amber-500/40 bg-amber-500/5 p-2">
-          <h3 className="text-xs font-semibold tracking-wide text-amber-900 dark:text-amber-100">
+          <h3 className="text-xs font-semibold tracking-wide text-amber-900">
             Dealership once price
           </h3>
           <div className="grid gap-1.5 sm:grid-cols-3">

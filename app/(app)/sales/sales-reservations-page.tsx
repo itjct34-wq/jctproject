@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllPages } from '@/lib/erp/paged-query';
 import type { Sale, Customer, Vehicle } from '@/lib/types';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { calcVehicleCost, formatPricingSummary, type PriceTerm } from '@/lib/utils/vehicle-pricing';
@@ -91,14 +92,30 @@ export default function SalesPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [sRes, cRes, vRes] = await Promise.all([
-      supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(250),
-      supabase.from('customers').select('id, full_name, customer_code, email, phone, country, city, port_of_discharge').order('full_name').limit(250),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, status, payment_status, reserved_by, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url').order('created_at', { ascending: false }).limit(250),
+      supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(500),
+      fetchAllPages<Customer>((from, to) =>
+        supabase
+          .from('customers')
+          .select('id, full_name, customer_code, email, phone, country, city, port_of_discharge')
+          .order('full_name')
+          .range(from, to)
+      ),
+      fetchAllPages<Vehicle>((from, to) =>
+        supabase
+          .from('vehicles')
+          .select(
+            'id, stock_number, make, model, chassis_number, status, payment_status, reserved_by, purchase_price, listed_price, listed_currency, model_year, color, mileage_km, transmission, fuel_type, primary_image_url'
+          )
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      ),
     ]);
     if (sRes.error) toast.error(`Unable to load sales: ${sRes.error.message}`);
     else setSales((sRes.data || []) as Sale[]);
-    if (cRes.data) setCustomers(cRes.data as Customer[]);
-    if (vRes.data) setVehicles(vRes.data as Vehicle[]);
+    if (cRes.error) toast.error(`Unable to load customers: ${cRes.error.message}`);
+    else setCustomers(cRes.data);
+    if (vRes.error) toast.error(`Unable to load vehicles: ${vRes.error.message}`);
+    else setVehicles(vRes.data);
     setLoading(false);
   }, []);
 

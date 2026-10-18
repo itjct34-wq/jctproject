@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllPages } from '@/lib/erp/paged-query';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { exportCommercialInvoiceExcel } from '@/lib/utils/commercial-invoice-excel';
 import { exportCommercialInvoiceDocx } from '@/lib/utils/commercial-invoice-docx';
@@ -147,9 +148,25 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [iRes, cRes, vRes, setRes] = await Promise.all([
-      supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(250),
-      supabase.from('customers').select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2, port_of_discharge').order('full_name').limit(250),
-      supabase.from('vehicles').select('id, stock_number, make, model, chassis_number, color, listed_price, fob_usd, sold_price, model_year, transmission').order('created_at', { ascending: false }).limit(250),
+      supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(500),
+      fetchAllPages<Customer>((from, to) =>
+        supabase
+          .from('customers')
+          .select(
+            'id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2, port_of_discharge'
+          )
+          .order('full_name')
+          .range(from, to)
+      ),
+      fetchAllPages<Vehicle>((from, to) =>
+        supabase
+          .from('vehicles')
+          .select(
+            'id, stock_number, make, model, chassis_number, color, listed_price, fob_usd, sold_price, model_year, transmission'
+          )
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      ),
       supabase
         .from('company_settings')
         .select('id, invoice_prefix, invoice_next_number, company_name, legal_name, logo_url, hanko_url')
@@ -158,8 +175,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     ]);
     if (iRes.error) toast.error(`Unable to load invoices: ${iRes.error.message}`);
     else setInvoices((iRes.data || []) as Invoice[]);
-    if (cRes.data) setCustomers(cRes.data as Customer[]);
-    if (vRes.data) setVehicles(vRes.data as Vehicle[]);
+    if (cRes.error) toast.error(`Unable to load customers: ${cRes.error.message}`);
+    else setCustomers(cRes.data);
+    if (vRes.error) toast.error(`Unable to load vehicles: ${vRes.error.message}`);
+    else setVehicles(vRes.data);
     if (setRes.data) {
       setCompanySettings(
         setRes.data as Pick<

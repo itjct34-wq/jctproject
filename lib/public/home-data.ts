@@ -5,10 +5,13 @@ import {
   resolveCatalogMake,
 } from '@/lib/public/catalog';
 import {
+  attachGallery,
   coverPhoto,
-  loadPublicVehicles,
+  loadVehicleGallery,
+  selectListedVehicles,
   type PublicVehicle,
 } from '@/lib/public/vehicles';
+import { createPublicSupabase } from '@/lib/supabase/public';
 import { createServerClient } from '@/lib/supabase/server';
 import { fetchVehicleMakes, fetchVehicleModels } from '@/lib/shipping-catalog';
 
@@ -33,6 +36,8 @@ export type HomeData = {
   modelsByMake: Record<string, string[]>;
 };
 
+type ListedRow = Omit<PublicVehicle, 'gallery'>;
+
 const EMPTY: HomeData = {
   arrivals: [],
   justListed: [],
@@ -42,9 +47,13 @@ const EMPTY: HomeData = {
   modelsByMake: {},
 };
 
-function photoFirst(a: PublicVehicle, b: PublicVehicle): number {
-  const ap = coverPhoto(a) ? 1 : 0;
-  const bp = coverPhoto(b) ? 1 : 0;
+function asPublic(row: ListedRow): PublicVehicle {
+  return { ...row, gallery: [] };
+}
+
+function photoFirst(a: ListedRow | PublicVehicle, b: ListedRow | PublicVehicle): number {
+  const ap = coverPhoto(asPublic(a as ListedRow)) ? 1 : 0;
+  const bp = coverPhoto(asPublic(b as ListedRow)) ? 1 : 0;
   if (bp !== ap) return bp - ap;
   return (b.stock_number || '').localeCompare(a.stock_number || '');
 }
@@ -123,18 +132,37 @@ function collectMakeNames(names: Iterable<string>): string[] {
   return Array.from(byKey.values());
 }
 
+async function loadListedRows(category: 'car' | 'parts', limit: number): Promise<ListedRow[]> {
+  const db = createPublicSupabase();
+  if (!db) return [];
+  const { data, error } = await selectListedVehicles(db, { limit, category });
+  if (error || !data) return [];
+  return (Array.isArray(data) ? data : [data]) as unknown as ListedRow[];
+}
+
+async function withGalleries(rows: ListedRow[]): Promise<PublicVehicle[]> {
+  if (!rows.length) return [];
+  const db = createPublicSupabase();
+  if (!db) return rows.map(asPublic);
+  const images = await loadVehicleGallery(
+    db,
+    rows.map((row) => row.id)
+  );
+  return attachGallery(rows, images);
+}
+
 export async function loadHomeData(): Promise<HomeData> {
   try {
-    const [stock, partsStock, catalog] = await Promise.all([
-      loadPublicVehicles(400, 'car'),
-      loadPublicVehicles(200, 'parts'),
+    const [stockRows, partsRows, catalog] = await Promise.all([
+      loadListedRows('car', 500),
+      loadListedRows('parts', 80),
       loadCatalogModelsByMake(),
     ]);
 
     const counts = new Map<string, number>();
     const stockModelsByMake: Record<string, string[]> = {};
 
-    for (const vehicle of stock) {
+    for (const vehicle of stockRows) {
       if (!vehicle.make?.trim()) continue;
       const key = canonicalMakeName(vehicle.make);
       counts.set(key, (counts.get(key) || 0) + 1);
@@ -172,22 +200,30 @@ export async function loadHomeData(): Promise<HomeData> {
         return a.name.localeCompare(b.name);
       });
 
-    const inStock = stock.filter((v) => v.status === 'in_stock').sort(photoFirst);
-    const featured = inStock.slice(0, 8);
-    const featuredIds = new Set(featured.map((v) => v.id));
-    const justListed = inStock.filter((v) => !featuredIds.has(v.id)).slice(0, 10);
+    const inStockLite = stockRows.filter((v) => v.status === 'in_stock').sort(photoFirst);
+    const featuredLite = inStockLite.slice(0, 8);
+    const featuredIds = new Set(featuredLite.map((v) => v.id));
+    const justListedLite = inStockLite.filter((v) => !featuredIds.has(v.id)).slice(0, 10);
+    const justListedChosen =
+      justListedLite.length >= 4 ? justListedLite : inStockLite.slice(0, 10);
 
-    // Prefer photo-backed in-stock parts for the homepage grid.
-    const featuredParts = partsStock
-      .filter((v) => v.status === 'in_stock' && coverPhoto(v))
+    const partsLite = partsRows
+      .filter((v) => v.status === 'in_stock' && Boolean(v.primary_image_url))
       .sort(photoFirst)
       .slice(0, 8);
 
+    // Only fetch galleries for units that actually render on the homepage.
+    const [featured, justListed, featuredParts] = await Promise.all([
+      withGalleries(featuredLite),
+      withGalleries(justListedChosen),
+      withGalleries(partsLite),
+    ]);
+
     return {
       arrivals: featured,
-      justListed: justListed.length >= 4 ? justListed : inStock.slice(0, 10),
+      justListed,
       featuredParts,
-      stockCount: inStock.length,
+      stockCount: inStockLite.length,
       makes,
       modelsByMake,
     };

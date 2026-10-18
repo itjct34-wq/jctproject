@@ -7,7 +7,7 @@ Monorepo for **Japan Circular Trading Co., Ltd.**: an internal ERP for export op
 | App | Next.js App Router (`app/`), React 18, TypeScript, Tailwind, Radix/shadcn UI |
 | Database & auth | Supabase project `omlejtzwodudghqqgaiz` |
 | Hosting | Vercel project **jct16** (primary); `netlify.toml` exists for alternate builds |
-| Active branch | `feat/vehicle-commercial-workflow` |
+| Active branch | `main` |
 
 ## What each surface does
 

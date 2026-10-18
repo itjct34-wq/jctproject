@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase/client';
+import { fetchAllPages } from '@/lib/erp/paged-query';
 import type { Quotation, Customer, Vehicle, CompanySettings } from '@/lib/types';
 import { CommercialQuotationTemplate } from '@/components/quotations/commercial-quotation-template';
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
@@ -128,20 +129,26 @@ function QuotationsPageInner() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [qRes, cRes, vRes, setRes] = await Promise.all([
-      supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(250),
-      supabase
-        .from('customers')
-        .select('id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2, port_of_discharge')
-        .order('full_name')
-        .limit(250),
-      supabase
-        .from('vehicles')
-        .select(
-          'id, stock_number, make, model, chassis_number, model_year, color, mileage_km, listed_price, listed_currency, status, transmission'
-        )
-        .in('status', ['in_stock', 'reserved'])
-        .order('updated_at', { ascending: false })
-        .limit(250),
+      supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(500),
+      fetchAllPages<Customer>((from, to) =>
+        supabase
+          .from('customers')
+          .select(
+            'id, full_name, customer_code, company_name, email, phone, whatsapp, country, city, address_line1, address_line2, port_of_discharge'
+          )
+          .order('full_name')
+          .range(from, to)
+      ),
+      fetchAllPages<Vehicle>((from, to) =>
+        supabase
+          .from('vehicles')
+          .select(
+            'id, stock_number, make, model, chassis_number, model_year, color, mileage_km, listed_price, listed_currency, status, transmission'
+          )
+          .in('status', ['in_stock', 'reserved'])
+          .order('updated_at', { ascending: false })
+          .range(from, to)
+      ),
       supabase
         .from('company_settings')
         .select('company_name, legal_name, logo_url, hanko_url')
@@ -150,8 +157,10 @@ function QuotationsPageInner() {
     ]);
     if (qRes.error) toast.error(`Unable to load quotations: ${qRes.error.message}`);
     else setQuotations((qRes.data || []) as Quotation[]);
-    if (cRes.data) setCustomers(cRes.data as Customer[]);
-    if (vRes.data) setVehicles(vRes.data as Vehicle[]);
+    if (cRes.error) toast.error(`Unable to load customers: ${cRes.error.message}`);
+    else setCustomers(cRes.data);
+    if (vRes.error) toast.error(`Unable to load vehicles: ${vRes.error.message}`);
+    else setVehicles(vRes.data);
     if (setRes.data) {
       const row = setRes.data as Pick<CompanySettings, 'company_name' | 'legal_name' | 'logo_url' | 'hanko_url'>;
       setCompanyLetterhead({

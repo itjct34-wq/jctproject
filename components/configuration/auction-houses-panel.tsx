@@ -221,7 +221,7 @@ export function AuctionHousesPanel() {
                   <p className="font-medium">{formatAuctionHouseLabel(house)}</p>
                   <p className="text-xs text-muted-foreground">{house.supplier_code}</p>
                   {house.notes ? (
-                    <p className="mt-1 text-xs text-amber-800 dark:text-amber-200/90">{house.notes}</p>
+                    <p className="mt-1 text-xs text-amber-800">{house.notes}</p>
                   ) : null}
                 </div>
                 <Badge variant="outline" className={statusStyles[house.status]}>

@@ -67,8 +67,8 @@ export default function CustomersPage() {
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     const [{ data, error }, { data: profiles }, { data: roleRows }] = await Promise.all([
-      supabase.from('customers').select('*').order('updated_at', { ascending: false }).limit(250),
-      supabase.from('profiles').select('id, full_name, email, is_active').eq('is_active', true).order('full_name').limit(250),
+      supabase.from('customers').select('*').order('updated_at', { ascending: false }).limit(500),
+      supabase.from('profiles').select('id, full_name, email, is_active').eq('is_active', true).order('full_name').limit(500),
       supabase.from('user_roles').select('user_id, is_active, roles(name)').eq('is_active', true),
     ]);
     if (error) toast.error(`Unable to load customers: ${error.message}`);

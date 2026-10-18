@@ -107,9 +107,6 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
                   <span className="rounded-full border border-[var(--jct-border)] bg-[var(--jct-panel)] px-2.5 py-1 font-mono text-xs font-semibold text-[var(--jct-navy)]">
                     {vehicle.stock_number}
                   </span>
-                  <span className="rounded-full border border-[var(--jct-border)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--jct-navy)]">
-                    RORO
-                  </span>
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                       vehicle.status === 'in_stock'
