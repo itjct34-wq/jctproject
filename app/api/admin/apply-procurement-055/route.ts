@@ -79,7 +79,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'POSTGRES_URL not configured' }, { status: 500 });
   }
 
-  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  // Supabase pooler / intermediate CAs can fail default Node TLS verification in serverless.
+  const previousTls = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  const connectionString = dbUrl.replace(/[?&]sslmode=[^&]+/gi, '').replace(/\?&/, '?');
+  const client = new Client({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
   try {
     await client.connect();
     await client.query(MIGRATION_055_SQL);
@@ -110,5 +117,7 @@ export async function POST(request: NextRequest) {
     );
   } finally {
     await client.end().catch(() => undefined);
+    if (previousTls === undefined) delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    else process.env.NODE_TLS_REJECT_UNAUTHORIZED = previousTls;
   }
 }
