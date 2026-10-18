@@ -198,7 +198,7 @@ export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
             '1. In Bulk upload, choose Third party, then source country and load port.',
             '2. Required: dealership_name, once_price, once_price_currency (JPY or USD), chassis_number, make, model.',
             '3. Optional: model_year, stock_number, color, mileage_km, transmission, fuel_type, notes.',
-            '4. Import sets procurement_source = third_party (ERP Third party page — not public stock).',
+            '4. Import sets procurement_source = third_party (ERP Third party page; listable on public inventory when in stock).',
             '5. Do not paste image URLs. Photos ZIP after import (folder = chassis). Delete sample rows before save.',
           ]
         : [

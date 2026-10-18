@@ -32,7 +32,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
 
   useEffect(() => {
     (async () => {
-      const { data } = await selectListedVehicles(supabase, { limit: 96, category });
+      const { data } = await selectListedVehicles(supabase, { limit: 500, category });
       const rows = (Array.isArray(data) ? data : data ? [data] : []) as unknown as Omit<PublicVehicle, 'gallery'>[];
       const ids = rows.map((row) => row.id);
       let images: VehicleImageRow[] = [];

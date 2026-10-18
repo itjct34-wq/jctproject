@@ -23,9 +23,10 @@ function mapFuel(raw: string): string | null | 'invalid' {
   const v = raw.trim().toLowerCase();
   if (!v) return null;
   if (FUELS.has(v)) return v;
-  if (['gasoline', 'gas', 'ice', 'unleaded'].includes(v)) return 'petrol';
-  if (['hv', 'hev', 'phv', 'phev'].includes(v)) return 'hybrid';
-  if (['ev', 'bev'].includes(v)) return 'electric';
+  if (['gasoline', 'gas', 'ice', 'unleaded', 'petrol'].includes(v)) return 'petrol';
+  if (['diesel', 'light oil', 'lightoil', 'gasoil', 'gas oil'].includes(v)) return 'diesel';
+  if (['hv', 'hev', 'phv', 'phev', 'hybrid'].includes(v)) return 'hybrid';
+  if (['ev', 'bev', 'electric'].includes(v)) return 'electric';
   return 'invalid';
 }
 

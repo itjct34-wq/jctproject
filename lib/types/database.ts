@@ -326,7 +326,7 @@ export interface Vehicle {
   source_country: string | null;
   source_country_code: string | null;
   source_supplier: string | null;
-  /** own_stock | auction | third_party — third_party is dealership once-price (ERP-only). */
+  /** own_stock | auction | third_party — third_party is dealership once-price (also listable publicly). */
   procurement_source?: 'own_stock' | 'auction' | 'third_party';
   dealership_name?: string | null;
   once_price?: number | null;

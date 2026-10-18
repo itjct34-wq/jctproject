@@ -135,13 +135,9 @@ export async function selectListedVehicles(
   db: SupabaseClient,
   opts: { id?: string; limit?: number; category?: StockCategory } = {}
 ) {
-  const run = (cols: string, filterCategory: boolean, excludeThirdParty: boolean) => {
+  const run = (cols: string, filterCategory: boolean) => {
     let query = db.from('vehicles').select(cols).in('status', ['in_stock', 'reserved']);
-    // Third-party dealership units are ERP-only (not our public stock).
-    // After migration procurement_source is NOT NULL; neq is safe.
-    if (excludeThirdParty) {
-      query = query.neq('procurement_source', 'third_party');
-    }
+    // Listable units from any procurement channel (own_stock, auction, third_party).
     if (filterCategory && opts.category) {
       query =
         opts.category === 'car'
@@ -149,21 +145,16 @@ export async function selectListedVehicles(
           : query.eq('stock_category', opts.category);
     }
     if (opts.id) return query.eq('id', opts.id).maybeSingle();
-    return query.order('stock_number', { ascending: false }).limit(opts.limit ?? 96);
+    return query.order('stock_number', { ascending: false }).limit(opts.limit ?? 500);
   };
-  const first = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category), true);
+  const first = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category));
   if (!first.error) return first;
-  // Column may not exist yet — retry without procurement filter.
-  if (/procurement_source/i.test(first.error.message || '')) {
-    const withoutProc = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category), false);
-    if (!withoutProc.error) return withoutProc;
-  }
   if (opts.category && opts.category !== 'car') {
     return { data: opts.id ? null : [], error: null };
   }
-  const withoutCategory = await run(COLUMNS_WITHOUT_CATEGORY, false, false);
+  const withoutCategory = await run(COLUMNS_WITHOUT_CATEGORY, false);
   if (!withoutCategory.error) return withoutCategory;
-  return run(FALLBACK_COLUMNS, false, false);
+  return run(FALLBACK_COLUMNS, false);
 }
 
 export function listedVehicleCategory(vehicle: Pick<PublicVehicle, 'stock_category'>): StockCategory {
@@ -190,7 +181,7 @@ export async function loadVehicleGallery(db: SupabaseClient, vehicleIds: string[
   return data as VehicleImageRow[];
 }
 
-export async function loadPublicVehicles(limit = 96, category?: StockCategory): Promise<PublicVehicle[]> {
+export async function loadPublicVehicles(limit = 500, category?: StockCategory): Promise<PublicVehicle[]> {
   const db = createPublicSupabase();
   if (!db) return [];
   const { data, error } = await selectListedVehicles(db, { limit, category });
