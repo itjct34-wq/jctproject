@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/auth-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LocaleProvider } from '@/lib/i18n/locale-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { Analytics } from '@vercel/analytics/next';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -65,6 +66,7 @@ export default function RootLayout({
             </AuthProvider>
           </LocaleProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
