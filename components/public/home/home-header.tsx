@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 const NAV = [
   ...PUBLIC_STOCK_NAV,
   { href: '/#source-markets', label: 'Source markets' },
-  { href: '/blog', label: 'Import guides' },
+  { href: '/blog', label: 'Insights' },
   { href: '/verify-agent', label: 'Verify agent' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },

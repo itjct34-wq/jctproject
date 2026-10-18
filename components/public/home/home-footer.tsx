@@ -39,7 +39,7 @@ export function HomeFooter() {
             ))}
             <li><Link href="/machinery" className="jct-footer-link">Machinery</Link></li>
             <li><Link href="/parts" className="jct-footer-link">Parts</Link></li>
-            <li><Link href="/blog" className="jct-footer-link">Guides</Link></li>
+            <li><Link href="/blog" className="jct-footer-link">Insights</Link></li>
             <li><Link href="/verify-agent" className="jct-footer-link">Verify agent</Link></li>
             <li><Link href="/about" className="jct-footer-link">About</Link></li>
             <li><Link href="/contact" className="jct-footer-link">Contact</Link></li>
