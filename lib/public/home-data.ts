@@ -1,4 +1,9 @@
-import { CATALOG_MAKES, makeMatches } from '@/lib/public/catalog';
+import {
+  CATALOG_MAKES,
+  formatMakeDisplayName,
+  makeSlug,
+  resolveCatalogMake,
+} from '@/lib/public/catalog';
 import {
   coverPhoto,
   loadPublicVehicles,
@@ -41,6 +46,11 @@ function photoFirst(a: PublicVehicle, b: PublicVehicle): number {
   return (b.stock_number || '').localeCompare(a.stock_number || '');
 }
 
+/** Canonical UI make label (catalog Title Case, else Title Case from raw). */
+function canonicalMakeName(raw: string): string {
+  return formatMakeDisplayName(raw);
+}
+
 /** Prefer config catalogs (vehicle_makes / vehicle_models); fall back to static + stock. */
 async function loadCatalogModelsByMake(): Promise<{
   makeNames: string[];
@@ -54,10 +64,10 @@ async function loadCatalogModelsByMake(): Promise<{
     ]);
     if (!makeRows.length) return { makeNames: [], modelsByMake: {} };
 
-    const byId = new Map(makeRows.map((m) => [m.id, m.name]));
+    const byId = new Map(makeRows.map((m) => [m.id, canonicalMakeName(m.name)]));
     const modelsByMake: Record<string, string[]> = {};
     for (const make of makeRows) {
-      modelsByMake[make.name] = [];
+      modelsByMake[canonicalMakeName(make.name)] = [];
     }
     for (const model of modelRows) {
       const makeName = byId.get(model.make_id);
@@ -71,7 +81,7 @@ async function loadCatalogModelsByMake(): Promise<{
       list.sort((a, b) => a.localeCompare(b));
     }
     return {
-      makeNames: makeRows.map((m) => m.name),
+      makeNames: makeRows.map((m) => canonicalMakeName(m.name)),
       modelsByMake,
     };
   } catch {
@@ -85,13 +95,29 @@ function mergeModels(
 ): Record<string, string[]> {
   const out: Record<string, string[]> = { ...primary };
   for (const [make, models] of Object.entries(extra)) {
-    if (!out[make]) out[make] = [];
+    const key = canonicalMakeName(make);
+    if (!out[key]) out[key] = [];
     for (const model of models) {
-      if (!out[make].includes(model)) out[make].push(model);
+      if (!out[key].includes(model)) out[key].push(model);
     }
-    out[make].sort((a, b) => a.localeCompare(b));
+    out[key].sort((a, b) => a.localeCompare(b));
   }
   return out;
+}
+
+/** Deduplicate make labels case-insensitively, preferring catalog Title Case. */
+function collectMakeNames(names: Iterable<string>): string[] {
+  const byKey = new Map<string, string>();
+  for (const raw of names) {
+    const display = canonicalMakeName(raw);
+    if (!display) continue;
+    const key = display.toLowerCase();
+    const resolved = resolveCatalogMake(display);
+    if (!byKey.has(key) || resolved) {
+      byKey.set(key, resolved?.name ?? display);
+    }
+  }
+  return Array.from(byKey.values());
 }
 
 export async function loadHomeData(): Promise<HomeData> {
@@ -105,9 +131,8 @@ export async function loadHomeData(): Promise<HomeData> {
     const stockModelsByMake: Record<string, string[]> = {};
 
     for (const vehicle of stock) {
-      const catalogMake = CATALOG_MAKES.find((make) => makeMatches(vehicle.make, make));
-      const key = catalogMake?.name ?? vehicle.make;
-      if (!key) continue;
+      if (!vehicle.make?.trim()) continue;
+      const key = canonicalMakeName(vehicle.make);
       counts.set(key, (counts.get(key) || 0) + 1);
       if (!stockModelsByMake[key]) stockModelsByMake[key] = [];
       if (vehicle.model && !stockModelsByMake[key].includes(vehicle.model)) {
@@ -121,25 +146,23 @@ export async function loadHomeData(): Promise<HomeData> {
 
     const modelsByMake = mergeModels(catalog.modelsByMake, stockModelsByMake);
 
-    const makeNameSet = new Set<string>([
+    const makes: HomeMakeRow[] = collectMakeNames([
       ...CATALOG_MAKES.filter((m) => m.kind === 'car').map((m) => m.name),
       ...catalog.makeNames,
       ...Object.keys(stockModelsByMake),
-    ]);
-
-    const makes: HomeMakeRow[] = Array.from(makeNameSet)
+    ])
       .map((name) => {
-        const staticMake = CATALOG_MAKES.find((m) => m.name === name);
+        const staticMake = resolveCatalogMake(name);
         return {
           name,
-          slug: staticMake?.slug ?? name.toLowerCase().replace(/\s+/g, '-'),
+          slug: staticMake?.slug ?? makeSlug(name),
           logoPath: staticMake?.logoPath ?? null,
           cars: counts.get(name) || 0,
         };
       })
       .sort((a, b) => {
-        const orderA = CATALOG_MAKES.find((m) => m.name === a.name)?.sortOrder ?? 999;
-        const orderB = CATALOG_MAKES.find((m) => m.name === b.name)?.sortOrder ?? 999;
+        const orderA = resolveCatalogMake(a.name)?.sortOrder ?? 999;
+        const orderB = resolveCatalogMake(b.name)?.sortOrder ?? 999;
         if (orderA !== orderB) return orderA - orderB;
         if (b.cars !== a.cars) return b.cars - a.cars;
         return a.name.localeCompare(b.name);

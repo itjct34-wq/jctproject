@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img">
+  <title>Peugeot</title>
+  <!-- Simplified P lettermark (original geometry, Peugeot blue) -->
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#001E50" stroke-width="2.5"/>
+  <path fill="#001E50" d="M18 14h10.5c5 0 8.5 2.8 8.5 7.2S33.5 28.5 28.5 28.5H24V34h-6V14zm6 9.5h4c2.2 0 3.5-1.2 3.5-2.8S30.2 18 28 18H24v5.5z"/>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img">
+  <title>Rover</title>
+  <!-- Simplified R lettermark (original geometry, Rover green) -->
+  <path fill="#006B3F" d="M14 10h12.5c6.2 0 10.5 3.4 10.5 9 0 4.2-2.4 7.2-6.2 8.4L38 38h-7.2l-6.4-9.6H20V38h-6V10zm6 12.8h6c2.8 0 4.6-1.5 4.6-3.8S28.8 15.2 26 15.2H20v7.6z"/>
+</svg>
