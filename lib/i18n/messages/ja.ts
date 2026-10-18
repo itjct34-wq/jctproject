@@ -45,6 +45,7 @@ const ja: MessageTree = {
     cars: '乗用車',
     machinery: '建機',
     parts: 'パーツ',
+    thirdParty: 'サードパーティ',
     stockPipeline: '在庫パイプライン',
     auction: 'オークション',
     auctionPurchases: 'オークション仕入',

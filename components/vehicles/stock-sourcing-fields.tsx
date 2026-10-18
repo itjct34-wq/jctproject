@@ -42,6 +42,8 @@ type Props = {
   vehicleId?: string | null;
   onAuctionSheetUploaded?: () => void;
   profileId?: string | null;
+  /** Third-party dealership units: hide auction house / sheet / bid requester. */
+  variant?: 'stock' | 'third_party';
 };
 
 export function StockSourcingFields({
@@ -54,14 +56,17 @@ export function StockSourcingFields({
   vehicleId,
   onAuctionSheetUploaded,
   profileId,
+  variant = 'stock',
 }: Props) {
   const [houses, setHouses] = useState<AuctionHousePick[]>([]);
   const [yards, setYards] = useState<YardRow[]>([]);
   const [uploading, setUploading] = useState(false);
+  const isThirdParty = variant === 'third_party';
 
   useEffect(() => {
+    if (isThirdParty) return;
     void fetchAuctionHouses(supabase, { activeOnly: true }).then(({ data }) => setHouses(data));
-  }, []);
+  }, [isThirdParty]);
 
   const portKey = portKeyFromLabel(form.shipping_port_of_loading);
 
@@ -117,37 +122,41 @@ export function StockSourcingFields({
 
   return (
     <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
-      <h3 className="text-xs font-semibold">Auction / origin / destination</h3>
+      <h3 className="text-xs font-semibold">
+        {isThirdParty ? 'Origin / destination' : 'Auction / origin / destination'}
+      </h3>
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="space-y-0.5">
-          <Label className="text-xs">Auction house</Label>
-          <Select
-            value={selectedHouseId}
-            onValueChange={selectHouse}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select auction house" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Not set</SelectItem>
-              {houses.map((h) => (
-                <SelectItem key={h.id} value={h.id}>
-                  {formatAuctionHouseLabel(h)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!selectedHouseId || selectedHouseId === 'none' ? (
-            <Input
-              className="mt-1"
+        {!isThirdParty ? (
+          <div className="space-y-0.5">
+            <Label className="text-xs">Auction house</Label>
+            <Select
+              value={selectedHouseId}
+              onValueChange={selectHouse}
               disabled={disabled}
-              value={form.source_supplier}
-              onChange={(e) => onChange({ source_supplier: e.target.value })}
-              placeholder="Or type auction house name"
-            />
-          ) : null}
-        </div>
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select auction house" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not set</SelectItem>
+                {houses.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {formatAuctionHouseLabel(h)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!selectedHouseId || selectedHouseId === 'none' ? (
+              <Input
+                className="mt-1"
+                disabled={disabled}
+                value={form.source_supplier}
+                onChange={(e) => onChange({ source_supplier: e.target.value })}
+                placeholder="Or type auction house name"
+              />
+            ) : null}
+          </div>
+        ) : null}
         <div className="space-y-0.5">
           <Label className="text-xs">Source port (POL)</Label>
           <Input
@@ -160,7 +169,7 @@ export function StockSourcingFields({
                 location: '',
               })
             }
-            placeholder="Autofills from auction house"
+            placeholder={isThirdParty ? 'e.g. Nagoya, Japan' : 'Autofills from auction house'}
             list="stock-source-ports"
           />
           <datalist id="stock-source-ports">
@@ -218,45 +227,49 @@ export function StockSourcingFields({
             )}
           </datalist>
         </div>
-        <div className="space-y-0.5">
-          <Label className="text-xs">Bid requester</Label>
-          <Select
-            value={form.bid_requester_id || 'none'}
-            onValueChange={(v) => onChange({ bid_requester_id: v === 'none' ? '' : v })}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Who wanted this bid" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Not set</SelectItem>
-              {staff.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-0.5">
-          <Label className="text-xs">Auction sheet</Label>
-          <Input
-            type="file"
-            accept=".pdf,image/*,.xlsx,.xls"
-            disabled={disabled || uploading}
-            onChange={(e) => {
-              const file = e.target.files?.[0] || null;
-              if (!file) {
-                onAuctionSheetFile?.(null);
-                return;
-              }
-              void uploadAuctionSheet(file);
-            }}
-          />
-          {auctionSheetFile ? (
-            <p className="text-xs text-muted-foreground">Queued: {auctionSheetFile.name}</p>
-          ) : null}
-        </div>
+        {!isThirdParty ? (
+          <>
+            <div className="space-y-0.5">
+              <Label className="text-xs">Bid requester</Label>
+              <Select
+                value={form.bid_requester_id || 'none'}
+                onValueChange={(v) => onChange({ bid_requester_id: v === 'none' ? '' : v })}
+                disabled={disabled}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Who wanted this bid" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not set</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-xs">Auction sheet</Label>
+              <Input
+                type="file"
+                accept=".pdf,image/*,.xlsx,.xls"
+                disabled={disabled || uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  if (!file) {
+                    onAuctionSheetFile?.(null);
+                    return;
+                  }
+                  void uploadAuctionSheet(file);
+                }}
+              />
+              {auctionSheetFile ? (
+                <p className="text-xs text-muted-foreground">Queued: {auctionSheetFile.name}</p>
+              ) : null}
+            </div>
+          </>
+        ) : null}
       </div>
     </section>
   );

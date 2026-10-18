@@ -23,7 +23,7 @@ export default function BulkUploadPage() {
     <div className="space-y-6">
       <PageHeader
         title="Bulk upload"
-        description="Choose cars, machinery, parts, or auction stock. Then pick country and port, upload the easy sheet, and attach photos as a ZIP — no image URLs."
+        description="Choose cars, machinery, parts, third-party dealership units, or auction stock. Then pick country and port, upload the easy sheet, and attach photos as a ZIP — no image URLs."
       />
       <Suspense
         fallback={

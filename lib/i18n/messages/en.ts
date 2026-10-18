@@ -43,6 +43,7 @@ export type MessageTree = {
     cars: string;
     machinery: string;
     parts: string;
+    thirdParty: string;
     stockPipeline: string;
     auction: string;
     auctionPurchases: string;
@@ -128,6 +129,7 @@ const en: MessageTree = {
     cars: 'Cars',
     machinery: 'Machinery',
     parts: 'Parts',
+    thirdParty: 'Third party',
     stockPipeline: 'Stock pipeline',
     auction: 'Auction',
     auctionPurchases: 'Auction Purchases',

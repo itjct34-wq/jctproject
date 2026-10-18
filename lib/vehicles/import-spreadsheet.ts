@@ -3,6 +3,7 @@ import { parseStockCategory } from '@/lib/stock-category';
 import { normalizeChassis } from '@/lib/utils/chassis';
 import { parseOptionalNumber, splitImageUrls } from '@/lib/utils/csv-import';
 import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
+import { fobFieldsFromOncePrice } from '@/lib/vehicles/procurement';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const TRANSMISSIONS = new Set(['automatic', 'manual', 'cvt', 'other']);
@@ -50,6 +51,8 @@ export type VehicleImportDefaults = {
   sourceCountryCode?: string;
   location?: string;
   stockCategory?: 'car' | 'machinery' | 'parts';
+  /** When true, rows become dealership once-price third-party units. */
+  procurementSource?: 'own_stock' | 'third_party';
 };
 
 export async function importVehicleSpreadsheetRows(
@@ -136,9 +139,19 @@ export async function importVehicleSpreadsheetRows(
     const mileage = parseOptionalNumber(r.mileage_km);
     const purchase = parseOptionalNumber(r.purchase_price);
     const listed = parseOptionalNumber(r.listed_price);
-    if (!year.ok || !regYear.ok || !mileage.ok || !purchase.ok || !listed.ok) {
+    const oncePrice = parseOptionalNumber(r.once_price);
+    if (!year.ok || !regYear.ok || !mileage.ok || !purchase.ok || !listed.ok || !oncePrice.ok) {
       failed++;
       errors.push(`Row ${line}: numeric field is invalid`);
+      continue;
+    }
+
+    const isThirdParty = defaults?.procurementSource === 'third_party';
+    const dealership =
+      (r.dealership_name || r.dealership || r.source_supplier || '').trim() || null;
+    if (isThirdParty && (!dealership || oncePrice.value == null)) {
+      failed++;
+      errors.push(`Row ${line}: dealership_name and once_price are required for third-party import`);
       continue;
     }
 
@@ -164,7 +177,7 @@ export async function importVehicleSpreadsheetRows(
     const images = splitImageUrls(r);
     const bidRequesterRaw = (r.bid_requester || r.bid_requester_email || r.bid_requester_id || '').trim();
     let bidRequesterId: string | null = null;
-    if (bidRequesterRaw) {
+    if (!isThirdParty && bidRequesterRaw) {
       bidRequesterId =
         profileByEmail.get(bidRequesterRaw.toLowerCase()) ||
         profileByName.get(bidRequesterRaw.toLowerCase()) ||
@@ -173,8 +186,16 @@ export async function importVehicleSpreadsheetRows(
     const yardRaw = (r.location || r.yard || '').trim();
     const yard = yardRaw ? yardByName.get(yardRaw.toLowerCase()) : null;
     const expense = FIXED_EXPENSE_JPY;
-    const fob =
-      purchase.value != null && purchase.value > 0
+    const onceCurrency = (r.once_price_currency || r.purchase_currency || 'JPY').trim().toUpperCase() || 'JPY';
+    const onceFob =
+      isThirdParty && oncePrice.value != null
+        ? fobFieldsFromOncePrice(oncePrice.value, onceCurrency, {
+            expenseJpy: expense,
+            ttRate: DEFAULT_TT_RATE,
+          })
+        : null;
+    const bidFob =
+      !onceFob && purchase.value != null && purchase.value > 0
         ? calcFobFromBid(purchase.value, expense, DEFAULT_TT_RATE)
         : null;
 
@@ -193,18 +214,30 @@ export async function importVehicleSpreadsheetRows(
       fuel_type: fuel,
       source_country: country.name,
       source_country_code: country.code,
-      source_supplier: r.source_supplier?.trim() || r.auction_house?.trim() || null,
+      source_supplier: isThirdParty
+        ? dealership
+        : r.source_supplier?.trim() || r.auction_house?.trim() || null,
+      procurement_source: isThirdParty ? 'third_party' : 'own_stock',
+      dealership_name: isThirdParty ? dealership : null,
+      once_price: isThirdParty ? oncePrice.value : null,
+      once_price_currency: isThirdParty ? onceCurrency : 'JPY',
       shipping_port_of_loading: r.shipping_port_of_loading?.trim() || r.source_port?.trim() || null,
       destination_country: r.destination_country?.trim() || null,
       bid_requester_id: bidRequesterId,
-      purchase_price: purchase.value,
-      purchase_currency: (r.purchase_currency || 'JPY').trim().toUpperCase() || 'JPY',
-      expense_jpy: expense,
-      tt_rate: DEFAULT_TT_RATE,
-      fob_jpy: fob ? Math.round(fob.fobJpy) : null,
-      fob_usd: fob ? Math.round(fob.fobUsd) : null,
-      listed_price: listed.value ?? (fob ? Math.round(fob.fobUsd) : null),
-      listed_currency: (r.listed_currency || 'USD').trim().toUpperCase() || 'USD',
+      purchase_price: onceFob ? onceFob.purchase_price : purchase.value,
+      purchase_currency: onceFob
+        ? onceFob.purchase_currency
+        : (r.purchase_currency || 'JPY').trim().toUpperCase() || 'JPY',
+      expense_jpy: onceFob ? onceFob.expense_jpy : expense,
+      tt_rate: onceFob ? onceFob.tt_rate : DEFAULT_TT_RATE,
+      fob_jpy: onceFob ? onceFob.fob_jpy : bidFob ? Math.round(bidFob.fobJpy) : null,
+      fob_usd: onceFob ? onceFob.fob_usd : bidFob ? Math.round(bidFob.fobUsd) : null,
+      listed_price: onceFob
+        ? onceFob.listed_price
+        : listed.value ?? (bidFob ? Math.round(bidFob.fobUsd) : null),
+      listed_currency: onceFob
+        ? onceFob.listed_currency
+        : (r.listed_currency || 'USD').trim().toUpperCase() || 'USD',
       location: yard?.name || yardRaw || defaults?.location?.trim() || null,
       yard_id: yard?.id || null,
       arrival_date: r.arrival_date?.trim() || null,
@@ -222,7 +255,7 @@ export async function importVehicleSpreadsheetRows(
       payload.updated_at = new Date().toISOString();
       const upd = await supabase.from('vehicles').update(payload).eq('id', existingId);
       error = upd.error;
-      if (error && /source_country_code|stock_category|part_sku/i.test(error.message)) {
+      if (error && /source_country_code|stock_category|part_sku|procurement_source|dealership_name|once_price/i.test(error.message)) {
         error = (await retryVehicleWrite(supabase, 'update', payload, existingId)).error;
       }
       if (!error) {
@@ -232,7 +265,7 @@ export async function importVehicleSpreadsheetRows(
     } else {
       payload.created_by = profileId;
       let ins = await supabase.from('vehicles').insert(payload).select('id').maybeSingle();
-      if (ins.error && /source_country_code|stock_category|part_sku/i.test(ins.error.message)) {
+      if (ins.error && /source_country_code|stock_category|part_sku|procurement_source|dealership_name|once_price/i.test(ins.error.message)) {
         const retry = await retryVehicleWrite(supabase, 'insert', payload);
         error = retry.error;
         vehicleId = retry.id;
@@ -275,6 +308,16 @@ async function retryVehicleWrite(
     strip(['source_country_code']),
     strip(['stock_category', 'part_sku']),
     strip(['source_country_code', 'stock_category', 'part_sku']),
+    strip(['procurement_source', 'dealership_name', 'once_price', 'once_price_currency']),
+    strip([
+      'source_country_code',
+      'stock_category',
+      'part_sku',
+      'procurement_source',
+      'dealership_name',
+      'once_price',
+      'once_price_currency',
+    ]),
   ];
   let lastError: { message: string } | null = { message: 'retry failed' };
   for (const next of attempts) {

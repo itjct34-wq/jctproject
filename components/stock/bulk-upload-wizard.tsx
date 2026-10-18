@@ -24,6 +24,7 @@ import {
   parseSpreadsheetFile,
   type EasySheetKind,
   AUCTION_CSV_HEADERS,
+  THIRD_PARTY_CSV_HEADERS,
   VEHICLE_CSV_HEADERS,
 } from '@/lib/utils/csv-import';
 import {
@@ -45,6 +46,7 @@ import {
   Gavel,
   Loader2,
   MapPin,
+  Store,
   Upload,
   Wrench,
 } from 'lucide-react';
@@ -61,12 +63,23 @@ const KINDS: {
   { id: 'car', title: 'Cars', blurb: 'Passenger cars and light vehicles', dest: '/vehicles', destLabel: 'Cars', icon: Car },
   { id: 'machinery', title: 'Machinery', blurb: 'Plant, trucks, and equipment', dest: '/vehicles?category=machinery', destLabel: 'Machinery', icon: Wrench },
   { id: 'parts', title: 'Parts', blurb: 'Spares with SKU or chassis folders', dest: '/vehicles?category=parts', destLabel: 'Parts', icon: Cog },
+  {
+    id: 'third_party',
+    title: 'Third party',
+    blurb: 'Dealership once-price units (not auction, not our stock)',
+    dest: '/vehicles/third-party',
+    destLabel: 'Third party',
+    icon: Store,
+  },
   { id: 'auctions', title: 'Auction stock', blurb: 'Watchlists and auction lots', dest: '/auctions', destLabel: 'Auction Stock', icon: Gavel },
 ];
 
 function parseKind(raw: string | null): EasySheetKind | null {
-  if (raw === 'car' || raw === 'machinery' || raw === 'parts' || raw === 'auctions') return raw;
+  if (raw === 'car' || raw === 'machinery' || raw === 'parts' || raw === 'auctions' || raw === 'third_party') {
+    return raw;
+  }
   if (raw === 'auction' || raw === 'auction_stock') return 'auctions';
+  if (raw === 'third-party' || raw === 'thirdparty' || raw === 'dealership') return 'third_party';
   return null;
 }
 
@@ -106,8 +119,20 @@ export function BulkUploadWizard() {
   const ports = useMemo(() => loadPortsForCountry(countryCode), [countryCode]);
   const country = SOURCE_COUNTRIES.find((c) => c.code === countryCode);
   const resolvedPort = port === '__other__' ? otherPort.trim() : port.trim();
-  const previewHeaders = kind === 'auctions' ? AUCTION_CSV_HEADERS.slice(0, 6) : VEHICLE_CSV_HEADERS.slice(0, 6);
+  const previewHeaders =
+    kind === 'auctions'
+      ? AUCTION_CSV_HEADERS.slice(0, 6)
+      : kind === 'third_party'
+        ? THIRD_PARTY_CSV_HEADERS.slice(0, 7)
+        : VEHICLE_CSV_HEADERS.slice(0, 6);
   const isAuction = kind === 'auctions';
+  const isThirdParty = kind === 'third_party';
+  const templateHeaders =
+    kind === 'auctions'
+      ? AUCTION_CSV_HEADERS
+      : kind === 'third_party'
+        ? THIRD_PARTY_CSV_HEADERS
+        : VEHICLE_CSV_HEADERS;
 
   const pickKind = (next: EasySheetKind) => {
     setKind(next);
@@ -176,19 +201,21 @@ export function BulkUploadWizard() {
           toast.error('No listings were saved. Check the row errors.');
         }
       } else {
+        const stockKind = kind === 'third_party' ? 'car' : kind;
         const res = await importVehicleSpreadsheetRows(supabase, profile.id, rows, {
           sourceCountry: country.name,
           sourceCountryCode: country.code,
           location: resolvedPort,
-          stockCategory: kind,
+          stockCategory: stockKind,
+          procurementSource: isThirdParty ? 'third_party' : 'own_stock',
         });
         setSheetResult(res);
         if (res.ok > 0) {
           toast.success(`Saved ${res.ok} unit(s)${res.updated ? ` (${res.updated} updated)` : ''}`);
           await recordBulkImportBatch(supabase, {
-            kind,
+            kind: isThirdParty ? 'third_party' : stockKind,
             source: 'sheet',
-            filename: sheetName || 'stock-sheet',
+            filename: sheetName || (isThirdParty ? 'third-party-sheet' : 'stock-sheet'),
             created_by: profile.id,
             payload: {
               created_vehicle_ids: res.createdIds,
@@ -504,6 +531,18 @@ export function BulkUploadWizard() {
                 Easy Excel for {kindMeta.title}. Country {countryFlagEmoji(countryCode)} {country?.name} · {resolvedPort || 'port pending'}.
                 No photo URL columns — photos come from a ZIP next.
               </p>
+              <div className="rounded-lg border bg-card/80 p-3">
+                <p className="text-xs font-semibold text-foreground">Template headers</p>
+                <p className="mt-1 break-all font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  {templateHeaders.join(' · ')}
+                </p>
+                {isThirdParty ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Required: dealership_name, once_price, once_price_currency (JPY/USD), chassis_number, make, model.
+                    Import sets procurement_source = third_party.
+                  </p>
+                ) : null}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"

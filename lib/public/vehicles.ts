@@ -135,8 +135,13 @@ export async function selectListedVehicles(
   db: SupabaseClient,
   opts: { id?: string; limit?: number; category?: StockCategory } = {}
 ) {
-  const run = (cols: string, filterCategory: boolean) => {
+  const run = (cols: string, filterCategory: boolean, excludeThirdParty: boolean) => {
     let query = db.from('vehicles').select(cols).in('status', ['in_stock', 'reserved']);
+    // Third-party dealership units are ERP-only (not our public stock).
+    // After migration procurement_source is NOT NULL; neq is safe.
+    if (excludeThirdParty) {
+      query = query.neq('procurement_source', 'third_party');
+    }
     if (filterCategory && opts.category) {
       query =
         opts.category === 'car'
@@ -146,14 +151,19 @@ export async function selectListedVehicles(
     if (opts.id) return query.eq('id', opts.id).maybeSingle();
     return query.order('stock_number', { ascending: false }).limit(opts.limit ?? 96);
   };
-  const first = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category));
+  const first = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category), true);
   if (!first.error) return first;
+  // Column may not exist yet — retry without procurement filter.
+  if (/procurement_source/i.test(first.error.message || '')) {
+    const withoutProc = await run(PUBLIC_VEHICLE_COLUMNS, Boolean(opts.category), false);
+    if (!withoutProc.error) return withoutProc;
+  }
   if (opts.category && opts.category !== 'car') {
     return { data: opts.id ? null : [], error: null };
   }
-  const withoutCategory = await run(COLUMNS_WITHOUT_CATEGORY, false);
+  const withoutCategory = await run(COLUMNS_WITHOUT_CATEGORY, false, false);
   if (!withoutCategory.error) return withoutCategory;
-  return run(FALLBACK_COLUMNS, false);
+  return run(FALLBACK_COLUMNS, false, false);
 }
 
 export function listedVehicleCategory(vehicle: Pick<PublicVehicle, 'stock_category'>): StockCategory {

@@ -25,6 +25,7 @@ const KIND_LABEL: Record<BulkImportBatch['kind'], string> = {
   car: 'Cars sheet',
   machinery: 'Machinery sheet',
   parts: 'Parts sheet',
+  third_party: 'Third-party sheet',
   auctions: 'Auction sheet',
   photos: 'Photos ZIP',
 };

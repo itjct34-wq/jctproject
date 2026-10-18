@@ -44,6 +44,12 @@ const HEADER_ALIASES: Record<string, string> = {
   pol: 'location',
   fob_price: 'listed_price',
   price: 'listed_price',
+  dealer: 'dealership_name',
+  dealership: 'dealership_name',
+  dealer_name: 'dealership_name',
+  once: 'once_price',
+  fixed_price: 'once_price',
+  once_currency: 'once_price_currency',
 };
 
 function applyHeaderAlias(header: string): string {
@@ -145,7 +151,7 @@ export async function parseSpreadsheetFile(
   return parseCSV(await file.text());
 }
 
-export type EasySheetKind = 'car' | 'machinery' | 'parts' | 'auctions';
+export type EasySheetKind = 'car' | 'machinery' | 'parts' | 'auctions' | 'third_party';
 
 function styleHeaderRow(row: { height: number; eachCell: (cb: (cell: { font: unknown; fill: unknown; alignment: unknown; border: unknown }) => void) => void }) {
   row.height = 28;
@@ -164,7 +170,16 @@ export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Vehicle Export ERP';
-  const kindLabel = kind === 'auctions' ? 'Auction stock' : kind === 'machinery' ? 'Machinery' : kind === 'parts' ? 'Parts' : 'Cars';
+  const kindLabel =
+    kind === 'auctions'
+      ? 'Auction stock'
+      : kind === 'third_party'
+        ? 'Third party'
+        : kind === 'machinery'
+          ? 'Machinery'
+          : kind === 'parts'
+            ? 'Parts'
+            : 'Cars';
   const guide = wb.addWorksheet('How to fill', { views: [{ showGridLines: false }] });
   guide.getColumn(1).width = 92;
   guide.mergeCells('A1:A1');
@@ -178,7 +193,15 @@ export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
           '3. Do not paste image URLs. Photos are optional after import.',
           '4. Delete the sample rows before you save.',
         ]
-      : [
+      : kind === 'third_party'
+        ? [
+            '1. In Bulk upload, choose Third party, then source country and load port.',
+            '2. Required: dealership_name, once_price, once_price_currency (JPY or USD), chassis_number, make, model.',
+            '3. Optional: model_year, stock_number, color, mileage_km, transmission, fuel_type, notes.',
+            '4. Import sets procurement_source = third_party (ERP Third party page — not public stock).',
+            '5. Do not paste image URLs. Photos ZIP after import (folder = chassis). Delete sample rows before save.',
+          ]
+        : [
           `1. In Bulk upload, choose ${kindLabel}, then source country and load port. Those apply to every row.`,
           '2. Fill chassis, make, model, colour, year, km, transmission, fuel, price.',
           '3. Do not paste image URLs. After import, upload one ZIP: a folder per chassis with jpg/png photos.',
@@ -196,13 +219,26 @@ export async function downloadEasyVehicleWorkbook(kind: EasySheetKind = 'car') {
   const sheet = wb.addWorksheet(kindLabel, {
     views: [{ state: 'frozen', ySplit: 1 }],
   });
-  const headers = kind === 'auctions' ? [...AUCTION_CSV_HEADERS] : [...VEHICLE_CSV_HEADERS];
-  const samples = kind === 'auctions' ? [AUCTION_CSV_SAMPLE] : VEHICLE_CSV_SAMPLES;
+  const headers =
+    kind === 'auctions'
+      ? [...AUCTION_CSV_HEADERS]
+      : kind === 'third_party'
+        ? [...THIRD_PARTY_CSV_HEADERS]
+        : [...VEHICLE_CSV_HEADERS];
+  const samples =
+    kind === 'auctions'
+      ? [AUCTION_CSV_SAMPLE]
+      : kind === 'third_party'
+        ? THIRD_PARTY_CSV_SAMPLES
+        : VEHICLE_CSV_SAMPLES;
   const headerRow = sheet.addRow(headers);
   styleHeaderRow(headerRow);
-  const colWidths = kind === 'auctions'
-    ? [18, 14, 16, 12, 14, 14, 14, 12, 12, 28]
-    : [18, 14, 16, 16, 12, 12, 14, 12, 14, 12, 14, 16, 16, 18, 16, 22, 14, 28];
+  const colWidths =
+    kind === 'auctions'
+      ? [18, 14, 16, 12, 14, 14, 14, 12, 12, 28]
+      : kind === 'third_party'
+        ? [22, 14, 14, 18, 14, 16, 12, 14, 14, 12, 14, 12, 28]
+        : [18, 14, 16, 16, 12, 12, 14, 12, 14, 12, 14, 16, 16, 18, 16, 22, 14, 28];
   headers.forEach((_, i) => {
     sheet.getColumn(i + 1).width = colWidths[i] || 14;
   });
@@ -337,6 +373,33 @@ export const AUCTION_CSV_HEADERS = [
 export const AUCTION_CSV_SAMPLE = [
   'XYZ987654321', 'Honda', 'Fit', '2018', '2026-03-20', 'A-1234',
   '350000', 'JPY', 'pending', 'USS Nagoya',
+];
+
+export const THIRD_PARTY_CSV_HEADERS = [
+  'dealership_name',
+  'once_price',
+  'once_price_currency',
+  'chassis_number',
+  'make',
+  'model',
+  'model_year',
+  'stock_number',
+  'color',
+  'mileage_km',
+  'transmission',
+  'fuel_type',
+  'notes',
+];
+
+export const THIRD_PARTY_CSV_SAMPLES: string[][] = [
+  [
+    'Nagoya Auto Dealer', '1850000', 'JPY', 'KDH201000001', 'Toyota', 'Hiace',
+    '2017', '', 'White', '98000', 'automatic', 'diesel', 'Once-price unit',
+  ],
+  [
+    'Osaka Motors Co', '6200', 'USD', 'NZE141000099', 'Toyota', 'Axio',
+    '2019', '', 'Silver', '54000', 'cvt', 'petrol', '',
+  ],
 ];
 
 export const CUSTOMER_CSV_HEADERS = [

@@ -47,3 +47,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.oneshot_token
+.oneshot_payload.json
+.env.import.tmp
+scripts/_probe_procurement.js

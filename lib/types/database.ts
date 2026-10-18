@@ -326,6 +326,11 @@ export interface Vehicle {
   source_country: string | null;
   source_country_code: string | null;
   source_supplier: string | null;
+  /** own_stock | auction | third_party — third_party is dealership once-price (ERP-only). */
+  procurement_source?: 'own_stock' | 'auction' | 'third_party';
+  dealership_name?: string | null;
+  once_price?: number | null;
+  once_price_currency?: string | null;
   purchase_price: number | null;
   purchase_currency: string;
   expense_jpy?: number | null;
@@ -404,7 +409,7 @@ export interface VehicleImage {
   created_at: string;
 }
 
-export type BulkImportKind = 'car' | 'machinery' | 'parts' | 'auctions' | 'photos';
+export type BulkImportKind = 'car' | 'machinery' | 'parts' | 'auctions' | 'photos' | 'third_party';
 export type BulkImportSource = 'sheet' | 'zip';
 
 export interface BulkImportBatchPayload {

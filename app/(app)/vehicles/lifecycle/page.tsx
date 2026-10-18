@@ -19,19 +19,37 @@ export default function VehiclesLifecyclePage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const withProc = await supabase
       .from('vehicles')
       .select(
-        'id, payment_status, shipping_status, status, created_at, shipping_etd, shipping_eta, shipping_bl_date, arrival_date, stock_category'
+        'id, payment_status, shipping_status, status, created_at, shipping_etd, shipping_eta, shipping_bl_date, arrival_date, stock_category, procurement_source'
       )
+      .neq('procurement_source', 'third_party')
       .order('updated_at', { ascending: false })
       .limit(10000);
+
+    let data: LifecycleVehicleRow[] | null = null;
+    let error = withProc.error;
+
+    if (error && /procurement_source/i.test(error.message || '')) {
+      const fallback = await supabase
+        .from('vehicles')
+        .select(
+          'id, payment_status, shipping_status, status, created_at, shipping_etd, shipping_eta, shipping_bl_date, arrival_date, stock_category'
+        )
+        .order('updated_at', { ascending: false })
+        .limit(10000);
+      error = fallback.error;
+      data = (fallback.data || []) as LifecycleVehicleRow[];
+    } else {
+      data = (withProc.data || []) as LifecycleVehicleRow[];
+    }
 
     if (error) {
       toast.error(`Unable to load lifecycle data: ${error.message}`);
       setRows([]);
     } else {
-      setRows((data || []) as LifecycleVehicleRow[]);
+      setRows(data || []);
     }
     setLoading(false);
   }, []);

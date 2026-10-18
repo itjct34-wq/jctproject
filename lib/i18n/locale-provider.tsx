@@ -123,6 +123,7 @@ export const NAV_ITEM_I18N: Record<string, string> = {
   '/vehicles': 'nav.cars',
   '/vehicles?category=machinery': 'nav.machinery',
   '/vehicles?category=parts': 'nav.parts',
+  '/vehicles/third-party': 'nav.thirdParty',
   '/vehicles/lifecycle': 'nav.stockPipeline',
   '/auctions': 'nav.auction',
   '/purchases': 'nav.auctionPurchases',

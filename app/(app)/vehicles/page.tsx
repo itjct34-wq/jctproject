@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/layout/page-header';
@@ -51,6 +51,11 @@ import { nextVehicleStockNumber } from '@/lib/utils/stock-number';
 import { mergeEngineIntoNotes, publicEngineFromNotes, stripEngineFromNotes } from '@/lib/public/vehicles';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
 import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
+import {
+  fobFieldsFromOncePrice,
+  isOwnStockListVehicle,
+  isThirdPartyVehicle,
+} from '@/lib/vehicles/procurement';
 import type { Customer, Office, Vehicle } from '@/lib/types';
 import {
   commissionAmountPkr,
@@ -136,6 +141,9 @@ const emptyForm = {
   incoterm: 'FOB' as VehicleIncoterm,
   notes: '', primary_image_url: '', source_country_code: 'JP',
   source_supplier: '',
+  dealership_name: '',
+  once_price: '',
+  once_price_currency: 'JPY',
   shipping_port_of_loading: '',
   yard_id: '',
   location: '',
@@ -163,12 +171,20 @@ function fobFromForm(form: typeof emptyForm) {
 
 function VehiclesPage() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const router = useRouter();
+  const isThirdPartyPage = pathname === '/vehicles/third-party' || pathname.startsWith('/vehicles/third-party/');
+  const listBasePath = isThirdPartyPage ? '/vehicles/third-party' : '/vehicles';
   const listCategory: StockCategory =
     searchParams.get('category') === 'machinery' || searchParams.get('category') === 'parts'
       ? (searchParams.get('category') as StockCategory)
       : 'car';
-  const listCopy = LIST_TITLES[listCategory];
+  const listCopy = isThirdPartyPage
+    ? {
+        title: 'Third party',
+        description: 'Dealership once-price units — not auction, not our owned stock',
+      }
+    : LIST_TITLES[listCategory];
   const { profile } = useAuth();
   const {
     can,
@@ -240,8 +256,14 @@ function VehiclesPage() {
   const loadVehicles = useCallback(async () => {
     setLoading(true);
     await supabase.rpc('expire_reserved_vehicles');
-    const [vRes, cRes, oRes] = await Promise.all([
-      supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250),
+    let vehiclesQuery = supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250);
+    if (isThirdPartyPage) {
+      vehiclesQuery = vehiclesQuery.eq('procurement_source', 'third_party');
+    } else {
+      vehiclesQuery = vehiclesQuery.neq('procurement_source', 'third_party');
+    }
+    let [vRes, cRes, oRes] = await Promise.all([
+      vehiclesQuery,
       supabase
         .from('customers')
         .select(
@@ -251,6 +273,21 @@ function VehiclesPage() {
         .limit(250),
       supabase.from('offices').select('*').eq('is_active', true).order('name'),
     ]);
+    // Column may not exist until migration is applied.
+    if (vRes.error && /procurement_source/i.test(vRes.error.message || '')) {
+      vRes = await supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250);
+      if (isThirdPartyPage && !vRes.error) {
+        vRes = {
+          ...vRes,
+          data: ((vRes.data || []) as Vehicle[]).filter((v) => isThirdPartyVehicle(v.procurement_source)),
+        };
+      } else if (!vRes.error && vRes.data) {
+        vRes = {
+          ...vRes,
+          data: ((vRes.data || []) as Vehicle[]).filter((v) => isOwnStockListVehicle(v.procurement_source)),
+        };
+      }
+    }
     if (oRes.data) setOffices(oRes.data as Office[]);
     if (vRes.error) toast.error(`Unable to load inventory: ${vRes.error.message}`);
     const list = (vRes.data || []) as Vehicle[];
@@ -457,7 +494,7 @@ function VehiclesPage() {
     }
     setVehiclePays(payMap);
     setLoading(false);
-  }, []);
+  }, [isThirdPartyPage]);
 
   useEffect(() => { loadVehicles(); }, [loadVehicles]);
 
@@ -471,7 +508,7 @@ function VehiclesPage() {
       const nextPage = next.page ?? page;
       const nextSize = next.pageSize ?? pageSize;
       const params = new URLSearchParams();
-      if (listCategory !== 'car') params.set('category', listCategory);
+      if (!isThirdPartyPage && listCategory !== 'car') params.set('category', listCategory);
       if (filters.search.trim()) params.set('q', filters.search.trim());
       if (filters.status) params.set('status', filters.status);
       if (filters.make) params.set('make', filters.make);
@@ -486,15 +523,29 @@ function VehiclesPage() {
       if (nextPage > 1) params.set('page', String(nextPage));
       if (nextSize !== DEFAULT_STOCK_PAGE_SIZE) params.set('pageSize', String(nextSize));
       const qs = params.toString();
-      router.replace(qs ? `/vehicles?${qs}` : '/vehicles', { scroll: false });
+      router.replace(qs ? `${listBasePath}?${qs}` : listBasePath, { scroll: false });
     },
-    [listCategory, listFilters, page, pageSize, router, paymentFilter, shippingFilter, lifecycleAlert]
+    [
+      listCategory,
+      listFilters,
+      page,
+      pageSize,
+      router,
+      paymentFilter,
+      shippingFilter,
+      lifecycleAlert,
+      isThirdPartyPage,
+      listBasePath,
+    ]
   );
 
-  const catalogVehicles = useMemo(
-    () => vehicles.filter((v) => parseStockCategory(v.stock_category) === listCategory),
-    [vehicles, listCategory]
-  );
+  const catalogVehicles = useMemo(() => {
+    const byProc = isThirdPartyPage
+      ? vehicles.filter((v) => isThirdPartyVehicle(v.procurement_source))
+      : vehicles.filter((v) => isOwnStockListVehicle(v.procurement_source));
+    if (isThirdPartyPage) return byProc;
+    return byProc.filter((v) => parseStockCategory(v.stock_category) === listCategory);
+  }, [vehicles, listCategory, isThirdPartyPage]);
 
   const filtered = useMemo(() => {
     const q = listFilters.search.trim().toLowerCase();
@@ -664,6 +715,9 @@ function VehiclesPage() {
       primary_image_url: v.primary_image_url || '',
       source_country_code: v.source_country_code || resolveSourceCountry(v.source_country)?.code || 'JP',
       source_supplier: v.source_supplier || '',
+      dealership_name: v.dealership_name || v.source_supplier || '',
+      once_price: v.once_price != null ? String(v.once_price) : '',
+      once_price_currency: (v.once_price_currency || 'JPY').toUpperCase(),
       shipping_port_of_loading: v.shipping_port_of_loading || '',
       yard_id: v.yard_id || '',
       location: v.location || '',
@@ -701,7 +755,17 @@ function VehiclesPage() {
     const category = parseStockCategory(formState.stock_category);
     const chassis = formState.chassis_number.trim() || (category === 'parts' ? (formState.part_sku.trim() || formState.stock_number.trim()) : '');
     const origin = resolveSourceCountry(formState.source_country_code);
-    const fob = fobFromForm(formState);
+    const dealership = formState.dealership_name.trim() || formState.source_supplier.trim() || null;
+    const oncePriceNum = formState.once_price.trim() ? Number(formState.once_price) : null;
+    const onceCurrency = (formState.once_price_currency || 'JPY').trim().toUpperCase() || 'JPY';
+    const onceFob =
+      isThirdPartyPage && oncePriceNum != null && Number.isFinite(oncePriceNum)
+        ? fobFieldsFromOncePrice(oncePriceNum, onceCurrency, {
+            expenseJpy: formState.expense_jpy === '' ? FIXED_EXPENSE_JPY : Number(formState.expense_jpy) || 0,
+            ttRate: formState.tt_rate === '' ? DEFAULT_TT_RATE : Number(formState.tt_rate) || DEFAULT_TT_RATE,
+          })
+        : null;
+    const fob = onceFob ? null : fobFromForm(formState);
     const payload: Record<string, unknown> = {
       chassis_number: chassis,
       stock_category: category,
@@ -711,22 +775,39 @@ function VehiclesPage() {
       color: formState.colour.trim() || null,
       model_year: formState.model_year ? Number(formState.model_year) : null,
       transmission: mapTransmissionToDb(formState.transmission),
-      purchase_price: formState.purchase_price ? Number(formState.purchase_price) : null,
-      expense_jpy: formState.expense_jpy === '' ? FIXED_EXPENSE_JPY : Number(formState.expense_jpy) || 0,
-      tt_rate: formState.tt_rate === '' ? DEFAULT_TT_RATE : Number(formState.tt_rate) || DEFAULT_TT_RATE,
-      fob_jpy: fob ? Math.round(fob.fobJpy) : null,
-      fob_usd: fob ? Math.round(fob.fobUsd) : null,
-      listed_price: fob ? Math.round(fob.fobUsd) : null,
-      listed_currency: 'USD',
+      purchase_price: onceFob
+        ? onceFob.purchase_price
+        : formState.purchase_price
+          ? Number(formState.purchase_price)
+          : null,
+      purchase_currency: onceFob?.purchase_currency || 'JPY',
+      expense_jpy: onceFob
+        ? onceFob.expense_jpy
+        : formState.expense_jpy === ''
+          ? FIXED_EXPENSE_JPY
+          : Number(formState.expense_jpy) || 0,
+      tt_rate: onceFob
+        ? onceFob.tt_rate
+        : formState.tt_rate === ''
+          ? DEFAULT_TT_RATE
+          : Number(formState.tt_rate) || DEFAULT_TT_RATE,
+      fob_jpy: onceFob ? onceFob.fob_jpy : fob ? Math.round(fob.fobJpy) : null,
+      fob_usd: onceFob ? onceFob.fob_usd : fob ? Math.round(fob.fobUsd) : null,
+      listed_price: onceFob ? onceFob.listed_price : fob ? Math.round(fob.fobUsd) : null,
+      listed_currency: onceFob?.listed_currency || 'USD',
       notes: mergeEngineIntoNotes(formState.notes, formState.engine),
       source_country: origin?.name || 'Japan',
       source_country_code: origin?.code || 'JP',
-      source_supplier: formState.source_supplier.trim() || null,
+      source_supplier: isThirdPartyPage ? dealership : formState.source_supplier.trim() || null,
+      procurement_source: isThirdPartyPage ? 'third_party' : 'own_stock',
+      dealership_name: isThirdPartyPage ? dealership : null,
+      once_price: isThirdPartyPage ? oncePriceNum : null,
+      once_price_currency: isThirdPartyPage ? onceCurrency : 'JPY',
       shipping_port_of_loading: formState.shipping_port_of_loading.trim() || null,
       yard_id: formState.yard_id || null,
       location: formState.location.trim() || null,
       destination_country: formState.destination_country.trim() || null,
-      bid_requester_id: formState.bid_requester_id || null,
+      bid_requester_id: isThirdPartyPage ? null : formState.bid_requester_id || null,
     };
     return { chassis, category, payload };
   };
@@ -740,6 +821,10 @@ function VehiclesPage() {
     const { chassis, category, payload } = stockPayload(form);
     if (!profile || !chassis || !form.make.trim() || !form.model.trim()) {
       toast.error(category === 'parts' ? 'Part number, stock no., or chassis is required' : 'Chassis, make, and model are required');
+      return;
+    }
+    if (isThirdPartyPage && (!form.dealership_name.trim() || !form.once_price.trim())) {
+      toast.error('Dealership name and once price are required');
       return;
     }
     setSubmitting(true);
@@ -757,7 +842,7 @@ function VehiclesPage() {
         : {}),
     };
     let { data, error } = await supabase.from('vehicles').insert(insertPayload).select().maybeSingle();
-    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|fob_jpy|yard_id|destination_country/i.test(error.message)) {
+    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|fob_jpy|yard_id|destination_country|procurement_source|dealership_name|once_price/i.test(error.message)) {
       const rest = { ...insertPayload };
       delete rest.source_country_code;
       delete rest.stock_category;
@@ -768,6 +853,10 @@ function VehiclesPage() {
       delete rest.fob_jpy;
       delete rest.yard_id;
       delete rest.destination_country;
+      delete rest.procurement_source;
+      delete rest.dealership_name;
+      delete rest.once_price;
+      delete rest.once_price_currency;
       ({ data, error } = await supabase.from('vehicles').insert(rest).select().maybeSingle());
     }
     if (error) { setSubmitting(false); toast.error(error.message); return; }
@@ -795,7 +884,7 @@ function VehiclesPage() {
       }
     }
     setSubmitting(false);
-    toast.success('Stock added');
+    toast.success(isThirdPartyPage ? 'Third-party unit added' : 'Stock added');
     setCreateOpen(false);
     setGallery([]);
     setAuctionSheetFile(null);
@@ -822,6 +911,11 @@ function VehiclesPage() {
       toast.error(category === 'parts' ? 'Part number, stock no., or chassis is required' : 'Chassis, make, and model are required');
       return;
     }
+    if (isThirdPartyPage && (!form.dealership_name.trim() || !form.once_price.trim())) {
+      setSubmitting(false);
+      toast.error('Dealership name and once price are required');
+      return;
+    }
     const primary = pickPrimaryImageUrl(gallery);
     // Booking/courier/customer stay on Edit Shipping / Reserve; term + vehicle cost are editable here.
     const updatePayload: Record<string, unknown> = {
@@ -841,7 +935,7 @@ function VehiclesPage() {
       updatePayload.status = form.status;
     }
     let { error } = await supabase.from('vehicles').update(updatePayload).eq('id', selected.id);
-    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|fob_jpy|yard_id|destination_country/i.test(error.message)) {
+    if (error && /source_country_code|stock_category|part_sku|expense_jpy|tt_rate|fob_usd|fob_jpy|yard_id|destination_country|procurement_source|dealership_name|once_price/i.test(error.message)) {
       const rest = { ...updatePayload };
       delete rest.source_country_code;
       delete rest.stock_category;
@@ -852,6 +946,10 @@ function VehiclesPage() {
       delete rest.destination_country;
       delete rest.tt_rate;
       delete rest.fob_usd;
+      delete rest.procurement_source;
+      delete rest.dealership_name;
+      delete rest.once_price;
+      delete rest.once_price_currency;
       ({ error } = await supabase.from('vehicles').update(rest).eq('id', selected.id));
     }
     setSubmitting(false);
@@ -1297,13 +1395,76 @@ function VehiclesPage() {
           ) : null}
         </div>
       </section>
-      <FobFormulaFields
-        bidJpy={form.purchase_price}
-        expenseJpy={form.expense_jpy}
-        ttRate={form.tt_rate}
-        onChange={(patch) => setForm({ ...form, ...patch })}
-        disabled={!canEditVehicle && mode === 'edit'}
-      />
+      {isThirdPartyPage ? (
+        <section className="space-y-1.5 rounded-xl border-2 border-amber-500/40 bg-amber-500/5 p-2">
+          <h3 className="text-xs font-semibold tracking-wide text-amber-900 dark:text-amber-100">
+            Dealership once price
+          </h3>
+          <div className="grid gap-1.5 sm:grid-cols-3">
+            <div className="space-y-0.5 sm:col-span-2">
+              <Label>Dealership name *</Label>
+              <Input
+                value={form.dealership_name}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    dealership_name: e.target.value,
+                    source_supplier: e.target.value,
+                  })
+                }
+                placeholder="e.g. Nagoya Auto Dealer"
+                disabled={!canEditVehicle && mode === 'edit'}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <Label>Currency</Label>
+              <Select
+                value={form.once_price_currency}
+                onValueChange={(v) => setForm({ ...form, once_price_currency: v })}
+                disabled={!canEditVehicle && mode === 'edit'}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="JPY">JPY</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-0.5 sm:col-span-2">
+              <Label>Once / fixed price *</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={form.once_price}
+                onChange={(e) => setForm({ ...form, once_price: e.target.value })}
+                placeholder={form.once_price_currency === 'USD' ? 'FOB USD ask' : 'Dealership ask (JPY)'}
+                disabled={!canEditVehicle && mode === 'edit'}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <Label>TT rate (JPY/USD)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={form.tt_rate}
+                onChange={(e) => setForm({ ...form, tt_rate: e.target.value })}
+                disabled={!canEditVehicle && mode === 'edit'}
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            JPY once price derives FOB like stock (ask + 10% + expense ÷ TT). USD once price is stored as FOB USD.
+          </p>
+        </section>
+      ) : (
+        <FobFormulaFields
+          bidJpy={form.purchase_price}
+          expenseJpy={form.expense_jpy}
+          ttRate={form.tt_rate}
+          onChange={(patch) => setForm({ ...form, ...patch })}
+          disabled={!canEditVehicle && mode === 'edit'}
+        />
+      )}
       <StockSourcingFields
         form={{
           source_supplier: form.source_supplier,
@@ -1321,6 +1482,7 @@ function VehiclesPage() {
         vehicleId={mode === 'edit' ? selected?.id : null}
         profileId={profile?.id}
         onAuctionSheetUploaded={() => void loadVehicles()}
+        variant={isThirdPartyPage ? 'third_party' : 'stock'}
       />
       <section className="space-y-1.5 rounded-xl border border-border/70 p-2">
         <h3 className="text-xs font-semibold">Vehicle specs</h3>
@@ -1374,11 +1536,20 @@ function VehiclesPage() {
       <PageHeader title={listCopy.title} description={listCopy.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/vehicles/lifecycle">Stock pipeline</Link>
-            </Button>
+            {isThirdPartyPage ? (
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/bulk-upload?kind=third_party">Bulk import</Link>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/vehicles/lifecycle">Stock pipeline</Link>
+              </Button>
+            )}
             {canCreateVehicle ? (
-              <Button size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />Add stock</Button>
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                {isThirdPartyPage ? 'Add third-party unit' : 'Add stock'}
+              </Button>
             ) : null}
           </div>
         } />
@@ -1397,7 +1568,7 @@ function VehiclesPage() {
             className="h-7 px-2"
             onClick={() => {
               const params = new URLSearchParams();
-              if (listCategory !== 'car') params.set('category', listCategory);
+              if (!isThirdPartyPage && listCategory !== 'car') params.set('category', listCategory);
               if (listFilters.search.trim()) params.set('q', listFilters.search.trim());
               if (listFilters.status) params.set('status', listFilters.status);
               if (listFilters.make) params.set('make', listFilters.make);
@@ -1405,7 +1576,7 @@ function VehiclesPage() {
               if (listFilters.customer) params.set('customer', listFilters.customer);
               if (listFilters.agent) params.set('agent', listFilters.agent);
               const qs = params.toString();
-              router.replace(qs ? `/vehicles?${qs}` : '/vehicles', { scroll: false });
+              router.replace(qs ? `${listBasePath}?${qs}` : listBasePath, { scroll: false });
             }}
           >
             <X className="mr-1 h-3 w-3" />
@@ -1447,7 +1618,9 @@ function VehiclesPage() {
             description={
               isSellingFocused
                 ? 'You see available stock plus vehicles you reserved. Other agents’ reserved units stay hidden.'
-                : 'Add stock or adjust your filters.'
+                : isThirdPartyPage
+                  ? 'Add a dealership once-price unit or import via Bulk upload → Third party.'
+                  : 'Add stock or adjust your filters.'
             }
           />
         </Card>
@@ -1524,7 +1697,11 @@ function VehiclesPage() {
       )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent fullscreen>
-        <DialogHeader><DialogTitle>Add {stockCategoryLabel(listCategory).toLowerCase()}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>
+            {isThirdPartyPage ? 'Add third-party unit' : `Add ${stockCategoryLabel(listCategory).toLowerCase()}`}
+          </DialogTitle>
+        </DialogHeader>
         <form onSubmit={submitCreate} className="space-y-3">
           {workflowFormSections('create')}
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Save'}</Button></DialogFooter>
@@ -1532,7 +1709,9 @@ function VehiclesPage() {
       </DialogContent></Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}><DialogContent fullscreen>
-        <DialogHeader><DialogTitle>Edit stock</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{isThirdPartyPage ? 'Edit third-party unit' : 'Edit stock'}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={submitEdit} className="space-y-3">
           {workflowFormSections('edit')}
           <DialogFooter><Button type="submit" disabled={submitting}>Save</Button></DialogFooter>
