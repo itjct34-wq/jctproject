@@ -26,6 +26,8 @@ export type HomeData = {
   arrivals: HomeVehicle[];
   /** Yard-fresh strip — extra units beyond the featured grid when available. */
   justListed: HomeVehicle[];
+  /** Featured parts grid (photo-first in-stock parts). */
+  featuredParts: HomeVehicle[];
   stockCount: number;
   makes: HomeMakeRow[];
   modelsByMake: Record<string, string[]>;
@@ -34,6 +36,7 @@ export type HomeData = {
 const EMPTY: HomeData = {
   arrivals: [],
   justListed: [],
+  featuredParts: [],
   stockCount: 0,
   makes: [],
   modelsByMake: {},
@@ -122,8 +125,9 @@ function collectMakeNames(names: Iterable<string>): string[] {
 
 export async function loadHomeData(): Promise<HomeData> {
   try {
-    const [stock, catalog] = await Promise.all([
+    const [stock, partsStock, catalog] = await Promise.all([
       loadPublicVehicles(400, 'car'),
+      loadPublicVehicles(200, 'parts'),
       loadCatalogModelsByMake(),
     ]);
 
@@ -173,9 +177,16 @@ export async function loadHomeData(): Promise<HomeData> {
     const featuredIds = new Set(featured.map((v) => v.id));
     const justListed = inStock.filter((v) => !featuredIds.has(v.id)).slice(0, 10);
 
+    // Prefer photo-backed in-stock parts for the homepage grid.
+    const featuredParts = partsStock
+      .filter((v) => v.status === 'in_stock' && coverPhoto(v))
+      .sort(photoFirst)
+      .slice(0, 8);
+
     return {
       arrivals: featured,
       justListed: justListed.length >= 4 ? justListed : inStock.slice(0, 10),
+      featuredParts,
       stockCount: inStock.length,
       makes,
       modelsByMake,

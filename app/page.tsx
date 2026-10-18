@@ -43,7 +43,7 @@ const jsonLd = {
 };
 
 export default async function HomePage() {
-  const { arrivals, justListed, stockCount, makes, modelsByMake } = await loadHomeData();
+  const { arrivals, justListed, featuredParts, stockCount, makes, modelsByMake } = await loadHomeData();
   const makeNames = makes.map((make) => make.name);
   const stockLabel =
     stockCount > 0 ? `${stockCount.toLocaleString()}+ units in stock` : 'Live export stock';
@@ -134,6 +134,35 @@ export default async function HomePage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {arrivals.map((vehicle) => (
               <VehicleCard key={vehicle.id} vehicle={vehicle} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {featuredParts.length > 0 && (
+        <section className="jct-home-wrap py-12 md:py-16" aria-labelledby="featured-parts-heading">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2
+                id="featured-parts-heading"
+                className="font-display text-2xl font-semibold text-[var(--jct-navy)] md:text-3xl"
+              >
+                Featured parts
+              </h2>
+              <p className="mt-1 text-sm text-[var(--jct-muted-2)]">
+                In-stock spare parts with photos — browse by make and model, then request a quote.
+              </p>
+            </div>
+            <Link
+              href="/parts"
+              className="shrink-0 text-sm font-medium text-[var(--jct-vermilion)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+            >
+              See all parts
+            </Link>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {featuredParts.map((part) => (
+              <VehicleCard key={part.id} vehicle={part} hrefBase="/parts" />
             ))}
           </div>
         </section>
