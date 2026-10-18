@@ -34,10 +34,7 @@ export const metadata: Metadata = {
     'Vehicle export management — CRM, inventory, auctions, invoicing, payments, and shipping.',
   manifest: '/manifest.webmanifest',
   applicationName: 'ERP',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b0f14' },
-  ],
+  themeColor: '#F4F7FB',
   appleWebApp: {
     capable: true,
     title: 'ERP',
@@ -60,7 +57,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${notoSansJp.variable} ${jetbrainsMono.variable} font-sans`}
       >
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false}>
           <LocaleProvider>
             <AuthProvider>
               {children}

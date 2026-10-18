@@ -1,5 +1,9 @@
 import { CATALOG_MAKES, makeMatches } from '@/lib/public/catalog';
-import { loadPublicVehicles, type PublicVehicle } from '@/lib/public/vehicles';
+import {
+  coverPhoto,
+  loadPublicVehicles,
+  type PublicVehicle,
+} from '@/lib/public/vehicles';
 import { createServerClient } from '@/lib/supabase/server';
 import { fetchVehicleMakes, fetchVehicleModels } from '@/lib/shipping-catalog';
 
@@ -13,12 +17,29 @@ export type HomeMakeRow = {
 };
 
 export type HomeData = {
+  /** Featured grid units (photo-first). */
   arrivals: HomeVehicle[];
+  /** Yard-fresh strip — extra units beyond the featured grid when available. */
+  justListed: HomeVehicle[];
+  stockCount: number;
   makes: HomeMakeRow[];
   modelsByMake: Record<string, string[]>;
 };
 
-const EMPTY: HomeData = { arrivals: [], makes: [], modelsByMake: {} };
+const EMPTY: HomeData = {
+  arrivals: [],
+  justListed: [],
+  stockCount: 0,
+  makes: [],
+  modelsByMake: {},
+};
+
+function photoFirst(a: PublicVehicle, b: PublicVehicle): number {
+  const ap = coverPhoto(a) ? 1 : 0;
+  const bp = coverPhoto(b) ? 1 : 0;
+  if (bp !== ap) return bp - ap;
+  return (b.stock_number || '').localeCompare(a.stock_number || '');
+}
 
 /** Prefer config catalogs (vehicle_makes / vehicle_models); fall back to static + stock. */
 async function loadCatalogModelsByMake(): Promise<{
@@ -76,7 +97,7 @@ function mergeModels(
 export async function loadHomeData(): Promise<HomeData> {
   try {
     const [stock, catalog] = await Promise.all([
-      loadPublicVehicles(200, 'car'),
+      loadPublicVehicles(400, 'car'),
       loadCatalogModelsByMake(),
     ]);
 
@@ -124,8 +145,15 @@ export async function loadHomeData(): Promise<HomeData> {
         return a.name.localeCompare(b.name);
       });
 
+    const inStock = stock.filter((v) => v.status === 'in_stock').sort(photoFirst);
+    const featured = inStock.slice(0, 8);
+    const featuredIds = new Set(featured.map((v) => v.id));
+    const justListed = inStock.filter((v) => !featuredIds.has(v.id)).slice(0, 10);
+
     return {
-      arrivals: stock.filter((v) => v.status === 'in_stock').slice(0, 8),
+      arrivals: featured,
+      justListed: justListed.length >= 4 ? justListed : inStock.slice(0, 10),
+      stockCount: inStock.length,
       makes,
       modelsByMake,
     };

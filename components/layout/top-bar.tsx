@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSwitcher } from '@/components/layout/language-switcher';
 import { Bell, Search, Settings, LogOut, Menu, ChevronDown, User } from 'lucide-react';
 import { ROLE_COLORS } from '@/lib/types';
@@ -172,7 +171,6 @@ export function TopBar({
         </button>
 
         <LanguageSwitcher className="hidden sm:inline-flex" />
-        <ThemeToggle />
 
         <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
           <DropdownMenuTrigger asChild>

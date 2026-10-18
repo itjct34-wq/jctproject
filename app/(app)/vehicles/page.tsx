@@ -169,6 +169,48 @@ function fobFromForm(form: typeof emptyForm) {
   );
 }
 
+const VEHICLE_FETCH_PAGE = 1000;
+
+/** Loads every matching row. The list used to stop at 250, so totals under-counted imports. */
+async function fetchInventoryVehicles(thirdParty: boolean): Promise<{
+  data: Vehicle[];
+  error: { message: string } | null;
+}> {
+  const all: Vehicle[] = [];
+  let from = 0;
+  let missingProcurement = false;
+
+  for (;;) {
+    let query = supabase
+      .from('vehicles')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .range(from, from + VEHICLE_FETCH_PAGE - 1);
+    if (!missingProcurement) {
+      query = thirdParty
+        ? query.eq('procurement_source', 'third_party')
+        : query.neq('procurement_source', 'third_party');
+    }
+    const res = await query;
+    if (!missingProcurement && res.error && /procurement_source/i.test(res.error.message || '')) {
+      missingProcurement = true;
+      from = 0;
+      all.length = 0;
+      continue;
+    }
+    if (res.error) return { data: all, error: res.error };
+    const raw = (res.data || []) as Vehicle[];
+    const chunk = missingProcurement
+      ? raw.filter((v) =>
+          thirdParty ? isThirdPartyVehicle(v.procurement_source) : isOwnStockListVehicle(v.procurement_source)
+        )
+      : raw;
+    all.push(...chunk);
+    if (raw.length < VEHICLE_FETCH_PAGE) return { data: all, error: null };
+    from += VEHICLE_FETCH_PAGE;
+  }
+}
+
 function VehiclesPage() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -256,14 +298,8 @@ function VehiclesPage() {
   const loadVehicles = useCallback(async () => {
     setLoading(true);
     await supabase.rpc('expire_reserved_vehicles');
-    let vehiclesQuery = supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250);
-    if (isThirdPartyPage) {
-      vehiclesQuery = vehiclesQuery.eq('procurement_source', 'third_party');
-    } else {
-      vehiclesQuery = vehiclesQuery.neq('procurement_source', 'third_party');
-    }
-    let [vRes, cRes, oRes] = await Promise.all([
-      vehiclesQuery,
+    const [vRes, cRes, oRes] = await Promise.all([
+      fetchInventoryVehicles(isThirdPartyPage),
       supabase
         .from('customers')
         .select(
@@ -273,21 +309,6 @@ function VehiclesPage() {
         .limit(250),
       supabase.from('offices').select('*').eq('is_active', true).order('name'),
     ]);
-    // Column may not exist until migration is applied.
-    if (vRes.error && /procurement_source/i.test(vRes.error.message || '')) {
-      vRes = await supabase.from('vehicles').select('*').order('updated_at', { ascending: false }).limit(250);
-      if (isThirdPartyPage && !vRes.error) {
-        vRes = {
-          ...vRes,
-          data: ((vRes.data || []) as Vehicle[]).filter((v) => isThirdPartyVehicle(v.procurement_source)),
-        };
-      } else if (!vRes.error && vRes.data) {
-        vRes = {
-          ...vRes,
-          data: ((vRes.data || []) as Vehicle[]).filter((v) => isOwnStockListVehicle(v.procurement_source)),
-        };
-      }
-    }
     if (oRes.data) setOffices(oRes.data as Office[]);
     if (vRes.error) toast.error(`Unable to load inventory: ${vRes.error.message}`);
     const list = (vRes.data || []) as Vehicle[];
@@ -1586,8 +1607,14 @@ function VehiclesPage() {
       ) : null}
 
       <div className="grid grid-cols-3 gap-3">
-        {[{ l: 'Total', v: stats.total }, { l: 'Available', v: stats.available }, { l: 'Reserved', v: stats.reserved }].map((s) => (
-          <Card key={s.l} className="erp-stat-card rounded-md shadow-sm">
+        {(
+          [
+            { l: 'Total', v: stats.total, tone: 'erp-stat-card--navy' },
+            { l: 'Available', v: stats.available, tone: 'erp-stat-card--success' },
+            { l: 'Reserved', v: stats.reserved, tone: 'erp-stat-card--gold' },
+          ] as const
+        ).map((s) => (
+          <Card key={s.l} className={`erp-stat-card ${s.tone} rounded-md shadow-sm`}>
             <CardContent className="p-3.5 sm:p-4">
               <p className="erp-stat-label">{s.l}</p>
               <p className="erp-stat-value">{s.v}</p>

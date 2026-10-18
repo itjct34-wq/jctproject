@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { PUBLIC_STOCK_NAV } from '@/lib/stock-category';
 import { cn } from '@/lib/utils';
 
@@ -30,10 +31,10 @@ export function HomeHeader() {
       <div className="jct-home-wrap flex min-h-[72px] items-center justify-between gap-4 py-2.5 sm:min-h-[88px] md:min-h-[104px] lg:min-h-[112px] lg:py-3">
         <Link
           href="/"
-          className="font-display text-xl font-bold tracking-tight text-[var(--jct-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)] sm:text-2xl"
-          aria-label="Home"
+          className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          aria-label="Japan Circular Trading home"
         >
-          Export
+          <BrandLogo label="JCT" placement="header" />
         </Link>
         <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
@@ -81,7 +82,7 @@ export function HomeHeader() {
           aria-label="Site menu"
         >
           <div className="flex items-center justify-between border-b border-[var(--jct-border)] px-4 py-3">
-            <span className="font-display text-xl font-bold tracking-tight text-[var(--jct-navy)]">Export</span>
+            <BrandLogo label="JCT" placement="header" />
             <button
               type="button"
               className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--jct-navy)]/20"

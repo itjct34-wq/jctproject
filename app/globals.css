@@ -6,116 +6,68 @@
   :root {
     color-scheme: light;
     /*
-      Liquid Glass ERP tokens — neutral charcoal + refined brand red.
-      Print / public-site CSS stay scoped below (.public-site, .jct-home, invoice-print).
-      --gold is a legacy alias of --brand for existing Tailwind `gold` utilities.
+      Light-only ERP. Vibe palette matches the public site:
+      navy #0B1F33, vermilion #D8392B, gold, cream canvas.
+      Print CSS stays scoped below (invoice-print).
     */
-    --background: 220 16% 96%;
-    --foreground: 220 22% 12%;
+    --jct-navy: #0B1F33;
+    --jct-vermilion: #D8392B;
+    --jct-gold: #C4A35A;
+    --jct-panel: #F4F7FB;
+    --jct-surface: #EEF3F8;
+    --jct-border: #D5DEE8;
+    --jct-muted: #3B4C5D;
+    --background: 210 40% 97%;
+    --foreground: 210 64% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 220 22% 12%;
+    --card-foreground: 210 64% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 22% 12%;
-    --primary: 220 18% 16%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 220 18% 16%;
-    --muted: 220 12% 93%;
-    --muted-foreground: 220 10% 38%;
-    --accent: 0 70% 96%;
-    --accent-foreground: 0 65% 32%;
-    --destructive: 0 72% 42%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 152 55% 32%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 40%;
-    --warning-foreground: 0 0% 100%;
-    --info: 199 78% 38%;
-    --info-foreground: 0 0% 100%;
-    --border: 220 14% 86%;
-    --input: 220 12% 84%;
-    --ring: 0 72% 48%;
-    --brand: 0 72% 48%;
-    --brand-foreground: 0 0% 100%;
-    --gold: 0 72% 48%;
-    --gold-foreground: 0 0% 100%;
-    --chart-1: 0 72% 48%;
-    --chart-2: 199 78% 42%;
-    --chart-3: 152 55% 36%;
-    --chart-4: 38 92% 46%;
-    --chart-5: 220 14% 46%;
-    --chart-6: 262 40% 52%;
-    --radius: 1.125rem;
-    /* Glass system — intensified Liquid Glass (Gen Z / multinational) */
-    --glass-bg: 0 0% 100% / 0.58;
-    --glass-bg-strong: 0 0% 100% / 0.78;
-    --glass-border: 0 0% 100% / 0.72;
-    --glass-border-muted: 220 14% 70% / 0.38;
-    --glass-blur: 28px;
-    --glass-shadow: 0 14px 48px hsl(220 22% 12% / 0.12), 0 1px 0 hsl(0 0% 100% / 0.75) inset;
-    --glass-shadow-sm: 0 6px 22px hsl(220 22% 12% / 0.08);
-    --shell-glow: radial-gradient(ellipse 85% 55% at 8% -12%, hsl(0 72% 48% / 0.12), transparent 52%),
-      radial-gradient(ellipse 65% 45% at 92% 0%, hsl(199 78% 42% / 0.1), transparent 48%),
-      radial-gradient(ellipse 50% 35% at 50% 100%, hsl(220 18% 88% / 0.55), transparent 60%),
-      linear-gradient(165deg, hsl(220 20% 97%) 0%, hsl(220 14% 93%) 48%, hsl(220 16% 96%) 100%);
-    --sidebar-glass: 220 20% 9% / 0.88;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-muted: 0 0% 100%;
-    --sidebar-muted-foreground: 220 10% 68%;
-    --sidebar-border: 0 0% 100%;
-  }
-
-  .dark {
-    color-scheme: dark;
-    --background: 220 18% 7%;
-    --foreground: 220 14% 96%;
-    --card: 220 16% 11%;
-    --card-foreground: 220 14% 96%;
-    --popover: 220 16% 12%;
-    --popover-foreground: 220 14% 96%;
-    --primary: 0 72% 52%;
+    --popover-foreground: 210 64% 12%;
+    --primary: 210 64% 16%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 16%;
-    --secondary-foreground: 220 14% 96%;
-    --muted: 220 14% 14%;
-    --muted-foreground: 220 10% 68%;
-    --accent: 0 40% 16%;
-    --accent-foreground: 0 80% 78%;
-    --destructive: 0 68% 48%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 152 50% 44%;
+    --secondary: 210 32% 94%;
+    --secondary-foreground: 210 64% 16%;
+    --muted: 210 28% 94%;
+    --muted-foreground: 207 18% 38%;
+    --accent: 5 78% 96%;
+    --accent-foreground: 5 72% 36%;
+    --destructive: 5 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 158 64% 28%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 52%;
-    --warning-foreground: 0 0% 10%;
-    --info: 199 78% 56%;
-    --info-foreground: 220 18% 8%;
-    --border: 220 12% 20%;
-    --input: 220 12% 20%;
-    --ring: 0 72% 52%;
-    --brand: 0 72% 52%;
+    --warning: 36 88% 38%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 84% 36%;
+    --info-foreground: 0 0% 100%;
+    --border: 210 24% 86%;
+    --input: 210 20% 84%;
+    --ring: 5 72% 51%;
+    --brand: 5 72% 51%;
     --brand-foreground: 0 0% 100%;
-    --gold: 0 72% 52%;
-    --gold-foreground: 0 0% 100%;
-    --chart-1: 0 72% 52%;
-    --chart-2: 199 78% 56%;
-    --chart-3: 152 50% 44%;
-    --chart-4: 38 92% 52%;
-    --chart-5: 220 10% 70%;
-    --chart-6: 262 45% 62%;
-    --glass-bg: 220 16% 14% / 0.42;
-    --glass-bg-strong: 220 16% 14% / 0.68;
-    --glass-border: 0 0% 100% / 0.14;
-    --glass-border-muted: 0 0% 100% / 0.1;
-    --glass-blur: 32px;
-    --glass-shadow: 0 18px 52px hsl(0 0% 0% / 0.45), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
-    --glass-shadow-sm: 0 6px 26px hsl(0 0% 0% / 0.32);
-    --shell-glow: radial-gradient(ellipse 75% 50% at 12% -8%, hsl(0 72% 48% / 0.22), transparent 52%),
-      radial-gradient(ellipse 60% 42% at 88% 4%, hsl(199 78% 42% / 0.16), transparent 48%),
-      linear-gradient(165deg, hsl(220 22% 8%) 0%, hsl(220 18% 5%) 100%);
-    --sidebar-glass: 220 20% 7% / 0.9;
+    --gold: 40 48% 56%;
+    --gold-foreground: 210 64% 12%;
+    --chart-1: 5 72% 51%;
+    --chart-2: 210 64% 28%;
+    --chart-3: 158 64% 32%;
+    --chart-4: 40 72% 48%;
+    --chart-5: 199 84% 40%;
+    --chart-6: 262 48% 52%;
+    --radius: 1.125rem;
+    --glass-bg: 0 0% 100% / 0.72;
+    --glass-bg-strong: 0 0% 100% / 0.9;
+    --glass-border: 0 0% 100% / 0.8;
+    --glass-border-muted: 210 24% 70% / 0.45;
+    --glass-blur: 28px;
+    --glass-shadow: 0 14px 48px hsl(210 64% 12% / 0.1), 0 1px 0 hsl(0 0% 100% / 0.8) inset;
+    --glass-shadow-sm: 0 6px 22px hsl(210 64% 12% / 0.07);
+    --shell-glow: radial-gradient(ellipse 70% 48% at 6% -8%, hsl(5 72% 51% / 0.14), transparent 52%),
+      radial-gradient(ellipse 55% 40% at 96% 0%, hsl(210 64% 28% / 0.12), transparent 50%),
+      radial-gradient(ellipse 40% 30% at 70% 100%, hsl(40 48% 56% / 0.18), transparent 55%),
+      linear-gradient(165deg, hsl(210 45% 98%) 0%, hsl(210 32% 95%) 46%, hsl(200 28% 96%) 100%);
+    --sidebar-glass: 210 64% 10% / 0.94;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-muted: 0 0% 100%;
-    --sidebar-muted-foreground: 220 10% 68%;
+    --sidebar-muted-foreground: 210 18% 72%;
     --sidebar-border: 0 0% 100%;
   }
 }
@@ -345,6 +297,22 @@
 .erp-shell .erp-stat-value {
   @apply mt-1 text-2xl font-bold leading-none tracking-tight text-foreground;
 }
+.erp-shell .erp-stat-card--navy {
+  border-left-color: hsl(210 64% 22%);
+  background: linear-gradient(180deg, hsl(210 55% 97%), hsl(0 0% 100%));
+}
+.erp-shell .erp-stat-card--success {
+  border-left-color: hsl(var(--success));
+  background: linear-gradient(180deg, hsl(158 48% 96%), hsl(0 0% 100%));
+}
+.erp-shell .erp-stat-card--gold {
+  border-left-color: hsl(var(--gold));
+  background: linear-gradient(180deg, hsl(40 70% 96%), hsl(0 0% 100%));
+}
+.erp-shell .erp-stat-card--brand {
+  border-left-color: hsl(var(--brand));
+  background: linear-gradient(180deg, hsl(5 80% 97%), hsl(0 0% 100%));
+}
 .erp-shell .erp-empty {
   @apply text-muted-foreground;
 }
@@ -410,6 +378,7 @@
   color-scheme: light;
   --jct-navy: #0B1F33;
   --jct-vermilion: #D8392B;
+  --jct-gold: #C4A35A;
   --jct-panel: #F3F5F7;
   --jct-surface: #eef1f5;
   --jct-border: #DDE3E9;
@@ -421,6 +390,7 @@
 .jct-home {
   --jct-navy: #0B1F33;
   --jct-vermilion: #D8392B;
+  --jct-gold: #C4A35A;
   --jct-panel: #F3F5F7;
   --jct-border: #DDE3E9;
   --jct-muted: #3B4C5D;
@@ -429,13 +399,80 @@
   --jct-surface: #eef1f5;
   background: var(--jct-panel);
   color: var(--jct-navy);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-sans), var(--font-jp), ui-sans-serif, system-ui, sans-serif;
 }
 .jct-home .font-display,
 .jct-home h1,
 .jct-home h2,
 .jct-home h3 {
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-sans), var(--font-jp), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Homepage motion — hero entrance, subtle ken burns, yard-fresh rail */
+@keyframes jct-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes jct-kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+@keyframes jct-rail-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.jct-hero-enter {
+  animation: jct-hero-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.jct-hero-enter-delay-1 {
+  animation-delay: 0.08s;
+}
+.jct-hero-enter-delay-2 {
+  animation-delay: 0.16s;
+}
+.jct-hero-enter-delay-3 {
+  animation-delay: 0.24s;
+}
+.jct-hero-kenburns {
+  animation: jct-kenburns 18s ease-out both;
+  will-change: transform;
+}
+.jct-rail-item {
+  animation: jct-rail-item-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.jct-rail-fade::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0.75rem;
+  width: 3rem;
+  background: linear-gradient(90deg, transparent, var(--jct-panel));
+}
+@media (prefers-reduced-motion: reduce) {
+  .jct-hero-enter,
+  .jct-hero-kenburns,
+  .jct-rail-item {
+    animation: none;
+  }
 }
 .jct-home-wrap {
   width: 100%;
