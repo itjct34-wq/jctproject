@@ -37,10 +37,14 @@ export const CATALOG_MAKES: CatalogMake[] = [
   { name: 'Iseki', slug: 'iseki', kind: 'machinery', aliases: [], logoPath: '/brands/iseki.svg', sortOrder: 180 },
   { name: 'John Deere', slug: 'john-deere', kind: 'machinery', aliases: [], logoPath: '/brands/john-deere.svg', sortOrder: 190 },
   { name: 'Kubota', slug: 'kubota', kind: 'machinery', aliases: [], logoPath: '/brands/kubota.svg', sortOrder: 200 },
-  { name: 'Land Rover', slug: 'land-rover', kind: 'car', aliases: [], logoPath: '/brands/land-rover.png', sortOrder: 210 },
+  { name: 'Jaguar', slug: 'jaguar', kind: 'car', aliases: [], logoPath: '/brands/jaguar.svg', sortOrder: 205 },
+  { name: 'Land Rover', slug: 'land-rover', kind: 'car', aliases: ['Landrover'], logoPath: '/brands/land-rover.png', sortOrder: 210 },
   { name: 'Massey Ferguson', slug: 'massey-ferguson', kind: 'machinery', aliases: [], logoPath: '/brands/massey-ferguson.svg', sortOrder: 220 },
   { name: 'Mercedes-Benz', slug: 'mercedes-benz', kind: 'car', aliases: ['Mercedes', 'Mercedes Benz'], logoPath: '/brands/mercedes-benz.png', sortOrder: 230 },
   { name: 'Mametora', slug: 'mametora', kind: 'machinery', aliases: [], logoPath: '/brands/mametora.svg', sortOrder: 240 },
+  { name: 'Peugeot', slug: 'peugeot', kind: 'car', aliases: [], logoPath: '/brands/peugeot.svg', sortOrder: 245 },
+  { name: 'Porsche', slug: 'porsche', kind: 'car', aliases: [], logoPath: '/brands/porsche.svg', sortOrder: 248 },
+  { name: 'Rover', slug: 'rover', kind: 'car', aliases: [], logoPath: '/brands/rover.svg', sortOrder: 249 },
   { name: 'Shibaura', slug: 'shibaura', kind: 'machinery', aliases: [], logoPath: '/brands/shibaura.svg', sortOrder: 250 },
   { name: 'Volkswagen', slug: 'volkswagen', kind: 'car', aliases: ['VW'], logoPath: '/brands/volkswagen.png', sortOrder: 260 },
   { name: 'Yanmar', slug: 'yanmar', kind: 'machinery', aliases: [], logoPath: '/brands/yanmar.svg', sortOrder: 270 },
@@ -76,7 +80,42 @@ export function makeMatches(vehicleMake: string, catalog: CatalogMake): boolean 
   const n = vehicleMake.trim().toLowerCase();
   if (!n) return false;
   if (n === catalog.name.toLowerCase()) return true;
+  if (n === catalog.slug) return true;
   return catalog.aliases.some((alias) => alias.toLowerCase() === n);
+}
+
+/** Case-insensitive catalog lookup by name, slug, or alias. */
+export function resolveCatalogMake(raw: string): CatalogMake | undefined {
+  const n = raw.trim();
+  if (!n) return undefined;
+  return CATALOG_MAKES.find((make) => makeMatches(n, make));
+}
+
+/** Title Case for UI labels when DB stores ALL CAPS (preserves short acronyms). */
+export function formatMakeDisplayName(raw: string): string {
+  const resolved = resolveCatalogMake(raw);
+  if (resolved) return resolved.name;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  // Short codes (GMC, etc.) stay uppercase when not in the static catalog.
+  if (/^[A-Za-z0-9]{2,4}$/.test(trimmed) && trimmed === trimmed.toUpperCase()) {
+    return trimmed;
+  }
+
+  return trimmed
+    .toLowerCase()
+    .replace(/(^|[\s-])([a-z])/g, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
+export function makeSlug(raw: string): string {
+  const resolved = resolveCatalogMake(raw);
+  if (resolved) return resolved.slug;
+  return formatMakeDisplayName(raw)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 export function makeMonogram(name: string): string {

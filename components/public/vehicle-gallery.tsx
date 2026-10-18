@@ -73,7 +73,7 @@ export function VehicleGallery({ images, alt }: Props) {
 
   if (!current) {
     return (
-      <div className="flex aspect-[16/11] items-center justify-center rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] text-sm text-[var(--jct-muted-2)]">
+      <div className="flex aspect-[16/11] w-full max-w-full items-center justify-center rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)] text-sm text-[var(--jct-muted-2)]">
         Photos coming soon
       </div>
     );
@@ -81,7 +81,7 @@ export function VehicleGallery({ images, alt }: Props) {
 
   return (
     <div
-      className="space-y-3"
+      className="min-w-0 max-w-full space-y-3"
       onMouseEnter={() => setHoverOrFocus(true)}
       onMouseLeave={() => setHoverOrFocus(false)}
       onFocusCapture={() => setHoverOrFocus(true)}
@@ -93,13 +93,20 @@ export function VehicleGallery({ images, alt }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative block w-full overflow-hidden rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)]"
+        className="relative block w-full max-w-full overflow-hidden rounded-2xl border border-[var(--jct-border)] bg-[var(--jct-panel)]"
       >
-        <span className="relative block aspect-[16/11] w-full">
-          <Image src={current} alt={alt} fill sizes="(max-width: 768px) 100vw, 60vw" className="object-cover" priority />
+        <span className="relative block aspect-[16/11] w-full max-w-full">
+          <Image
+            src={current}
+            alt={alt}
+            fill
+            sizes="(max-width: 768px) 100vw, 60vw"
+            className="object-cover"
+            priority
+          />
         </span>
         {count > 1 ? (
-          <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-1 text-xs font-medium text-white">
+          <span className="absolute bottom-3 right-3 max-w-[calc(100%-1.5rem)] truncate rounded-md bg-black/65 px-2 py-1 text-xs font-medium text-white">
             {active + 1} / {count} · tap to enlarge
           </span>
         ) : (
@@ -109,7 +116,7 @@ export function VehicleGallery({ images, alt }: Props) {
         )}
       </button>
       {count > 1 ? (
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <div className="flex w-full max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
           {images.map((url, i) => (
             <button
               key={url + i}

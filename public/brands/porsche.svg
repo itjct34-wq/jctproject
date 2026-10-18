@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img">
+  <title>Porsche</title>
+  <!-- Simplified crest lettermark (original geometry) -->
+  <rect x="9" y="8" width="30" height="32" rx="3" fill="none" stroke="#1A1A1A" stroke-width="2"/>
+  <path fill="#C4A35A" d="M18 14h9c4.6 0 7.8 2.6 7.8 6.8S31.6 27.6 27 27.6H24V34h-6V14zm6 8.8h2.6c1.9 0 3-1.1 3-2.5s-1.1-2.5-3-2.5H24v5z"/>
+</svg>

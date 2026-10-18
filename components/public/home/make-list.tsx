@@ -33,6 +33,7 @@ export function MakeList({ makes }: { makes: HomeMakeRow[] }) {
                     width={64}
                     height={40}
                     aria-hidden="true"
+                    unoptimized={make.logoPath.endsWith('.svg')}
                     className="max-h-10 max-w-[64px] object-contain"
                   />
                 ) : (

@@ -8,6 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Mail } from 'lucide-react';
+import {
+  JCT_LOGO_HEIGHT,
+  JCT_LOGO_SRC,
+  JCT_LOGO_WIDTH,
+} from '@/components/public/brand-logo';
 import { supabase } from '@/lib/supabase/client';
 
 export default function LoginResetPage() {
@@ -36,13 +41,14 @@ export default function LoginResetPage() {
     <div className="erp-shell relative flex min-h-[100dvh] items-center justify-center px-4">
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-card shadow-glass ring-1 ring-border/60">
+          <div className="mb-3 flex h-16 w-[7rem] items-center justify-center overflow-hidden rounded-2xl bg-card px-2 shadow-glass ring-1 ring-border/60 sm:h-[4.5rem] sm:w-[8rem]">
             <Image
-              src="/images/jct-official-logo.png"
-              alt="JCT"
-              width={56}
-              height={56}
-              className="h-full w-full object-contain p-1"
+              src={JCT_LOGO_SRC}
+              alt=""
+              width={JCT_LOGO_WIDTH}
+              height={JCT_LOGO_HEIGHT}
+              sizes="(max-width: 640px) 112px, 128px"
+              className="h-12 w-[83px] object-contain sm:h-14 sm:w-[97px]"
               priority
             />
           </div>

@@ -34,7 +34,7 @@ export function HomeHeader() {
           className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
           aria-label="Japan Circular Trading home"
         >
-          <BrandLogo label="JCT" placement="header" />
+          <BrandLogo placement="header" />
         </Link>
         <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
@@ -82,7 +82,7 @@ export function HomeHeader() {
           aria-label="Site menu"
         >
           <div className="flex items-center justify-between border-b border-[var(--jct-border)] px-4 py-3">
-            <BrandLogo label="JCT" placement="header" />
+            <BrandLogo placement="header" />
             <button
               type="button"
               className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--jct-navy)]/20"

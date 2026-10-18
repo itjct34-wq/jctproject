@@ -1,32 +1,50 @@
+import Image from 'next/image';
+import {
+  JCT_LOGO_HEIGHT,
+  JCT_LOGO_SRC,
+  JCT_LOGO_WIDTH,
+} from '@/components/public/brand-logo';
 import { cn } from '@/lib/utils';
 
+/** Landscape-aware boxes — logo art is ~1.726:1 */
 const SIZES = {
-  sm: { box: 'h-8 w-8', icon: 'h-3.5 w-3.5' },
-  md: { box: 'h-10 w-10', icon: 'h-4 w-4' },
-  lg: { box: 'h-14 w-14', icon: 'h-6 w-6' },
+  sm: {
+    box: 'h-9 w-[3.875rem]',
+    img: 'h-7 w-[3rem]',
+    sizes: '48px',
+  },
+  md: {
+    box: 'h-12 w-[5.25rem]',
+    img: 'h-10 w-[4.375rem]',
+    sizes: '70px',
+  },
+  lg: {
+    box: 'h-14 w-[6.25rem]',
+    img: 'h-12 w-[5.25rem]',
+    sizes: '84px',
+  },
 } as const;
 
 type ErpMarkProps = {
   size?: keyof typeof SIZES;
-  /** Icon-only square (collapsed sidebar / loading). */
+  /** Icon-only square (collapsed sidebar / loading). Kept for callers; mark is always icon-only. */
   compact?: boolean;
+  /** @deprecated Wordmark copy removed — slot stays empty. */
   showWordmark?: boolean;
   className?: string;
+  /** @deprecated Wordmark copy removed — slot stays empty. */
   wordmarkClassName?: string;
-  /** `sidebar` = light-on-dark; `chrome` = works on light top bar. */
+  /** `sidebar` = light pad on dark nav; `chrome` = light top bar. */
   tone?: 'sidebar' | 'chrome';
 };
 
 /**
- * Neutral ERP chrome mark — no company / product branding.
- * Official marks belong on printed trade documents only.
+ * ERP chrome mark — mark-only (no accompanying text).
+ * Uses the official JCT lockup on a light pad so dark-in-art text stays readable.
  */
 export function ErpMark({
   size = 'md',
-  compact,
-  showWordmark = !compact,
   className,
-  wordmarkClassName,
   tone = 'sidebar',
 }: ErpMarkProps) {
   const s = SIZES[size];
@@ -35,43 +53,23 @@ export function ErpMark({
     <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
       <span
         className={cn(
-          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-glass-sm backdrop-blur-md',
+          'relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl px-1.5 shadow-glass-sm backdrop-blur-md',
           s.box,
           onSidebar
-            ? 'bg-white/15 ring-1 ring-white/20'
-            : 'bg-brand/10 ring-1 ring-border/50'
+            ? 'bg-white/95 ring-1 ring-white/25'
+            : 'bg-white ring-1 ring-border/50'
         )}
         aria-hidden
       >
-        <span
-          className={cn(
-            'rounded-md shadow-sm',
-            s.icon,
-            onSidebar ? 'bg-white/90' : 'bg-brand/80'
-          )}
+        <Image
+          src={JCT_LOGO_SRC}
+          alt=""
+          width={JCT_LOGO_WIDTH}
+          height={JCT_LOGO_HEIGHT}
+          sizes={s.sizes}
+          className={cn('object-contain', s.img)}
         />
       </span>
-      {showWordmark ? (
-        <div className={cn('min-w-0', wordmarkClassName)}>
-          <p
-            className={cn(
-              'truncate text-sm font-semibold tracking-tight',
-              onSidebar ? 'text-white' : 'text-foreground'
-            )}
-          >
-            ERP
-          </p>
-          <p
-            className={cn(
-              'truncate text-[11px] font-medium uppercase tracking-[0.14em]',
-              onSidebar ? 'text-white/50' : 'text-muted-foreground'
-            )}
-          >
-            Workspace
-          </p>
-        </div>
-      ) : null}
-      <span className="sr-only">ERP</span>
     </div>
   );
 }
