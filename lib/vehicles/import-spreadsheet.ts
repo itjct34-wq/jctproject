@@ -235,7 +235,11 @@ export async function importVehicleSpreadsheetRows(
       fob_usd: onceFob ? onceFob.fob_usd : bidFob ? Math.round(bidFob.fobUsd) : null,
       listed_price: onceFob
         ? onceFob.listed_price
-        : listed.value ?? (bidFob ? Math.round(bidFob.fobUsd) : null),
+        : listed.value != null
+          ? Math.round(listed.value)
+          : bidFob
+            ? Math.round(bidFob.fobUsd)
+            : null,
       listed_currency: onceFob
         ? onceFob.listed_currency
         : (r.listed_currency || 'USD').trim().toUpperCase() || 'USD',

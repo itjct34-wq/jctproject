@@ -274,17 +274,20 @@ def build_payload(row: dict) -> dict:
                 "expense_jpy": FIXED_EXPENSE_JPY,
                 "tt_rate": DEFAULT_TT_RATE,
                 "fob_jpy": pricing["fob_jpy"],
-                "fob_usd": listed_from_sheet if listed_from_sheet is not None else pricing["fob_usd"],
-                "listed_price": listed_from_sheet
+                "fob_usd": round(listed_from_sheet)
+                if listed_from_sheet is not None
+                else pricing["fob_usd"],
+                "listed_price": round(listed_from_sheet)
                 if listed_from_sheet is not None
                 else pricing["listed_price"],
                 "listed_currency": "USD",
             }
         )
     elif listed_from_sheet is not None:
-        payload["listed_price"] = listed_from_sheet
+        listed = round(listed_from_sheet)
+        payload["listed_price"] = listed
         payload["listed_currency"] = "USD"
-        payload["fob_usd"] = listed_from_sheet
+        payload["fob_usd"] = listed
 
     return payload
 

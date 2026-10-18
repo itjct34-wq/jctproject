@@ -281,8 +281,14 @@ export function effectiveShippingStatus(vehicle: Vehicle): VehicleShippingStatus
 }
 
 export function publicFobUsd(vehicle: Pick<Vehicle, 'fob_usd' | 'listed_price'>): number | null {
-  if (vehicle.fob_usd != null) return Number(vehicle.fob_usd);
-  if (vehicle.listed_price != null) return Number(vehicle.listed_price);
+  if (vehicle.fob_usd != null) {
+    const n = Number(vehicle.fob_usd);
+    return Number.isFinite(n) ? Math.round(n) : null;
+  }
+  if (vehicle.listed_price != null) {
+    const n = Number(vehicle.listed_price);
+    return Number.isFinite(n) ? Math.round(n) : null;
+  }
   return null;
 }
 

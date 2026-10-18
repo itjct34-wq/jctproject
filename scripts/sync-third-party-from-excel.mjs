@@ -142,13 +142,14 @@ function buildPayload(row) {
     payload.expense_jpy = FIXED_EXPENSE_JPY;
     payload.tt_rate = DEFAULT_TT_RATE;
     payload.fob_jpy = pricing.fob_jpy;
-    payload.fob_usd = listedFromSheet ?? pricing.fob_usd;
-    payload.listed_price = listedFromSheet ?? pricing.listed_price;
+    payload.fob_usd = listedFromSheet != null ? Math.round(listedFromSheet) : pricing.fob_usd;
+    payload.listed_price = listedFromSheet != null ? Math.round(listedFromSheet) : pricing.listed_price;
     payload.listed_currency = 'USD';
   } else if (listedFromSheet != null) {
-    payload.listed_price = listedFromSheet;
+    const listed = Math.round(listedFromSheet);
+    payload.listed_price = listed;
     payload.listed_currency = 'USD';
-    payload.fob_usd = listedFromSheet;
+    payload.fob_usd = listed;
   }
 
   return payload;

@@ -730,7 +730,7 @@ function VehiclesPage() {
       purchase_price: v.purchase_price != null ? String(v.purchase_price) : '',
       expense_jpy: v.expense_jpy != null ? String(v.expense_jpy) : String(FIXED_EXPENSE_JPY),
       tt_rate: v.tt_rate != null ? String(v.tt_rate) : String(DEFAULT_TT_RATE),
-      sold_price: v.sold_price != null ? String(v.sold_price) : '',
+      sold_price: v.sold_price != null ? String(Math.round(Number(v.sold_price))) : '',
       incoterm: (v.incoterm as VehicleIncoterm) || 'FOB',
       notes: stripEngineFromNotes(v.notes),
       primary_image_url: v.primary_image_url || '',
@@ -950,7 +950,9 @@ function VehiclesPage() {
     };
     // Only touch sold_price when reserved/sold — available stock keeps DB value (FOB is vehicle cost).
     if (form.payment_status !== 'available') {
-      updatePayload.sold_price = form.sold_price.trim() ? Number(form.sold_price) : null;
+      updatePayload.sold_price = form.sold_price.trim()
+        ? Math.round(Number(form.sold_price))
+        : null;
     }
     if (form.status === 'on_hold' || form.status === 'archived' || form.status === 'hidden') {
       updatePayload.status = form.status;
