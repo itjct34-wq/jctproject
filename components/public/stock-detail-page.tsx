@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { PublicShell } from '@/components/public/public-shell';
 import { CountryFlag } from '@/components/public/country-flag';
-import { PublicPriceEstimator } from '@/components/public/public-price-estimator';
 import { VehicleGallery } from '@/components/public/vehicle-gallery';
 import { supabase } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils/currencies';
@@ -140,13 +139,6 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
                     ? formatCurrency(vehicle.listed_price, vehicle.listed_currency || 'USD')
                     : 'Ask for quote'}
                 </p>
-                <div className="mt-5 min-w-0 border-t border-[var(--jct-border)] pt-5">
-                  <PublicPriceEstimator
-                    listedPrice={vehicle.listed_price}
-                    currency={vehicle.listed_currency || 'USD'}
-                    embedded
-                  />
-                </div>
                 <div className="mt-5 hidden flex-col gap-2 md:flex">
                   <Link
                     href={`/contact?stock=${encodeURIComponent(vehicle.stock_number)}`}
