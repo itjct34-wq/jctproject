@@ -85,8 +85,11 @@ Elevated staff who also hold `sales_agent` keep the full sidebar and ops dashboa
 
 ## Sales agent & freelancer data rules
 
+`sales_agent` and `freelancer` are treated as the same selling role for available-stock visibility and reserve access.
+
 | Action | sales_agent | freelancer |
 |--------|-------------|------------|
+| View **available** stock (own + third-party on Cars/Machinery/Parts) | Yes | Yes |
 | View stock / invoices | Yes | Yes (invoices after migration `024`) |
 | Reserve **available** stock for own customers | Yes (`vehicles.reserve` + RLS `025`) | Yes |
 | Record T/T / payments / Actions | **No** (UI + RLS **043**) | **No** |
