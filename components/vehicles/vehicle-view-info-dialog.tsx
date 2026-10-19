@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { format } from 'date-fns';
-import { CarFront, Eye, EyeOff, Loader2, Pencil, Ship, Tag, Trash2 } from 'lucide-react';
+import { CarFront, ExternalLink, Eye, EyeOff, Loader2, Pencil, Ship, Tag, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DownloadVehicleImagesButton } from '@/components/vehicles/download-vehicle-images-button';
+import { YardPhotosSection } from '@/components/vehicles/yard-photos-section';
+import { stockDetailPath } from '@/lib/stock-category';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +44,11 @@ import {
 } from '@/lib/vehicle-lifecycle';
 import { toast } from 'sonner';
 import { loadVehicleImages } from '@/lib/utils/vehicle-images';
-import { vehicleImageRoleLabel, type VehicleImageRole } from '@/lib/vehicles/image-role';
+import {
+  isErpOnlyVehicleImageRole,
+  vehicleImageRoleLabel,
+  type VehicleImageRole,
+} from '@/lib/vehicles/image-role';
 import type { GalleryImage } from '@/components/shared/multi-image-upload';
 
 export const VIEW_INFO_TABS = [
@@ -500,8 +507,27 @@ export function VehicleViewInfoDialog({
         <DialogContent fullscreen>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>
-              {vehicle.stock_number} · {statusLabels[vehicle.status]}
+            <DialogDescription asChild>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                <a
+                  href={stockDetailPath(vehicle.stock_category, vehicle.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-sky-800 underline-offset-2 hover:underline"
+                >
+                  {vehicle.stock_number}
+                  <ExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                </a>
+                <span>· {statusLabels[vehicle.status]}</span>
+                <DownloadVehicleImagesButton
+                  vehicleId={vehicle.id}
+                  stockNumber={vehicle.stock_number || vehicle.id}
+                  variant="outline"
+                  size="sm"
+                  label="Download photos ZIP"
+                  className="h-7"
+                />
+              </div>
             </DialogDescription>
           </DialogHeader>
 
@@ -518,14 +544,16 @@ export function VehicleViewInfoDialog({
               </div>
               {gallery.length > 0 ? (
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  {(['auction_sheet', 'front', 'back', 'gallery'] as VehicleImageRole[]).map((role) => {
+                  {(
+                    ['auction_sheet', 'front', 'back', 'gallery', 'yard'] as VehicleImageRole[]
+                  ).map((role) => {
                     const items = gallery.filter((g) => (g.image_role || 'gallery') === role);
                     if (!items.length) return null;
                     return (
                       <div key={role} className="space-y-1">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                           {vehicleImageRoleLabel(role)}
-                          {role === 'auction_sheet' ? ' · ERP only' : ''}
+                          {isErpOnlyVehicleImageRole(role) ? ' · ERP only' : ''}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {items.map((img) => (
@@ -536,7 +564,8 @@ export function VehicleViewInfoDialog({
                               rel="noreferrer"
                               className={cn(
                                 'h-14 w-[4.5rem] overflow-hidden rounded border bg-muted sm:h-16 sm:w-20',
-                                role === 'auction_sheet' && 'ring-1 ring-amber-500/50'
+                                role === 'auction_sheet' && 'ring-1 ring-amber-500/50',
+                                role === 'yard' && 'ring-1 ring-emerald-500/50'
                               )}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -645,6 +674,23 @@ export function VehicleViewInfoDialog({
                 </div>
               </div>
             </div>
+
+            {canEditVehicle ||
+            vehicle.yard_id ||
+            gallery.some((g) => g.image_role === 'yard') ||
+            effectiveShippingStatus(vehicle) === 'not_booked' ||
+            effectiveShippingStatus(vehicle) === 'booked' ? (
+              <YardPhotosSection
+                vehicleId={vehicle.id}
+                chassisNumber={vehicle.chassis_number}
+                stockNumber={vehicle.stock_number}
+                partSku={vehicle.part_sku}
+                canEdit={canEditVehicle}
+                onSaved={() => {
+                  void loadVehicleImages(vehicle.id).then(setGallery);
+                }}
+              />
+            ) : null}
 
             <div className="rounded-xl border border-border bg-background">
               <div className="border-b border-border px-3 py-3 sm:px-4">

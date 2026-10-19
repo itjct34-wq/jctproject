@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { AlertTriangle, CarFront, Check, ChevronDown, ChevronRight, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DownloadVehicleImagesButton } from '@/components/vehicles/download-vehicle-images-button';
+import { stockDetailPath } from '@/lib/stock-category';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -459,7 +461,23 @@ export function StockListCard({
         {/* Vehicle identity */}
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-[15px] font-bold leading-tight tracking-tight text-sky-800">{v.stock_number}</p>
+            <a
+              href={stockDetailPath(v.stock_category, v.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open public stock page"
+              className="inline-flex items-center gap-1 text-[15px] font-bold leading-tight tracking-tight text-sky-800 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {v.stock_number}
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+              <span className="sr-only">(opens public page)</span>
+            </a>
+            <DownloadVehicleImagesButton
+              vehicleId={v.id}
+              stockNumber={v.stock_number || v.id}
+              variant="icon"
+            />
             {incoterm ? (
               <span className="inline-flex rounded-md bg-lime-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-lime-800 ring-1 ring-lime-300/80">
                 {incoterm}

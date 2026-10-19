@@ -1,16 +1,19 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase/client';
-import { Camera, Loader2, Star, Trash2, Upload } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, Loader2, Star, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
 import {
   classifyVehicleImageFileName,
+  isErpOnlyVehicleImageRole,
+  isPublicVehicleImageRole,
   vehicleImageRoleLabel,
+  vehicleImageRoleStoragePrefix,
   type VehicleImageRole,
 } from '@/lib/vehicles/image-role';
 
@@ -29,11 +32,13 @@ type Props = {
   label?: string;
   maxImages?: number;
   maxBytes?: number;
-  /** When true, group thumbnails by auction / front / back / gallery. */
+  /** When true, group thumbnails by auction / front / back / gallery / yard. */
   groupByRole?: boolean;
+  /** Force every upload in this control to this role (e.g. yard section). */
+  forceRole?: VehicleImageRole;
 };
 
-const ROLE_ORDER: VehicleImageRole[] = ['auction_sheet', 'front', 'back', 'gallery'];
+const ROLE_ORDER: VehicleImageRole[] = ['auction_sheet', 'front', 'back', 'gallery', 'yard'];
 
 export function MultiImageUpload({
   folder,
@@ -43,9 +48,11 @@ export function MultiImageUpload({
   maxImages = 20,
   maxBytes = 5 * 1024 * 1024,
   groupByRole = true,
+  forceRole,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const uploadFiles = async (files: FileList | File[]) => {
     const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -64,9 +71,10 @@ export function MultiImageUpload({
         toast.error(`${file.name} is over ${Math.round(maxBytes / 1024 / 1024)}MB`);
         continue;
       }
-      const role = classifyVehicleImageFileName(file.name);
+      const classified = classifyVehicleImageFileName(file.name);
+      const role = forceRole || classified;
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const rolePrefix = role === 'auction_sheet' ? 'A' : role === 'front' ? 'F' : role === 'back' ? 'B' : 'G';
+      const rolePrefix = vehicleImageRoleStoragePrefix(role);
       const path = `${chassisStorageFolder(folder)}/${rolePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const { error } = await supabase.storage.from('vehicle-images').upload(path, file, {
         upsert: true,
@@ -85,10 +93,10 @@ export function MultiImageUpload({
         image_role: role,
       });
     }
-    const hasPublicPrimary = next.some((i) => i.is_primary && i.image_role !== 'auction_sheet');
+    const hasPublicPrimary = next.some((i) => i.is_primary && isPublicVehicleImageRole(i.image_role));
     if (!hasPublicPrimary) {
       const front = next.find((i) => i.image_role === 'front');
-      const firstPublic = front || next.find((i) => i.image_role !== 'auction_sheet');
+      const firstPublic = front || next.find((i) => isPublicVehicleImageRole(i.image_role));
       if (firstPublic) {
         for (const img of next) img.is_primary = img === firstPublic;
       }
@@ -103,46 +111,130 @@ export function MultiImageUpload({
       ...img,
       sort_order: i,
     }));
-    if (next.length && !next.some((i) => i.is_primary && i.image_role !== 'auction_sheet')) {
-      const cover = next.find((i) => i.image_role === 'front') || next.find((i) => i.image_role !== 'auction_sheet');
+    if (next.length && !next.some((i) => i.is_primary && isPublicVehicleImageRole(i.image_role))) {
+      const cover =
+        next.find((i) => i.image_role === 'front') ||
+        next.find((i) => isPublicVehicleImageRole(i.image_role));
       if (cover) {
         for (const img of next) img.is_primary = img === cover;
       }
     }
     onChange(next);
+    if (previewIndex != null) {
+      if (next.length === 0) setPreviewIndex(null);
+      else if (previewIndex >= next.length) setPreviewIndex(next.length - 1);
+    }
   };
 
   const setPrimary = (idx: number) => {
-    if (images[idx]?.image_role === 'auction_sheet') {
-      toast.error('Auction sheet photos cannot be the public cover');
+    if (isErpOnlyVehicleImageRole(images[idx]?.image_role)) {
+      toast.error(`${vehicleImageRoleLabel(images[idx]?.image_role)} photos cannot be the public cover`);
       return;
     }
     onChange(images.map((img, i) => ({ ...img, is_primary: i === idx })));
   };
+
+  const moveAt = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    const tmp = next[idx];
+    next[idx] = next[target];
+    next[target] = tmp;
+    onChange(next.map((img, i) => ({ ...img, sort_order: i })));
+    if (previewIndex === idx) setPreviewIndex(target);
+    else if (previewIndex === target) setPreviewIndex(idx);
+  };
+
+  const goPreview = useCallback(
+    (dir: number) => {
+      if (previewIndex == null || images.length === 0) return;
+      setPreviewIndex((previewIndex + dir + images.length) % images.length);
+    },
+    [previewIndex, images.length]
+  );
+
+  useEffect(() => {
+    if (previewIndex == null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewIndex(null);
+      if (event.key === 'ArrowRight') goPreview(1);
+      if (event.key === 'ArrowLeft') goPreview(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewIndex, goPreview]);
 
   const renderTile = (img: GalleryImage, idx: number) => (
     <div
       key={img.id || img.image_url + idx}
       className={cn(
         'relative aspect-square overflow-hidden rounded-lg border bg-muted',
-        img.is_primary && img.image_role !== 'auction_sheet' && 'ring-2 ring-primary',
-        img.image_role === 'auction_sheet' && 'ring-1 ring-amber-500/60'
+        img.is_primary && isPublicVehicleImageRole(img.image_role) && 'ring-2 ring-primary',
+        img.image_role === 'auction_sheet' && 'ring-1 ring-amber-500/60',
+        img.image_role === 'yard' && 'ring-1 ring-emerald-500/60'
       )}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={img.image_url} alt="" className="h-full w-full object-cover" />
-      <span className="absolute left-1 top-1 rounded bg-black/65 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+      <button
+        type="button"
+        className="absolute inset-0 z-0"
+        onClick={() => setPreviewIndex(idx)}
+        aria-label={`Preview photo ${idx + 1}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+      </button>
+      <span className="pointer-events-none absolute left-1 top-1 z-[1] rounded bg-black/65 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
         {vehicleImageRoleLabel(img.image_role)}
       </span>
-      <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-black/55 p-1">
+      {images.length > 1 ? (
+        <div className="absolute right-1 top-1 z-[1] flex gap-0.5">
+          <button
+            type="button"
+            title="Move left"
+            aria-label="Move photo left"
+            className="rounded bg-black/55 p-0.5 text-white hover:bg-black/75 disabled:opacity-35"
+            disabled={idx === 0}
+            onClick={(e) => {
+              e.stopPropagation();
+              moveAt(idx, -1);
+            }}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title="Move right"
+            aria-label="Move photo right"
+            className="rounded bg-black/55 p-0.5 text-white hover:bg-black/75 disabled:opacity-35"
+            disabled={idx === images.length - 1}
+            onClick={(e) => {
+              e.stopPropagation();
+              moveAt(idx, 1);
+            }}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : null}
+      <div className="absolute inset-x-0 bottom-0 z-[1] flex justify-between gap-1 bg-black/55 p-1">
         <button
           type="button"
-          title={img.image_role === 'auction_sheet' ? 'ERP only — not public cover' : 'Set as primary'}
+          title={
+            isErpOnlyVehicleImageRole(img.image_role) ? 'ERP only — not public cover' : 'Set as primary'
+          }
           className="rounded p-0.5 text-white hover:text-amber-300 disabled:opacity-40"
-          disabled={img.image_role === 'auction_sheet'}
+          disabled={isErpOnlyVehicleImageRole(img.image_role)}
           onClick={() => setPrimary(idx)}
         >
-          <Star className={cn('h-3.5 w-3.5', img.is_primary && img.image_role !== 'auction_sheet' && 'fill-amber-400 text-amber-400')} />
+          <Star
+            className={cn(
+              'h-3.5 w-3.5',
+              img.is_primary &&
+                isPublicVehicleImageRole(img.image_role) &&
+                'fill-amber-400 text-amber-400'
+            )}
+          />
         </button>
         <button
           type="button"
@@ -164,6 +256,8 @@ export function MultiImageUpload({
           .filter(({ img }) => (img.image_role || 'gallery') === role),
       })).filter((s) => s.items.length > 0)
     : [{ role: 'gallery' as VehicleImageRole, items: images.map((img, idx) => ({ img, idx })) }];
+
+  const previewImage = previewIndex != null ? images[previewIndex] : null;
 
   return (
     <div className="space-y-3">
@@ -191,7 +285,11 @@ export function MultiImageUpload({
           className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 text-muted-foreground hover:bg-muted/50"
         >
           <Camera className="h-7 w-7 opacity-50" />
-          <span className="text-xs">Upload photos — name with A. / F. / B. prefixes</span>
+          <span className="text-xs">
+            {forceRole === 'yard'
+              ? 'Upload yard photos (ERP only)'
+              : 'Upload photos — name with A. / F. / B. / Y. prefixes'}
+          </span>
         </button>
       ) : (
         <div className="space-y-3">
@@ -200,7 +298,7 @@ export function MultiImageUpload({
               {groupByRole ? (
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {vehicleImageRoleLabel(section.role)}
-                  {section.role === 'auction_sheet' ? ' · ERP only' : ''}
+                  {isErpOnlyVehicleImageRole(section.role) ? ' · ERP only' : ''}
                 </p>
               ) : null}
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -213,7 +311,15 @@ export function MultiImageUpload({
 
       <p className="text-xs text-muted-foreground">
         JPG / PNG / WebP · up to {maxImages} · max {Math.round(maxBytes / 1024 / 1024)}MB ·
-        {' '}A./A_ = auction (ERP only) · F./F_ = front · B./B_ = back · star = public cover
+        {forceRole === 'yard' ? (
+          <> yard photos are ERP only · click photo to preview</>
+        ) : (
+          <>
+            {' '}
+            A./A_ = auction (ERP) · F./F_ = front · B./B_ = back · Y./Y_ = yard (ERP) · star = public
+            cover · click photo to preview · arrows reorder
+          </>
+        )}
       </p>
 
       <input
@@ -227,6 +333,60 @@ export function MultiImageUpload({
           e.target.value = '';
         }}
       />
+
+      {previewImage ? (
+        <div
+          className="fixed inset-0 z-[80] flex flex-col bg-black/92"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Gallery preview"
+        >
+          <div className="flex items-center justify-between px-4 py-3 text-white">
+            <p className="text-sm">
+              {(previewIndex ?? 0) + 1} / {images.length}
+              {previewImage.image_role
+                ? ` · ${vehicleImageRoleLabel(previewImage.image_role)}`
+                : ''}
+            </p>
+            <button
+              type="button"
+              onClick={() => setPreviewIndex(null)}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white/10"
+              aria-label="Close gallery"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-6 sm:px-12">
+            {images.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => goPreview(-1)}
+                className="absolute left-2 z-10 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 sm:left-4"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewImage.image_url}
+              alt=""
+              className="max-h-full max-w-full object-contain"
+            />
+            {images.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => goPreview(1)}
+                className="absolute right-2 z-10 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 sm:right-4"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function StockDetailPage({ category }: { category: StockCategory }) {
         .from('vehicle_images')
         .select('vehicle_id, image_url, sort_order, is_primary, image_role')
         .eq('vehicle_id', id)
-        .neq('image_role', 'auction_sheet');
+        .not('image_role', 'in', '(auction_sheet,yard)');
       let galleryRows = (withRole.data || []) as VehicleImageRow[];
       if (withRole.error) {
         const fallback = await supabase

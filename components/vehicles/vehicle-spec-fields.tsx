@@ -11,6 +11,16 @@ import { supabase } from '@/lib/supabase/client';
 import { fetchVehicleMakes, fetchVehicleModels, type VehicleMakeRow, type VehicleModelRow } from '@/lib/shipping-catalog';
 import type { Vehicle } from '@/lib/types';
 
+export type VehicleFuelType = NonNullable<Vehicle['fuel_type']>;
+
+export const VEHICLE_FUEL_OPTIONS: { value: VehicleFuelType; label: string }[] = [
+  { value: 'petrol', label: 'Petrol' },
+  { value: 'diesel', label: 'Diesel' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'electric', label: 'Electric' },
+  { value: 'other', label: 'Other' },
+];
+
 export type VehicleSpecForm = {
   stock_category: StockCategory;
   chassis_number: string;
@@ -18,10 +28,13 @@ export type VehicleSpecForm = {
   part_sku: string;
   make: string;
   model: string;
+  model_grade: string;
   colour: string;
   model_year: string;
   engine: string;
   transmission: string;
+  fuel_type: '' | VehicleFuelType;
+  mileage_km: string;
 };
 
 export function mapTransmissionToDb(raw: string): Vehicle['transmission'] | null {
@@ -138,6 +151,16 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             ))}
           </datalist>
         </div>
+        {!parts ? (
+          <div className="space-y-0.5">
+            <Label className="text-xs">Grade</Label>
+            <Input
+              value={form.model_grade}
+              onChange={(e) => onChange({ model_grade: e.target.value })}
+              placeholder="e.g. G, X, Z"
+            />
+          </div>
+        ) : null}
         <div className="space-y-0.5">
           <Label className="text-xs">Colour</Label>
           <Input
@@ -170,6 +193,42 @@ export function VehicleSpecFields({ form, onChange, gallery = [], onGalleryChang
             placeholder="Automatic"
           />
         </div>
+        {!parts ? (
+          <>
+            <div className="space-y-0.5">
+              <Label className="text-xs">Fuel</Label>
+              <Select
+                value={form.fuel_type || 'none'}
+                onValueChange={(v) =>
+                  onChange({ fuel_type: v === 'none' ? '' : (v as VehicleFuelType) })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fuel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not set</SelectItem>
+                  {VEHICLE_FUEL_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-xs">Mileage (km)</Label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={form.mileage_km}
+                onChange={(e) => onChange({ mileage_km: e.target.value })}
+                placeholder="85000"
+              />
+            </div>
+          </>
+        ) : null}
       </div>
       {showPhotos && onGalleryChange ? (
         <MultiImageUpload
