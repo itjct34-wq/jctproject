@@ -171,14 +171,22 @@ function fobFromForm(form: typeof emptyForm) {
 
 const VEHICLE_FETCH_PAGE = 1000;
 
-/** Loads every matching row. The list used to stop at 250, so totals under-counted imports. */
-async function fetchInventoryVehicles(thirdParty: boolean): Promise<{
+/**
+ * Loads every matching row. The list used to stop at 250, so totals under-counted imports.
+ * `includeAllProcurement`: selling roles (sales_agent / freelancer) need Cars/Machinery/Parts
+ * to include third-party available units — most sellable stock is procurement_source=third_party.
+ */
+async function fetchInventoryVehicles(
+  thirdParty: boolean,
+  opts?: { includeAllProcurement?: boolean }
+): Promise<{
   data: Vehicle[];
   error: { message: string } | null;
 }> {
   const all: Vehicle[] = [];
   let from = 0;
   let missingProcurement = false;
+  const includeAll = Boolean(opts?.includeAllProcurement);
 
   for (;;) {
     let query = supabase
@@ -186,7 +194,7 @@ async function fetchInventoryVehicles(thirdParty: boolean): Promise<{
       .select('*')
       .order('updated_at', { ascending: false })
       .range(from, from + VEHICLE_FETCH_PAGE - 1);
-    if (!missingProcurement) {
+    if (!missingProcurement && !includeAll) {
       query = thirdParty
         ? query.eq('procurement_source', 'third_party')
         : query.neq('procurement_source', 'third_party');
@@ -200,11 +208,14 @@ async function fetchInventoryVehicles(thirdParty: boolean): Promise<{
     }
     if (res.error) return { data: all, error: res.error };
     const raw = (res.data || []) as Vehicle[];
-    const chunk = missingProcurement
-      ? raw.filter((v) =>
-          thirdParty ? isThirdPartyVehicle(v.procurement_source) : isOwnStockListVehicle(v.procurement_source)
-        )
-      : raw;
+    const chunk =
+      missingProcurement && !includeAll
+        ? raw.filter((v) =>
+            thirdParty
+              ? isThirdPartyVehicle(v.procurement_source)
+              : isOwnStockListVehicle(v.procurement_source)
+          )
+        : raw;
     all.push(...chunk);
     if (raw.length < VEHICLE_FETCH_PAGE) return { data: all, error: null };
     from += VEHICLE_FETCH_PAGE;
@@ -221,12 +232,6 @@ function VehiclesPage() {
     searchParams.get('category') === 'machinery' || searchParams.get('category') === 'parts'
       ? (searchParams.get('category') as StockCategory)
       : 'car';
-  const listCopy = isThirdPartyPage
-    ? {
-        title: 'Third party',
-        description: 'Dealership once-price units — not auction, not our owned stock',
-      }
-    : LIST_TITLES[listCategory];
   const { profile } = useAuth();
   const {
     can,
@@ -240,6 +245,17 @@ function VehiclesPage() {
     canEditShipping: canEditShippingByPerm,
     canAllocateRemittances,
   } = usePermissions();
+  const listCopy = isThirdPartyPage
+    ? {
+        title: 'Third party',
+        description: 'Dealership once-price units — not auction, not our owned stock',
+      }
+    : isSellingFocused
+      ? {
+          title: LIST_TITLES[listCategory].title,
+          description: 'Available stock to reserve (own and third-party), plus units you already hold',
+        }
+      : LIST_TITLES[listCategory];
   const canCreateVehicle = can('vehicles', 'create');
   const canEditVehicle = can('vehicles', 'edit');
   const canDeleteVehicle = can('vehicles', 'delete');
@@ -298,8 +314,10 @@ function VehiclesPage() {
   const loadVehicles = useCallback(async () => {
     setLoading(true);
     await supabase.rpc('expire_reserved_vehicles');
+    // Selling roles share one catalog: available stock across own + third-party procurement.
+    const sellingCatalog = isSellingFocused && !isThirdPartyPage;
     const [vRes, cRes, oRes] = await Promise.all([
-      fetchInventoryVehicles(isThirdPartyPage),
+      fetchInventoryVehicles(isThirdPartyPage, { includeAllProcurement: sellingCatalog }),
       supabase
         .from('customers')
         .select(
@@ -515,9 +533,21 @@ function VehiclesPage() {
     }
     setVehiclePays(payMap);
     setLoading(false);
-  }, [isThirdPartyPage]);
+  }, [isThirdPartyPage, isSellingFocused]);
 
   useEffect(() => { loadVehicles(); }, [loadVehicles]);
+
+  // Sales agent & freelancer: default Status → Available so sellable units are front and center.
+  const sellingStatusDefaulted = useRef(false);
+  useEffect(() => {
+    if (!isSellingFocused || sellingStatusDefaulted.current) return;
+    sellingStatusDefaulted.current = true;
+    if (searchParams.get('status')) return;
+    setListFilters((prev) => {
+      if (prev.status) return prev;
+      return { ...prev, status: 'available' };
+    });
+  }, [isSellingFocused, searchParams]);
 
   const syncListQuery = useCallback(
     (next: {
@@ -561,12 +591,15 @@ function VehiclesPage() {
   );
 
   const catalogVehicles = useMemo(() => {
+    // Ops keep own vs third-party split; selling roles see both on Cars/Machinery/Parts.
     const byProc = isThirdPartyPage
       ? vehicles.filter((v) => isThirdPartyVehicle(v.procurement_source))
-      : vehicles.filter((v) => isOwnStockListVehicle(v.procurement_source));
+      : isSellingFocused
+        ? vehicles
+        : vehicles.filter((v) => isOwnStockListVehicle(v.procurement_source));
     if (isThirdPartyPage) return byProc;
     return byProc.filter((v) => parseStockCategory(v.stock_category) === listCategory);
-  }, [vehicles, listCategory, isThirdPartyPage]);
+  }, [vehicles, listCategory, isThirdPartyPage, isSellingFocused]);
 
   const filtered = useMemo(() => {
     const q = listFilters.search.trim().toLowerCase();
@@ -1646,7 +1679,7 @@ function VehiclesPage() {
             title={`No ${listCopy.title.toLowerCase()} in this list yet`}
             description={
               isSellingFocused
-                ? 'You see available stock plus vehicles you reserved. Other agents’ reserved units stay hidden.'
+                ? 'Available stock (own and third-party) plus units you reserved. Clear Status or pick All if this filter is empty. Other agents’ reserved units stay hidden.'
                 : isThirdPartyPage
                   ? 'Add a dealership once-price unit or import via Bulk upload → Third party.'
                   : 'Add stock or adjust your filters.'

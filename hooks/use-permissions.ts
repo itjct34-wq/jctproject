@@ -31,14 +31,15 @@ const WRITE_ROLES: Record<PermissionModule, RoleName[]> = {
   vehicles: ['admin', 'operations', 'manager'],
   auctions: ['admin', 'operations', 'manager'],
   purchases: ['admin', 'operations', 'manager'],
-  sales: ['admin', 'operations', 'manager', 'sales_agent'],
+  // sales_agent and freelancer are equivalent selling roles for create (reserve / quotes path).
+  sales: ['admin', 'operations', 'manager', 'sales_agent', 'freelancer'],
   invoices: ['admin', 'manager', 'sales_agent', 'freelancer', 'accounts'],
   // Remittance mutate (add/edit/allocate): admin, manager, accounts only — not selling roles.
   payments: ['admin', 'manager', 'accounts'],
   expenses: ['admin', 'manager', 'accounts', 'operations'],
   shipments: ['admin', 'operations', 'manager'],
   documents: ['admin', 'operations'],
-  tasks: ['admin', 'operations', 'manager', 'sales_agent'],
+  tasks: ['admin', 'operations', 'manager', 'sales_agent', 'freelancer'],
   reports: [],
   users: ['admin'],
   settings: ['admin'],

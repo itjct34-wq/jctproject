@@ -132,8 +132,8 @@ export function SalesDashboard() {
 
   const kpis = [
     { label: 'My customers', value: String(data.myCustomers), sub: `${data.activeLeads} leads`, icon: Users, href: '/customers', tone: 'bg-brand/10 text-brand' },
-    { label: 'My reserved stock', value: String(data.myReservedStock), sub: `${data.mySalesOpen} open reservations`, icon: PackageCheck, href: '/vehicles', tone: 'bg-warning/15 text-warning' },
-    { label: 'Available to reserve', value: String(data.availableToReserve), sub: 'Browse stock inventory', icon: Car, href: '/vehicles', tone: 'bg-success/15 text-success' },
+    { label: 'My reserved stock', value: String(data.myReservedStock), sub: `${data.mySalesOpen} open reservations`, icon: PackageCheck, href: '/vehicles?status=reserved', tone: 'bg-warning/15 text-warning' },
+    { label: 'Available to reserve', value: String(data.availableToReserve), sub: 'Browse available stock', icon: Car, href: '/vehicles?status=available', tone: 'bg-success/15 text-success' },
     { label: 'My quotations', value: String(data.myQuotations), sub: 'Quotes you created', icon: FileText, href: '/quotations', tone: 'bg-info/15 text-info' },
     { label: 'My invoices', value: String(data.myInvoices), sub: moneyLine(data.outstandingByCurrency) !== '—' ? `${moneyLine(data.outstandingByCurrency)} outstanding` : 'Commercial / proforma', icon: Receipt, href: '/invoices', tone: 'bg-info/15 text-info' },
     { label: 'Auction invoices', value: String(data.myAuctionInvoices), sub: 'Deposit invoices you issued', icon: Landmark, href: '/auction-invoices', tone: 'bg-muted text-foreground' },
@@ -150,7 +150,7 @@ export function SalesDashboard() {
               <Link href="/quotations">New quotation</Link>
             </Button>
             <Button size="sm" className="bg-brand text-brand-foreground hover:bg-brand/90" asChild>
-              <Link href="/vehicles">Reserve stock</Link>
+              <Link href="/vehicles?status=available">Reserve stock</Link>
             </Button>
           </div>
         }
