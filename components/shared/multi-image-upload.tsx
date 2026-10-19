@@ -10,7 +10,10 @@ import { cn } from '@/lib/utils';
 import { chassisStorageFolder } from '@/lib/utils/chassis';
 import {
   classifyVehicleImageFileName,
+  isErpOnlyVehicleImageRole,
+  isPublicVehicleImageRole,
   vehicleImageRoleLabel,
+  vehicleImageRoleStoragePrefix,
   type VehicleImageRole,
 } from '@/lib/vehicles/image-role';
 
@@ -29,11 +32,13 @@ type Props = {
   label?: string;
   maxImages?: number;
   maxBytes?: number;
-  /** When true, group thumbnails by auction / front / back / gallery. */
+  /** When true, group thumbnails by auction / front / back / gallery / yard. */
   groupByRole?: boolean;
+  /** Force every upload in this control to this role (e.g. yard section). */
+  forceRole?: VehicleImageRole;
 };
 
-const ROLE_ORDER: VehicleImageRole[] = ['auction_sheet', 'front', 'back', 'gallery'];
+const ROLE_ORDER: VehicleImageRole[] = ['auction_sheet', 'front', 'back', 'gallery', 'yard'];
 
 export function MultiImageUpload({
   folder,
@@ -43,6 +48,7 @@ export function MultiImageUpload({
   maxImages = 20,
   maxBytes = 5 * 1024 * 1024,
   groupByRole = true,
+  forceRole,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -65,9 +71,10 @@ export function MultiImageUpload({
         toast.error(`${file.name} is over ${Math.round(maxBytes / 1024 / 1024)}MB`);
         continue;
       }
-      const role = classifyVehicleImageFileName(file.name);
+      const classified = classifyVehicleImageFileName(file.name);
+      const role = forceRole || classified;
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const rolePrefix = role === 'auction_sheet' ? 'A' : role === 'front' ? 'F' : role === 'back' ? 'B' : 'G';
+      const rolePrefix = vehicleImageRoleStoragePrefix(role);
       const path = `${chassisStorageFolder(folder)}/${rolePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const { error } = await supabase.storage.from('vehicle-images').upload(path, file, {
         upsert: true,
@@ -86,10 +93,10 @@ export function MultiImageUpload({
         image_role: role,
       });
     }
-    const hasPublicPrimary = next.some((i) => i.is_primary && i.image_role !== 'auction_sheet');
+    const hasPublicPrimary = next.some((i) => i.is_primary && isPublicVehicleImageRole(i.image_role));
     if (!hasPublicPrimary) {
       const front = next.find((i) => i.image_role === 'front');
-      const firstPublic = front || next.find((i) => i.image_role !== 'auction_sheet');
+      const firstPublic = front || next.find((i) => isPublicVehicleImageRole(i.image_role));
       if (firstPublic) {
         for (const img of next) img.is_primary = img === firstPublic;
       }
@@ -104,8 +111,10 @@ export function MultiImageUpload({
       ...img,
       sort_order: i,
     }));
-    if (next.length && !next.some((i) => i.is_primary && i.image_role !== 'auction_sheet')) {
-      const cover = next.find((i) => i.image_role === 'front') || next.find((i) => i.image_role !== 'auction_sheet');
+    if (next.length && !next.some((i) => i.is_primary && isPublicVehicleImageRole(i.image_role))) {
+      const cover =
+        next.find((i) => i.image_role === 'front') ||
+        next.find((i) => isPublicVehicleImageRole(i.image_role));
       if (cover) {
         for (const img of next) img.is_primary = img === cover;
       }
@@ -118,8 +127,8 @@ export function MultiImageUpload({
   };
 
   const setPrimary = (idx: number) => {
-    if (images[idx]?.image_role === 'auction_sheet') {
-      toast.error('Auction sheet photos cannot be the public cover');
+    if (isErpOnlyVehicleImageRole(images[idx]?.image_role)) {
+      toast.error(`${vehicleImageRoleLabel(images[idx]?.image_role)} photos cannot be the public cover`);
       return;
     }
     onChange(images.map((img, i) => ({ ...img, is_primary: i === idx })));
@@ -161,8 +170,9 @@ export function MultiImageUpload({
       key={img.id || img.image_url + idx}
       className={cn(
         'relative aspect-square overflow-hidden rounded-lg border bg-muted',
-        img.is_primary && img.image_role !== 'auction_sheet' && 'ring-2 ring-primary',
-        img.image_role === 'auction_sheet' && 'ring-1 ring-amber-500/60'
+        img.is_primary && isPublicVehicleImageRole(img.image_role) && 'ring-2 ring-primary',
+        img.image_role === 'auction_sheet' && 'ring-1 ring-amber-500/60',
+        img.image_role === 'yard' && 'ring-1 ring-emerald-500/60'
       )}
     >
       <button
@@ -210,12 +220,21 @@ export function MultiImageUpload({
       <div className="absolute inset-x-0 bottom-0 z-[1] flex justify-between gap-1 bg-black/55 p-1">
         <button
           type="button"
-          title={img.image_role === 'auction_sheet' ? 'ERP only — not public cover' : 'Set as primary'}
+          title={
+            isErpOnlyVehicleImageRole(img.image_role) ? 'ERP only — not public cover' : 'Set as primary'
+          }
           className="rounded p-0.5 text-white hover:text-amber-300 disabled:opacity-40"
-          disabled={img.image_role === 'auction_sheet'}
+          disabled={isErpOnlyVehicleImageRole(img.image_role)}
           onClick={() => setPrimary(idx)}
         >
-          <Star className={cn('h-3.5 w-3.5', img.is_primary && img.image_role !== 'auction_sheet' && 'fill-amber-400 text-amber-400')} />
+          <Star
+            className={cn(
+              'h-3.5 w-3.5',
+              img.is_primary &&
+                isPublicVehicleImageRole(img.image_role) &&
+                'fill-amber-400 text-amber-400'
+            )}
+          />
         </button>
         <button
           type="button"
@@ -266,7 +285,11 @@ export function MultiImageUpload({
           className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 text-muted-foreground hover:bg-muted/50"
         >
           <Camera className="h-7 w-7 opacity-50" />
-          <span className="text-xs">Upload photos — name with A. / F. / B. prefixes</span>
+          <span className="text-xs">
+            {forceRole === 'yard'
+              ? 'Upload yard photos (ERP only)'
+              : 'Upload photos — name with A. / F. / B. / Y. prefixes'}
+          </span>
         </button>
       ) : (
         <div className="space-y-3">
@@ -275,7 +298,7 @@ export function MultiImageUpload({
               {groupByRole ? (
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {vehicleImageRoleLabel(section.role)}
-                  {section.role === 'auction_sheet' ? ' · ERP only' : ''}
+                  {isErpOnlyVehicleImageRole(section.role) ? ' · ERP only' : ''}
                 </p>
               ) : null}
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -288,8 +311,15 @@ export function MultiImageUpload({
 
       <p className="text-xs text-muted-foreground">
         JPG / PNG / WebP · up to {maxImages} · max {Math.round(maxBytes / 1024 / 1024)}MB ·
-        {' '}A./A_ = auction (ERP only) · F./F_ = front · B./B_ = back · star = public cover ·
-        {' '}click photo to preview · arrows reorder
+        {forceRole === 'yard' ? (
+          <> yard photos are ERP only · click photo to preview</>
+        ) : (
+          <>
+            {' '}
+            A./A_ = auction (ERP) · F./F_ = front · B./B_ = back · Y./Y_ = yard (ERP) · star = public
+            cover · click photo to preview · arrows reorder
+          </>
+        )}
       </p>
 
       <input

@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { vehicleImageStoragePath } from '@/lib/stock/bulk-import-batches';
-import { pickPrimaryImageUrl, type VehicleImageRole } from '@/lib/vehicles/image-role';
+import {
+  isPublicVehicleImageRole,
+  pickPrimaryImageUrl,
+  type VehicleImageRole,
+} from '@/lib/vehicles/image-role';
 
 type ImageRow = {
   id: string;
@@ -29,14 +33,14 @@ export async function appendVehicleImageUrls(
   const rows = (existing || []) as ImageRow[];
   const have = new Set(rows.map((r) => r.image_url));
   const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order ?? 0), -1);
-  const hasPublicPrimary = rows.some((r) => r.is_primary && r.image_role !== 'auction_sheet');
+  const hasPublicPrimary = rows.some((r) => r.is_primary && isPublicVehicleImageRole(r.image_role));
   const toInsert = unique
     .filter((url) => !have.has(url))
     .map((image_url, i) => ({
       vehicle_id: vehicleId,
       image_url,
       sort_order: maxOrder + 1 + i,
-      is_primary: !hasPublicPrimary && role !== 'auction_sheet' && i === 0,
+      is_primary: !hasPublicPrimary && isPublicVehicleImageRole(role) && i === 0,
       image_role: role,
     }));
 

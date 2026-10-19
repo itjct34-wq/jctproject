@@ -1589,14 +1589,40 @@ function VehiclesPage() {
         </div>
         <p className="text-[11px] text-muted-foreground">
           ZIP folder = chassis/stock/SKU (e.g. <code>RU3-123123/</code>). Files: <code>A.</code>/<code>A_</code> auction (ERP only),
-          {' '}<code>F.</code> front, <code>B.</code> back.
+          {' '}<code>F.</code> front, <code>B.</code> back, <code>Y.</code>/<code>Y_</code> yard (ERP only).
         </p>
         <MultiImageUpload
           folder={chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number)}
-          images={gallery}
-          onChange={setGallery}
-          label="Gallery"
+          images={gallery.filter((img) => img.image_role !== 'yard')}
+          onChange={(listing) => {
+            const yard = gallery.filter((img) => img.image_role === 'yard');
+            setGallery([...listing, ...yard]);
+          }}
+          label="Listing gallery"
         />
+        <div className="mt-3 space-y-1.5 rounded-lg border border-emerald-200/80 bg-emerald-50/40 p-2">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-900">
+            Yard photos (ERP only)
+          </h4>
+          <p className="text-[11px] text-emerald-900/70">
+            Upload when the unit is at the yard — separate from the public listing gallery.
+          </p>
+          <MultiImageUpload
+            folder={chassisStorageFolder(form.chassis_number || form.part_sku || form.stock_number)}
+            images={gallery.filter((img) => img.image_role === 'yard')}
+            onChange={(yard) => {
+              const listing = gallery.filter((img) => img.image_role !== 'yard');
+              setGallery([
+                ...listing,
+                ...yard.map((img) => ({ ...img, image_role: 'yard' as const, is_primary: false })),
+              ]);
+            }}
+            label="Yard gallery"
+            forceRole="yard"
+            groupByRole={false}
+            maxImages={30}
+          />
+        </div>
       </section>
     </>
     );

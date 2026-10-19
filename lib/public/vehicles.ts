@@ -88,8 +88,8 @@ export function coverPhoto(vehicle: Pick<PublicVehicle, 'gallery' | 'primary_ima
 export function attachGallery(vehicles: Omit<PublicVehicle, 'gallery'>[], images: VehicleImageRow[]): PublicVehicle[] {
   const byId = new Map<string, string[]>();
   for (const row of sortGalleryRows(images)) {
-    // Auction sheets (A. / A_) must never appear on the public site.
-    if (row.image_role === 'auction_sheet') continue;
+    // Auction sheets (A.) and yard pics (Y.) must never appear on the public site.
+    if (row.image_role === 'auction_sheet' || row.image_role === 'yard') continue;
     const list = byId.get(row.vehicle_id) || [];
     if (row.image_url && !list.includes(row.image_url)) list.push(row.image_url);
     byId.set(row.vehicle_id, list);
@@ -167,7 +167,7 @@ export async function loadVehicleGallery(db: SupabaseClient, vehicleIds: string[
     .from('vehicle_images')
     .select('vehicle_id, image_url, sort_order, is_primary, image_role')
     .in('vehicle_id', vehicleIds)
-    .neq('image_role', 'auction_sheet')
+    .not('image_role', 'in', '(auction_sheet,yard)')
     .order('sort_order', { ascending: true });
   if (!withRole.error && withRole.data) return withRole.data as VehicleImageRow[];
 

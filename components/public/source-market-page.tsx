@@ -32,7 +32,7 @@ export function SourceMarketPage({ market }: { market: PublicSourceMarket }) {
           .from('vehicle_images')
           .select('vehicle_id, image_url, sort_order, is_primary, image_role')
           .in('vehicle_id', ids)
-          .neq('image_role', 'auction_sheet');
+          .not('image_role', 'in', '(auction_sheet,yard)');
         if (!withRole.error && withRole.data) {
           images = withRole.data as VehicleImageRow[];
         } else {

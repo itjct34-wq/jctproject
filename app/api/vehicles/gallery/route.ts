@@ -4,7 +4,9 @@ import { chassisStorageFolder, imageContentType, isImageFileName } from '@/lib/u
 import { MAX_PHOTO_BYTES, MAX_PHOTOS_PER_VEHICLE } from '@/lib/utils/vehicle-photo-zip';
 import {
   classifyVehicleImageFileName,
+  isPublicVehicleImageRole,
   pickPrimaryImageUrl,
+  vehicleImageRoleStoragePrefix,
   type VehicleImageRole,
 } from '@/lib/vehicles/image-role';
 
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   const hasPublicPrimary = (existing || []).some(
-    (r) => r.is_primary && r.image_role !== 'auction_sheet'
+    (r) => r.is_primary && isPublicVehicleImageRole(r.image_role as string)
   );
 
   for (const file of files.slice(0, room)) {
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
     const role = classifyVehicleImageFileName(file.name);
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const rolePrefix = role === 'auction_sheet' ? 'A' : role === 'front' ? 'F' : role === 'back' ? 'B' : 'G';
+    const rolePrefix = vehicleImageRoleStoragePrefix(role);
     const path = `${folder}/${rolePrefix}-${String(existingCount + rows.length + 1).padStart(3, '0')}-${Date.now()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
     const { error: upErr } = await admin.storage.from('vehicle-images').upload(path, buffer, {

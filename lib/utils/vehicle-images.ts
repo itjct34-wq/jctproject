@@ -1,6 +1,10 @@
 import { supabase } from '@/lib/supabase/client';
 import type { GalleryImage } from '@/components/shared/multi-image-upload';
-import { pickPrimaryImageUrl, type VehicleImageRole } from '@/lib/vehicles/image-role';
+import {
+  isPublicVehicleImageRole,
+  pickPrimaryImageUrl,
+  type VehicleImageRole,
+} from '@/lib/vehicles/image-role';
 
 export async function loadVehicleImages(vehicleId: string): Promise<GalleryImage[]> {
   const { data, error } = await supabase
@@ -42,9 +46,9 @@ export async function saveVehicleImages(vehicleId: string, images: GalleryImage[
   const existingIds = (existing || []).map((row) => row.id as string);
 
   const publicIdx = images.findIndex(
-    (img) => img.is_primary && img.image_role !== 'auction_sheet'
+    (img) => img.is_primary && isPublicVehicleImageRole(img.image_role)
   );
-  const fallbackIdx = images.findIndex((img) => img.image_role !== 'auction_sheet');
+  const fallbackIdx = images.findIndex((img) => isPublicVehicleImageRole(img.image_role));
   const primaryAt = publicIdx >= 0 ? publicIdx : fallbackIdx;
 
   const toInsert = images

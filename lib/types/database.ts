@@ -396,7 +396,7 @@ export interface Vehicle {
   updated_at: string;
 }
 
-export type VehicleImageRole = 'gallery' | 'front' | 'back' | 'auction_sheet';
+export type VehicleImageRole = 'gallery' | 'front' | 'back' | 'auction_sheet' | 'yard';
 
 export interface VehicleImage {
   id: string;
@@ -404,7 +404,7 @@ export interface VehicleImage {
   image_url: string;
   sort_order: number;
   is_primary: boolean;
-  /** ZIP/file prefix role: A=auction_sheet (ERP only), F=front, B=back, else gallery. */
+  /** ZIP/file prefix role: A=auction_sheet, F=front, B=back, Y=yard (ERP), else gallery. */
   image_role: VehicleImageRole;
   created_at: string;
 }

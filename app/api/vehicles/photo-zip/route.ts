@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireInventoryStaff } from '@/lib/admin-auth';
 import { inspectVehiclePhotoZip, MAX_PHOTO_BYTES, MAX_PHOTO_ZIP_BYTES } from '@/lib/utils/vehicle-photo-zip';
 import { chassisStorageFolder, imageContentType } from '@/lib/utils/chassis';
-import { pickPrimaryImageUrl, type VehicleImageRole } from '@/lib/vehicles/image-role';
+import {
+  isPublicVehicleImageRole,
+  pickPrimaryImageUrl,
+  vehicleImageRoleStoragePrefix,
+  type VehicleImageRole,
+} from '@/lib/vehicles/image-role';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest) {
       .eq('vehicle_id', match.vehicleId);
     const existingCount = existing?.length || 0;
     const hasPublicPrimary = (existing || []).some(
-      (r) => r.is_primary && r.image_role !== 'auction_sheet'
+      (r) => r.is_primary && isPublicVehicleImageRole(r.image_role as string)
     );
     const rows: {
       vehicle_id: string;
@@ -67,8 +72,7 @@ export async function POST(request: NextRequest) {
       const blob = await photo.asyncBlob();
       if (blob.size > MAX_PHOTO_BYTES) continue;
       const safe = photo.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80);
-      const rolePrefix =
-        photo.role === 'auction_sheet' ? 'A' : photo.role === 'front' ? 'F' : photo.role === 'back' ? 'B' : 'G';
+      const rolePrefix = vehicleImageRoleStoragePrefix(photo.role);
       const path = `${folder}/${rolePrefix}-${String(existingCount + p + 1).padStart(3, '0')}-${Date.now()}-${safe}`;
       const buffer = Buffer.from(await blob.arrayBuffer());
       const { error: upErr } = await admin.storage.from('vehicle-images').upload(path, buffer, {
