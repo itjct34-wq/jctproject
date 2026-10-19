@@ -133,8 +133,8 @@ const statusLabels: Record<Vehicle['status'], string> = {
 
 const emptyForm = {
   stock_category: 'car' as StockCategory,
-  chassis_number: '', stock_number: '', part_sku: '', make: '', model: '', colour: '', model_year: '',
-  engine: '', transmission: '',
+  chassis_number: '', stock_number: '', part_sku: '', make: '', model: '', model_grade: '', colour: '', model_year: '',
+  engine: '', transmission: '', fuel_type: '' as '' | NonNullable<Vehicle['fuel_type']>, mileage_km: '',
   purchase_price: '', expense_jpy: String(FIXED_EXPENSE_JPY), tt_rate: String(DEFAULT_TT_RATE),
   /** Commercial selling amount when reserved/sold; empty for available (FOB is vehicle cost). */
   sold_price: '',
@@ -149,6 +149,7 @@ const emptyForm = {
   location: '',
   destination_country: '',
   bid_requester_id: '',
+  assigned_agent_id: '',
   payment_status: 'available' as VehiclePaymentStatus,
   shipping_status: 'not_booked' as VehicleShippingStatus,
   status: 'in_stock' as Vehicle['status'],
@@ -756,10 +757,13 @@ function VehiclesPage() {
       part_sku: v.part_sku || '',
       make: v.make,
       model: v.model,
+      model_grade: v.model_grade || '',
       colour: v.color || '',
       model_year: v.model_year ? String(v.model_year) : '',
       engine: publicEngineFromNotes(v.notes) || '',
       transmission: v.transmission || '',
+      fuel_type: v.fuel_type || '',
+      mileage_km: v.mileage_km != null ? String(v.mileage_km) : '',
       purchase_price: v.purchase_price != null ? String(v.purchase_price) : '',
       expense_jpy: v.expense_jpy != null ? String(v.expense_jpy) : String(FIXED_EXPENSE_JPY),
       tt_rate: v.tt_rate != null ? String(v.tt_rate) : String(DEFAULT_TT_RATE),
@@ -777,6 +781,7 @@ function VehiclesPage() {
       location: v.location || '',
       destination_country: v.destination_country || '',
       bid_requester_id: v.bid_requester_id || '',
+      assigned_agent_id: v.assigned_agent_id || '',
       payment_status: effectivePaymentStatus(v),
       shipping_status: effectiveShippingStatus(v),
       status: v.status,
@@ -826,9 +831,17 @@ function VehiclesPage() {
       part_sku: formState.part_sku.trim() || (category === 'parts' ? chassis : null),
       make: formState.make.trim(),
       model: formState.model.trim(),
+      model_grade: formState.model_grade.trim() || null,
       color: formState.colour.trim() || null,
       model_year: formState.model_year ? Number(formState.model_year) : null,
       transmission: mapTransmissionToDb(formState.transmission),
+      fuel_type: formState.fuel_type || null,
+      mileage_km: (() => {
+        const raw = formState.mileage_km.trim();
+        if (!raw) return null;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+      })(),
       purchase_price: onceFob
         ? onceFob.purchase_price
         : formState.purchase_price
@@ -862,6 +875,7 @@ function VehiclesPage() {
       location: formState.location.trim() || null,
       destination_country: formState.destination_country.trim() || null,
       bid_requester_id: isThirdPartyPage ? null : formState.bid_requester_id || null,
+      assigned_agent_id: formState.assigned_agent_id || null,
     };
     return { chassis, category, payload };
   };
@@ -1529,6 +1543,7 @@ function VehiclesPage() {
           location: form.location,
           destination_country: form.destination_country,
           bid_requester_id: form.bid_requester_id,
+          assigned_agent_id: form.assigned_agent_id,
         }}
         onChange={(patch) => setForm({ ...form, ...patch })}
         staff={Object.entries(agentNames).map(([id, label]) => ({ id, label }))}

@@ -26,6 +26,8 @@ export type StockSourcingForm = {
   location: string;
   destination_country: string;
   bid_requester_id: string;
+  /** Soft assignment to a sales agent (available stock). */
+  assigned_agent_id: string;
 };
 
 type StaffOpt = { id: string; label: string };
@@ -192,16 +194,16 @@ export function StockSourcingFields({
               const yard = filteredYards.find((y) => y.id === v);
               onChange({ yard_id: v, location: yard?.name || '' });
             }}
-            disabled={disabled || !portKey}
+            disabled={disabled}
           >
             <SelectTrigger>
-              <SelectValue placeholder={portKey ? 'Select yard' : 'Set port first'} />
+              <SelectValue placeholder={portKey ? 'Select yard' : 'Select yard (all ports)'} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Not set</SelectItem>
               {filteredYards.map((y) => (
                 <SelectItem key={y.id} value={y.id}>
-                  {y.name}
+                  {portKey ? y.name : `${y.name} (${y.port_name})`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -226,6 +228,26 @@ export function StockSourcingFields({
               )
             )}
           </datalist>
+        </div>
+        <div className="space-y-0.5">
+          <Label className="text-xs">Agent</Label>
+          <Select
+            value={form.assigned_agent_id || 'none'}
+            onValueChange={(v) => onChange({ assigned_agent_id: v === 'none' ? '' : v })}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Assigned sales agent" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Not set</SelectItem>
+              {staff.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {!isThirdParty ? (
           <>
