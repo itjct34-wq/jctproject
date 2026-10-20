@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="erp-shell flex min-h-[100dvh] items-center justify-center">
         <div className="flex flex-col items-center gap-4 rounded-3xl border border-border/40 bg-card/70 px-8 py-10 shadow-glass backdrop-blur-2xl">
-          <ErpMark size="lg" compact showWordmark={false} />
+          <ErpMark size="lg" compact showWordmark={false} tone="chrome" />
           <div className="flex items-center gap-2 text-muted-foreground" role="status" aria-live="polite">
             <Loader2 className="h-4 w-4 animate-spin text-brand" />
             <span className="text-sm tracking-tight">{t('common.loading')}</span>

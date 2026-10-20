@@ -17,28 +17,14 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: 'Japan Circular Trading | Used cars from Japan',
+  title: 'Used cars from Japan',
   description:
-    'Japan Circular Trading (JCT) — buy used cars direct from Japan. FOB, C&F and CIF quotes, RORO or container shipping from Nagoya.',
+    'Buy used cars direct from Japan. FOB, C&F and CIF quotes, RORO or container shipping from Nagoya.',
   openGraph: {
-    title: 'Japan Circular Trading | Used cars from Japan',
+    title: 'Used cars from Japan',
     description:
       'Auction-grade Toyota, Honda, Nissan and more. Export from Nagoya with FOB, C&F or CIF quotes.',
     type: 'website',
-  },
-};
-
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'Japan Circular Trading',
-  alternateName: 'JCT',
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: 'Nagoya',
-    addressRegion: 'Aichi',
-    postalCode: '454-0943',
-    addressCountry: 'JP',
   },
 };
 
@@ -50,9 +36,7 @@ export default async function HomePage() {
 
   return (
     <HomeShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-
-      {/* Brand-first full-bleed hero — one composition, no cards in the hero plane */}
+      {/* Full-bleed hero — product line only, no company name */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -75,11 +59,8 @@ export default async function HomePage() {
         </div>
 
         <div className="jct-home-wrap relative z-10 pb-28 pt-14 md:pb-36 md:pt-20">
-          <p className="jct-hero-enter text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[var(--jct-gold,#C4A35A)] sm:text-xs">
-            Japan Circular Trading · JCT
-          </p>
-          <h1 className="jct-hero-enter jct-hero-enter-delay-1 mt-3 max-w-3xl font-display text-[2.35rem] font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-[3.35rem]">
-            Japan Circular Trading
+          <h1 className="jct-hero-enter jct-hero-enter-delay-1 max-w-3xl font-display text-[2.35rem] font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-[3.35rem]">
+            Used cars from Japan
           </h1>
           <p className="jct-hero-enter jct-hero-enter-delay-2 mt-4 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
             Auction-grade Japanese cars, ready for your port — FOB, C&amp;F or CIF from Nagoya.

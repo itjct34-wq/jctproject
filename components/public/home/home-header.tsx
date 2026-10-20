@@ -4,7 +4,6 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { BrandLogo } from '@/components/public/brand-logo';
 import { PUBLIC_STOCK_NAV } from '@/lib/stock-category';
 import { cn } from '@/lib/utils';
 
@@ -28,13 +27,13 @@ export function HomeHeader() {
 
   return (
     <header className="jct-site-header sticky top-0 z-50">
-      <div className="jct-home-wrap flex min-h-[72px] items-center justify-between gap-4 py-2.5 sm:min-h-[88px] md:min-h-[104px] lg:min-h-[112px] lg:py-3">
+      <div className="jct-home-wrap flex min-h-14 items-center justify-between gap-4 py-2.5 sm:min-h-16 lg:py-3">
         <Link
           href="/"
-          className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
-          aria-label="Japan Circular Trading home"
+          className="font-display text-lg font-semibold tracking-[0.18em] text-[var(--jct-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          aria-label="ERP home"
         >
-          <BrandLogo placement="header" />
+          ERP
         </Link>
         <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
@@ -82,7 +81,7 @@ export function HomeHeader() {
           aria-label="Site menu"
         >
           <div className="flex items-center justify-between border-b border-[var(--jct-border)] px-4 py-3">
-            <BrandLogo placement="header" />
+            <span className="font-display text-lg font-semibold tracking-[0.18em] text-[var(--jct-navy)]">ERP</span>
             <button
               type="button"
               className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--jct-navy)]/20"

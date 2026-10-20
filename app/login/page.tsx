@@ -9,11 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
-import {
-  JCT_LOGO_HEIGHT,
-  JCT_LOGO_SRC,
-  JCT_LOGO_WIDTH,
-} from '@/components/public/brand-logo';
 import { getPostLoginPath } from '@/lib/nav';
 
 function LoginForm() {
@@ -64,17 +59,7 @@ function LoginForm() {
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--jct-navy)]/95 via-[var(--jct-navy)]/88 to-[var(--jct-navy)]/70" />
         <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14">
-          <div className="inline-flex w-fit items-center rounded-2xl bg-white px-4 py-2.5 shadow-lg">
-            <Image
-              src={JCT_LOGO_SRC}
-              alt=""
-              width={JCT_LOGO_WIDTH}
-              height={JCT_LOGO_HEIGHT}
-              sizes="160px"
-              className="h-14 w-[97px] object-contain xl:h-16 xl:w-[110px]"
-              priority
-            />
-          </div>
+          <p className="font-display text-lg font-semibold tracking-[0.18em] text-white">ERP</p>
           <div className="max-w-lg">
             <h1 className="font-display text-4xl font-bold leading-tight text-white xl:text-[2.75rem]">
               One workspace for every export, from auction to{' '}
@@ -102,17 +87,7 @@ function LoginForm() {
         />
         <div className="relative z-10 w-full max-w-[430px]">
           <div className="mb-6 flex flex-col items-center gap-2 text-center lg:hidden">
-            <div className="inline-flex items-center rounded-2xl bg-white px-3 py-2 shadow-glass ring-1 ring-border/50">
-              <Image
-                src={JCT_LOGO_SRC}
-                alt=""
-                width={JCT_LOGO_WIDTH}
-                height={JCT_LOGO_HEIGHT}
-                sizes="120px"
-                className="h-12 w-[83px] object-contain"
-                priority
-              />
-            </div>
+            <p className="font-display text-lg font-semibold tracking-[0.18em] text-foreground">ERP</p>
             <p className="text-xs font-medium text-muted-foreground">Staff sign-in</p>
           </div>
 

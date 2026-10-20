@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { BrandLogo } from '@/components/public/brand-logo';
 import { CountryFlag } from '@/components/public/country-flag';
 import { DESTINATION_COUNTRIES } from '@/lib/public/countries';
 import { PUBLIC_SOURCE_MARKETS, sourceMarketPath } from '@/lib/public/source-markets';
@@ -9,7 +8,7 @@ export function HomeFooter() {
     <footer className="jct-site-footer text-[var(--jct-muted)]">
       <div className="jct-home-wrap grid gap-8 py-12 md:grid-cols-4">
         <div className="space-y-4 md:col-span-2">
-          <BrandLogo placement="footer" />
+          <p className="font-display text-lg font-semibold tracking-[0.18em] text-[var(--jct-navy)]">ERP</p>
           <p className="max-w-md text-sm leading-relaxed text-[var(--jct-muted)]">
             Used vehicle export from Nagoya, Japan. Auction sourcing, inspection support, RORO and container shipping
             under FOB, C&amp;F and CIF.
