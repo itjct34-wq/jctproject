@@ -35,7 +35,7 @@ import type { Invoice, InvoiceItem, Customer, Vehicle, CompanySettings } from '@
 import { Download, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
-import { customerContactErrorMessage, isCustomerConsigneeComplete } from '@/lib/utils/customer-contact';
+import { customerContactErrorMessage, isInvoiceConsigneeComplete } from '@/lib/utils/customer-contact';
 import {
   freightValidationError,
   normalizeFreightAmount,
@@ -401,7 +401,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     const email = form.guest_email.trim();
     const phone = form.guest_phone.trim();
     const address = form.guest_address.trim();
-    const missing = isCustomerConsigneeComplete({ full_name: name, email, phone, address_line1: address });
+    const missing = isInvoiceConsigneeComplete({ full_name: name, email, phone, address_line1: address });
     if (missing) {
       toast.error(missing);
       return null;
@@ -409,8 +409,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     const payload = {
       full_name: name,
       company_name: form.guest_company.trim() || null,
-      email,
-      phone,
+      email: email || null,
+      phone: phone || null,
       country: form.guest_country.trim() || null,
       city: form.guest_city.trim() || null,
       address_line1: address,
@@ -431,6 +431,15 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         const found = existing as Customer;
         setCustomers((prev) => (prev.some((c) => c.id === found.id) ? prev : [...prev, found]));
         toast.message('Used the existing customer with that email');
+        return found.id;
+      }
+    }
+    if (error?.code === '23505' && phone) {
+      const { data: existing } = await supabase.from('customers').select('*').eq('phone', phone).maybeSingle();
+      if (existing) {
+        const found = existing as Customer;
+        setCustomers((prev) => (prev.some((c) => c.id === found.id) ? prev : [...prev, found]));
+        toast.message('Used the existing customer with that phone');
         return found.id;
       }
     }
@@ -614,7 +623,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
   );
   const canSaveInvoice =
     form.customer_mode === 'manual'
-      ? !isCustomerConsigneeComplete({
+      ? !isInvoiceConsigneeComplete({
           full_name: form.guest_name,
           email: form.guest_email,
           phone: form.guest_phone,
@@ -708,8 +717,8 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           {form.customer_mode === 'manual' && (
             <div className="grid gap-1 sm:grid-cols-3">
               <div className="space-y-0.5"><Label>Company</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Optional" /></div>
-              <div className="space-y-0.5"><Label>Contact *</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone" required /></div>
-              <div className="space-y-0.5"><Label>Email *</Label><Input className="h-8 min-h-8 text-xs" type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email" required /></div>
+              <div className="space-y-0.5"><Label>Contact</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone (or email)" /></div>
+              <div className="space-y-0.5"><Label>Email</Label><Input className="h-8 min-h-8 text-xs" type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email (or phone)" /></div>
               <div className="space-y-0.5"><Label>Country</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} /></div>
               <div className="space-y-0.5"><Label>City</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} /></div>
               <div className="space-y-0.5"><Label>Address *</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>

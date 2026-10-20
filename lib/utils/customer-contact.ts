@@ -18,6 +18,9 @@ export function customerContactErrorMessage(error: {
   if (/customers_require_email_and_phone/i.test(msg)) {
     return 'Consignee email and contact (phone) are required.';
   }
+  if (/customers_require_email_or_phone/i.test(msg)) {
+    return 'Phone or email is required — provide at least one.';
+  }
   if (/customers_require_shipping_address/i.test(msg)) {
     return 'Consignee address is required for shipping.';
   }
@@ -36,6 +39,23 @@ export function isCustomerConsigneeComplete(input: {
   if (!input.full_name?.trim()) return 'Consignee name is required';
   if (!input.email?.trim()) return 'Consignee email is required';
   if (!input.phone?.trim()) return 'Consignee contact (phone) is required';
+  if (!input.address_line1?.trim()) return 'Consignee address is required for shipping';
+  return null;
+}
+
+/** Invoice guest/manual consignee: name, address, and at least one of phone or email. */
+export function isInvoiceConsigneeComplete(input: {
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address_line1?: string | null;
+}): string | null {
+  if (!input.full_name?.trim()) return 'Consignee name is required';
+  const hasEmail = Boolean(input.email?.trim());
+  const hasPhone = Boolean(input.phone?.trim());
+  if (!hasEmail && !hasPhone) {
+    return 'Phone or email is required — provide at least one.';
+  }
   if (!input.address_line1?.trim()) return 'Consignee address is required for shipping';
   return null;
 }
