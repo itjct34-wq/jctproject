@@ -40,6 +40,7 @@ export function DocumentPrintPreview({
   const measureRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [naturalH, setNaturalH] = useState(0);
+  const rafRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
@@ -48,22 +49,26 @@ export function DocumentPrintPreview({
     if (!stage || !measure) return;
 
     const update = () => {
-      const pad = window.matchMedia('(max-width: 640px)').matches ? 16 : 32;
-      const available = Math.max(160, stage.clientWidth - pad);
-      const next = Math.min(1, available / A4_CSS_PX);
-      setScale(next > 0.05 ? next : 1);
-      setNaturalH(measure.scrollHeight || measure.offsetHeight || 0);
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const pad = window.matchMedia('(max-width: 640px)').matches ? 16 : 32;
+        const available = Math.max(160, stage.clientWidth - pad);
+        const next = Math.min(1, available / A4_CSS_PX);
+        setScale(next > 0.05 ? next : 1);
+        setNaturalH(measure.scrollHeight || measure.offsetHeight || 0);
+      });
     };
 
     update();
-    const ro = new ResizeObserver(() => update());
+    const ro = new ResizeObserver(update);
     ro.observe(stage);
     ro.observe(measure);
-    // Re-measure after images / QR paint
-    const t1 = window.setTimeout(update, 120);
-    const t2 = window.setTimeout(update, 600);
+    // Re-measure after images / QR paint (short + one follow-up)
+    const t1 = window.setTimeout(update, 80);
+    const t2 = window.setTimeout(update, 400);
     return () => {
       ro.disconnect();
+      cancelAnimationFrame(rafRef.current);
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };

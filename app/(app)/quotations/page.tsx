@@ -23,7 +23,7 @@ import { CommercialQuotationTemplate } from '@/components/quotations/commercial-
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-import { ChevronRight, Download, FileText, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, ExternalLink, FileText, Loader2, Pencil, Plus, Printer, QrCode, Search, Trash2 } from 'lucide-react';
 import { exportQuotationExcel } from '@/lib/utils/commercial-invoice-excel';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
@@ -881,11 +881,59 @@ function QuotationsPageInner() {
         open={printOpen}
         onOpenChange={setPrintOpen}
         title="Print quotation"
+        toolbar={
+          selected?.verification_token ? (
+            <div className="rounded-md border border-border/60 p-2.5 text-xs text-muted-foreground">
+              Verify link:{' '}
+              <a
+                href={buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all font-medium text-foreground underline underline-offset-2"
+              >
+                {buildVerifyUrl(selected.verification_token).replace('/verify/', '/verify-quotation/')}
+              </a>
+            </div>
+          ) : (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              No verification token on this quotation — QR / link unavailable.
+            </p>
+          )
+        }
         footer={
           <>
             <Button variant="outline" onClick={() => setPrintOpen(false)}>
               Close
             </Button>
+            {selected?.verification_token ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const url = buildVerifyUrl(selected.verification_token!).replace(
+                      '/verify/',
+                      '/verify-quotation/'
+                    );
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" /> Open Link
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const url = buildVerifyUrl(selected.verification_token!).replace(
+                      '/verify/',
+                      '/verify-quotation/'
+                    );
+                    void navigator.clipboard.writeText(url);
+                    toast.success('Verification link copied');
+                  }}
+                >
+                  <QrCode className="mr-2 h-4 w-4" /> Copy Verify Link
+                </Button>
+              </>
+            ) : null}
             <Button
               variant="outline"
               onClick={async () => {

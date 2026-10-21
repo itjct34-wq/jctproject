@@ -32,7 +32,7 @@ import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Vehicle, CompanySettings } from '@/lib/types';
-import { Download, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
+import { Download, ExternalLink, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
 import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
 import { customerContactErrorMessage, isInvoiceConsigneeComplete } from '@/lib/utils/customer-contact';
@@ -274,8 +274,9 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
 
   /** Load line items and open the commercial invoice print/PDF preview. */
   const openPrintPreview = async (inv: Invoice) => {
-    setPrintOpen(true);
+    // Set selected + items before opening so preview never flashes empty / broken.
     await fetchInvoiceItems(inv);
+    setPrintOpen(true);
   };
 
   // Stock INV chip / "Open invoice" links use ?id= to open print preview for that invoice.
@@ -601,6 +602,14 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     if (!selected?.verification_token) { toast.error('No verification token on this invoice'); return; }
     navigator.clipboard.writeText(buildVerifyUrl(selected.verification_token));
     toast.success('Verification link copied');
+  };
+
+  const openVerifyLink = () => {
+    if (!selected?.verification_token) {
+      toast.error('No verification token on this invoice');
+      return;
+    }
+    window.open(buildVerifyUrl(selected.verification_token), '_blank', 'noopener,noreferrer');
   };
 
   const kindInvoices = invoices.filter((inv) => (isAuction ? isAuctionDepositInvoice(inv) : !isAuctionDepositInvoice(inv)));
@@ -1117,23 +1126,47 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
         onOpenChange={closePrintPreview}
         title={isAuction ? 'Auction deposit invoice preview' : 'Commercial Invoice Preview'}
         toolbar={
-          <div className="flex flex-wrap items-center gap-3 rounded-md border border-border/60 p-2.5 text-sm">
-            <label className="flex items-center gap-2">
-              <Switch checked={printShowQr} onCheckedChange={setPrintShowQr} />
-              QR code {printShowQr ? 'on' : 'off'}
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Pinch or scroll to pan. Print uses A4 — turn off browser Headers and footers if a URL appears.
-            </p>
+          <div className="flex flex-col gap-2 rounded-md border border-border/60 p-2.5 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2">
+                <Switch checked={printShowQr} onCheckedChange={setPrintShowQr} />
+                QR + verify link {printShowQr ? 'on' : 'off'}
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Pinch or scroll to pan. Print uses A4 — turn off browser Headers and footers if a URL appears.
+              </p>
+            </div>
+            {selected?.verification_token ? (
+              <p className="break-all text-xs text-muted-foreground">
+                Verify link:{' '}
+                <a
+                  href={buildVerifyUrl(selected.verification_token)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline underline-offset-2"
+                >
+                  {buildVerifyUrl(selected.verification_token)}
+                </a>
+              </p>
+            ) : (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                No verification token on this invoice — QR / link unavailable.
+              </p>
+            )}
           </div>
         }
         footer={
           <>
             <Button variant="outline" onClick={() => closePrintPreview(false)}>Close</Button>
             {selected?.verification_token && (
-              <Button variant="outline" onClick={copyVerifyLink}>
-                <QrCode className="h-4 w-4 mr-2" /> Copy Verify Link
-              </Button>
+              <>
+                <Button variant="outline" onClick={openVerifyLink}>
+                  <ExternalLink className="h-4 w-4 mr-2" /> Open Link
+                </Button>
+                <Button variant="outline" onClick={copyVerifyLink}>
+                  <QrCode className="h-4 w-4 mr-2" /> Copy Verify Link
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={exportCommercialExcel}>
               <Download className="h-4 w-4 mr-2" /> Excel

@@ -23,7 +23,10 @@ import { VehicleShippingDocs } from '@/components/vehicles/vehicle-shipping-docs
 import { supabase } from '@/lib/supabase/client';
 import { resolveSourceCountry } from '@/lib/source-countries';
 import { formatMoney } from '@/lib/utils/format';
+import { buildVerifyUrl } from '@/components/invoices/qr-code';
+import { exportCommercialInvoiceExcel } from '@/lib/utils/commercial-invoice-excel';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
+import { toast } from 'sonner';
 import { calcFobFromBid, DEFAULT_TT_RATE, FIXED_EXPENSE_JPY } from '@/lib/utils/vehicle-pricing';
 import { cn } from '@/lib/utils';
 import type { VehicleRemittanceRef } from '@/components/vehicles/vehicle-remittance-popover';
@@ -42,7 +45,6 @@ import {
   SHIPPING_STATUS_STYLES,
   soldProfitUsd,
 } from '@/lib/vehicle-lifecycle';
-import { toast } from 'sonner';
 import { loadVehicleImages } from '@/lib/utils/vehicle-images';
 import {
   isErpOnlyVehicleImageRole,
@@ -997,6 +999,38 @@ export function VehicleViewInfoDialog({
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>
               Close
             </Button>
+            {previewInvoice?.verification_token ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.open(
+                    buildVerifyUrl(previewInvoice.verification_token!),
+                    '_blank',
+                    'noopener,noreferrer'
+                  );
+                }}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" /> Open Link
+              </Button>
+            ) : null}
+            {previewInvoice ? (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await exportCommercialInvoiceExcel({
+                    invoice: previewInvoice,
+                    items: previewItems,
+                    customer: previewCustomer as Customer | null,
+                    verifyUrl: previewInvoice.verification_token
+                      ? buildVerifyUrl(previewInvoice.verification_token)
+                      : undefined,
+                  });
+                  toast.success('Commercial invoice Excel downloaded');
+                }}
+              >
+                Excel
+              </Button>
+            ) : null}
             {previewInvoice ? (
               <Button onClick={() => void printDocumentPdf(previewInvoice.invoice_code || 'Invoice')}>
                 Print / PDF

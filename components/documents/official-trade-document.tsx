@@ -528,7 +528,7 @@ export function OfficialTradeDocument({
             </div>
             <div className="flex justify-end">
               {showQr && verificationUrl ? (
-                <div className="invoice-qr-wrap flex flex-col items-center">
+                <div className="invoice-qr-wrap flex max-w-[110px] flex-col items-center text-center">
                   <InvoiceQRCode value={verificationUrl} size={88} className="invoice-qr" />
                   <p className="mt-0.5 text-[7px] font-semibold tracking-wide">Scan to verify</p>
                 </div>
@@ -537,6 +537,14 @@ export function OfficialTradeDocument({
               )}
             </div>
           </div>
+          {showQr && verificationUrl ? (
+            <p className="invoice-verify-url mt-1 text-center text-[6.5px] leading-snug text-[#0b1f3a]">
+              Verify link:{' '}
+              <a href={verificationUrl} className="underline break-all">
+                {verificationUrl}
+              </a>
+            </p>
+          ) : null}
           <div className="mt-1.5 border-t-2 border-[#0b1f3a] pt-1 text-center">
             <p className="text-[9px] font-semibold tracking-[0.14em]">SIGNATURE OF AUTHORISED PERSON</p>
           </div>
