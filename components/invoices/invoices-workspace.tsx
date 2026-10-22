@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-provider';
@@ -9,7 +10,6 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DocumentPrintPreview } from '@/components/documents/document-print-preview';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,7 +26,6 @@ import { fetchAllPages } from '@/lib/erp/paged-query';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { exportCommercialInvoiceExcel } from '@/lib/utils/commercial-invoice-excel';
 import { exportCommercialInvoiceDocx } from '@/lib/utils/commercial-invoice-docx';
-import { CommercialInvoiceTemplate } from '@/components/invoices/commercial-invoice-template';
 import { buildVerifyUrl } from '@/components/invoices/qr-code';
 import { printDocumentPdf } from '@/lib/utils/print-document-pdf';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -51,6 +50,15 @@ import {
   invoiceOpenHref,
   isAuctionDepositInvoice,
 } from '@/lib/invoice-links';
+
+const DocumentPrintPreview = dynamic(
+  () => import('@/components/documents/document-print-preview').then((m) => m.DocumentPrintPreview),
+  { ssr: false }
+);
+const CommercialInvoiceTemplate = dynamic(
+  () => import('@/components/invoices/commercial-invoice-template').then((m) => m.CommercialInvoiceTemplate),
+  { ssr: false }
+);
 
 export type InvoiceWorkspaceKind = 'commercial' | 'auction';
 export { invoiceOpenHref, invoiceOpenHrefByCode, isAuctionDepositInvoice } from '@/lib/invoice-links';
@@ -666,7 +674,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
       <form onSubmit={onSubmit} className="erp-invoice-workform">
         <div className="erp-invoice-workform-body">
-        {/* 1. Customer + invoice meta */}
+        {/* 1. Customer / consignee — one shared box (existing pick or Enter details) */}
         <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
           <div className="grid gap-1 sm:grid-cols-2">
             <div className="space-y-0.5">
@@ -733,6 +741,10 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <div className="space-y-0.5"><Label>Address *</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
             </div>
           )}
+        </section>
+
+        {/* 2. Invoice meta */}
+        <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
           <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-0.5">
               <Label>Invoice #</Label>
@@ -783,7 +795,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           </div>
         </section>
 
-        {/* 2. Shipping terms & charges + freight — always visible */}
+        {/* 3. Shipping terms & charges + freight — always visible */}
         <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
           <p className="text-xs font-semibold leading-tight text-muted-foreground">Shipping terms & charges</p>
           <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">

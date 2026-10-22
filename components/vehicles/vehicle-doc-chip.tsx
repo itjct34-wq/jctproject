@@ -106,7 +106,7 @@ export function VehicleDocChip({
         <button
           type="button"
           className={cn(
-            'inline-flex h-6 min-w-[1.75rem] items-center justify-center gap-1 rounded px-1.5 text-xs font-bold uppercase',
+            'inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded px-2.5 py-1.5 text-xs font-bold uppercase',
             'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
             'disabled:opacity-70',
             !className?.includes('text-') && 'text-white',

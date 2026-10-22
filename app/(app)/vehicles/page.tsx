@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -30,14 +31,33 @@ import { pickPrimaryImageUrl } from '@/lib/vehicles/image-role';
 import { mapTransmissionToDb, VehicleSpecFields } from '@/components/vehicles/vehicle-spec-fields';
 import { FobFormulaFields } from '@/components/vehicles/fob-formula-fields';
 import { StockSourcingFields } from '@/components/vehicles/stock-sourcing-fields';
-import { EditCourierDialog } from '@/components/vehicles/edit-courier-dialog';
-import { EditShippingDialog } from '@/components/vehicles/edit-shipping-dialog';
-import { AssignStockDialog } from '@/components/vehicles/assign-stock-dialog';
-import { SetBidRequesterDialog } from '@/components/vehicles/set-bid-requester-dialog';
-import { ReserveVehicleDialog } from '@/components/vehicles/reserve-vehicle-dialog';
 import { ShippingStepper } from '@/components/vehicles/shipping-stepper';
-import { VehicleViewInfoDialog } from '@/components/vehicles/vehicle-view-info-dialog';
 import type { VehicleRemittanceRef } from '@/components/vehicles/vehicle-remittance-popover';
+
+const EditCourierDialog = dynamic(
+  () => import('@/components/vehicles/edit-courier-dialog').then((m) => m.EditCourierDialog),
+  { ssr: false }
+);
+const EditShippingDialog = dynamic(
+  () => import('@/components/vehicles/edit-shipping-dialog').then((m) => m.EditShippingDialog),
+  { ssr: false }
+);
+const AssignStockDialog = dynamic(
+  () => import('@/components/vehicles/assign-stock-dialog').then((m) => m.AssignStockDialog),
+  { ssr: false }
+);
+const SetBidRequesterDialog = dynamic(
+  () => import('@/components/vehicles/set-bid-requester-dialog').then((m) => m.SetBidRequesterDialog),
+  { ssr: false }
+);
+const ReserveVehicleDialog = dynamic(
+  () => import('@/components/vehicles/reserve-vehicle-dialog').then((m) => m.ReserveVehicleDialog),
+  { ssr: false }
+);
+const VehicleViewInfoDialog = dynamic(
+  () => import('@/components/vehicles/vehicle-view-info-dialog').then((m) => m.VehicleViewInfoDialog),
+  { ssr: false }
+);
 import { SOURCE_COUNTRIES, resolveSourceCountry } from '@/lib/source-countries';
 import { parseStockCategory, stockCategoryLabel, type StockCategory } from '@/lib/stock-category';
 import {

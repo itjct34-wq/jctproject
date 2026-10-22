@@ -537,7 +537,11 @@ export function VehicleViewInfoDialog({
             <div className="flex flex-wrap items-start gap-4">
               <div className="h-20 w-28 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border sm:h-24 sm:w-32">
                 {vehicle.primary_image_url ? (
-                  <img src={vehicle.primary_image_url} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={vehicle.primary_image_url}
+                    alt={`Photo of ${title}${vehicle.stock_number ? ` (${vehicle.stock_number})` : ''}`}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                     <CarFront className="h-7 w-7" />
@@ -571,7 +575,11 @@ export function VehicleViewInfoDialog({
                               )}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+                              <img
+                                src={img.image_url}
+                                alt={`${vehicleImageRoleLabel(role)} photo${vehicle.stock_number ? ` for ${vehicle.stock_number}` : ''}`}
+                                className="h-full w-full object-cover"
+                              />
                             </a>
                           ))}
                         </div>

@@ -179,10 +179,14 @@ export function MultiImageUpload({
         type="button"
         className="absolute inset-0 z-0"
         onClick={() => setPreviewIndex(idx)}
-        aria-label={`Preview photo ${idx + 1}`}
+        aria-label={`Preview ${vehicleImageRoleLabel(img.image_role)} photo ${idx + 1}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+        <img
+          src={img.image_url}
+          alt={`${vehicleImageRoleLabel(img.image_role)} photo ${idx + 1}`}
+          className="h-full w-full object-cover"
+        />
       </button>
       <span className="pointer-events-none absolute left-1 top-1 z-[1] rounded bg-black/65 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
         {vehicleImageRoleLabel(img.image_role)}
@@ -371,7 +375,7 @@ export function MultiImageUpload({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewImage.image_url}
-              alt=""
+              alt={`${vehicleImageRoleLabel(previewImage.image_role)} photo ${(previewIndex ?? 0) + 1} of ${images.length}`}
               className="max-h-full max-w-full object-contain"
             />
             {images.length > 1 ? (

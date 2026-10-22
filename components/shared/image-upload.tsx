@@ -63,7 +63,7 @@ export function ImageUpload({
         <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40 flex items-center justify-center">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="" className="h-full w-full object-cover" />
+            <img src={value} alt={`${label} preview`} className="h-full w-full object-cover" />
           ) : (
             <Camera className="h-8 w-8 text-muted-foreground/50" />
           )}

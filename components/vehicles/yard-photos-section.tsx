@@ -128,7 +128,11 @@ export function YardPhotosSection({
               className="h-14 w-[4.5rem] overflow-hidden rounded border bg-muted ring-1 ring-emerald-500/40 sm:h-16 sm:w-20"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+              <img
+                src={img.image_url}
+                alt={`Yard photo${stockNumber ? ` for ${stockNumber}` : ''}`}
+                className="h-full w-full object-cover"
+              />
             </a>
           ))}
         </div>

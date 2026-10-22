@@ -167,9 +167,9 @@ type StockListCardActionsMenuProps = Pick<
   | 'onMarkCommissionPaid'
 >;
 
-/** Fixed right-rail control chrome — same width/height so Edit shipping / Actions / View Info align. */
+/** Fixed right-rail control chrome — ≥44px touch targets; same width so Edit shipping / Actions / View Info align. */
 const RAIL_BTN =
-  'h-9 min-h-9 w-full shrink-0 justify-center rounded-lg px-3 text-[12px] font-semibold shadow-sm';
+  'h-11 min-h-11 w-full shrink-0 justify-center rounded-lg px-3 text-[12px] font-semibold shadow-sm';
 const RAIL_BRAND_BTN = cn(
   RAIL_BTN,
   'bg-brand text-brand-foreground hover:bg-brand/90 focus-visible:ring-brand/40'
@@ -446,10 +446,22 @@ export function StockListCard({
         )}
       >
         {/* Thumb */}
-        <div className="shrink-0 pt-0.5">
+        <div className="max-md:order-1 shrink-0 pt-0.5">
           <div className="relative h-[88px] w-[120px] overflow-hidden rounded-md bg-white/80 ring-1 ring-black/10 sm:h-[100px] sm:w-[140px]">
             {v.primary_image_url ? (
-              <Image src={v.primary_image_url} alt="" fill sizes="140px" className="object-cover" />
+              <Image
+                src={v.primary_image_url}
+                alt={
+                  title
+                    ? `Photo of ${title}${v.stock_number ? ` (${v.stock_number})` : ''}`
+                    : v.stock_number
+                      ? `Vehicle ${v.stock_number}`
+                      : 'Vehicle photo'
+                }
+                fill
+                sizes="140px"
+                className="object-cover"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-400">
                 <CarFront className="h-8 w-8" />
@@ -459,7 +471,7 @@ export function StockListCard({
         </div>
 
         {/* Vehicle identity */}
-        <div className="min-w-0">
+        <div className="min-w-0 max-md:order-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <a
               href={stockDetailPath(v.stock_category, v.id)}
@@ -500,7 +512,7 @@ export function StockListCard({
                 entityId={v.id}
                 label="Auction sheet"
                 docKinds={['auction_sheet']}
-                className="h-7 border border-sky-300 bg-white px-2.5 font-semibold normal-case tracking-normal text-sky-800 hover:bg-sky-50"
+                className="min-h-11 border border-sky-300 bg-white px-2.5 font-semibold normal-case tracking-normal text-sky-800 hover:bg-sky-50"
               />
             </div>
           ) : null}
@@ -522,7 +534,7 @@ export function StockListCard({
         </div>
 
         {/* Origin / pricing cues — Vehicle cost + term lead; bid/buy secondary */}
-        <div className="min-w-0 text-[12px] leading-5">
+        <div className="min-w-0 text-[12px] leading-5 max-md:order-4">
           {place.city || place.country ? (
             <p className="font-semibold uppercase tracking-wide text-slate-800">
               {place.city ? `${place.city}${place.country ? ', ' : ''}` : ''}
@@ -572,7 +584,7 @@ export function StockListCard({
         </div>
 
         {/* Customer / agent */}
-        <div className="min-w-0 text-[12px] leading-5">
+        <div className="min-w-0 text-[12px] leading-5 max-md:order-5">
           {customerName ? (
             <p>
               <span className="font-bold uppercase text-sky-800">{customerName}</span>
@@ -598,7 +610,7 @@ export function StockListCard({
 
         {/* Money boxes — wrap inside this column only; never spill into the actions rail */}
         {showMoney ? (
-          <div className="min-w-0 max-w-full space-y-1.5 md:col-span-4 xl:col-span-1 xl:pr-1">
+          <div className="min-w-0 max-w-full space-y-1.5 max-md:order-6 md:col-span-4 xl:col-span-1 xl:pr-1">
             <div className="flex flex-wrap gap-1.5">
               <div className="min-w-[6.5rem] flex-1 basis-[6.5rem] rounded-md border border-white/80 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur-sm">
                 <p className="text-xs font-bold uppercase tracking-wide text-sky-600">Sold</p>
@@ -708,7 +720,7 @@ export function StockListCard({
                         label="DHL"
                         docKinds={['dhl']}
                         icon={<FileText className="h-3 w-3 shrink-0 text-rose-500" aria-hidden />}
-                        className="h-6 gap-1 rounded-full border border-slate-600 bg-slate-900 px-2 text-white hover:bg-slate-800 focus-visible:ring-slate-500/40"
+                        className="min-h-11 gap-1 rounded-full border border-slate-600 bg-slate-900 px-2.5 text-white hover:bg-slate-800 focus-visible:ring-slate-500/40"
                       />
                     ) : null}
                     {remitList.length ? (
@@ -738,20 +750,21 @@ export function StockListCard({
           </div>
         ) : null}
 
-        {/* Right rail — isolated column: status → shipping → controls (never shrinks under money/chips) */}
+        {/* Action rail — mobile: after identity (thumb zone); xl: fixed right column */}
         <aside
           className={cn(
-            'flex w-full flex-col items-stretch',
+            'flex w-full flex-col items-stretch max-md:order-3',
+            'max-md:rounded-xl max-md:border max-md:border-black/10 max-md:bg-white/85 max-md:p-3 max-md:shadow-sm',
             'md:col-span-4',
             'xl:col-span-1 xl:w-[12.5rem] xl:min-w-[12.5rem] xl:max-w-[12.5rem] xl:shrink-0',
-            'xl:border-l xl:border-black/10 xl:pl-4'
+            'xl:border-l xl:border-black/10 xl:bg-transparent xl:p-0 xl:pl-4 xl:shadow-none'
           )}
         >
           <div className="flex flex-col items-stretch gap-1.5">
             <span
               role="status"
               className={cn(
-                'inline-flex w-full items-center justify-center px-3 py-1.5 text-xs font-bold uppercase tracking-wide shadow-sm',
+                'inline-flex min-h-11 w-full items-center justify-center px-3 py-2 text-xs font-bold uppercase tracking-wide shadow-sm',
                 pay === 'available' ? 'rounded-full' : 'rounded-md',
                 PAYMENT_STATUS_PILL_STYLES[pay]
               )}
@@ -759,7 +772,7 @@ export function StockListCard({
               {PAYMENT_STATUS_PILL_LABELS[pay]}
             </span>
             {incoterm ? (
-              <span className="inline-flex w-full items-center justify-center rounded-md bg-lime-100 px-2 py-1 text-xs font-bold uppercase tracking-wide text-lime-900 ring-1 ring-lime-300/80">
+              <span className="inline-flex min-h-9 w-full items-center justify-center rounded-md bg-lime-100 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-lime-900 ring-1 ring-lime-300/80">
                 {incoterm}
               </span>
             ) : null}
@@ -774,7 +787,7 @@ export function StockListCard({
             </p>
           </div>
 
-          <div className="mt-2.5 flex flex-col items-stretch gap-2">
+          <div className="mt-2.5 grid grid-cols-1 gap-2.5 max-md:grid-cols-2 xl:flex xl:flex-col xl:items-stretch">
             {pay === 'available' ? (
               <>
                 {onReserve ? (
@@ -807,7 +820,12 @@ export function StockListCard({
                     onMarkCommissionPaid={onMarkCommissionPaid}
                   />
                 ) : null}
-                <Button type="button" size="sm" className={RAIL_BRAND_BTN} onClick={onViewInfo}>
+                <Button
+                  type="button"
+                  size="sm"
+                  className={cn(RAIL_BRAND_BTN, 'max-md:col-span-2')}
+                  onClick={onViewInfo}
+                >
                   View Info
                   <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
                 </Button>
@@ -844,7 +862,12 @@ export function StockListCard({
                     onMarkCommissionPaid={onMarkCommissionPaid}
                   />
                 ) : null}
-                <Button type="button" size="sm" className={RAIL_BRAND_BTN} onClick={onViewInfo}>
+                <Button
+                  type="button"
+                  size="sm"
+                  className={cn(RAIL_BRAND_BTN, 'max-md:col-span-2')}
+                  onClick={onViewInfo}
+                >
                   View Info
                   <ChevronRight className="ml-1 h-3.5 w-3.5 shrink-0" />
                 </Button>
