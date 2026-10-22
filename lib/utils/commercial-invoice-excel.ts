@@ -1,6 +1,12 @@
 import ExcelJS from 'exceljs';
 import type { Invoice, InvoiceItem, Customer, Quotation } from '@/lib/types';
-import { decodeInvoiceVehicle, extractChassis, formatDepositRatio, formatDocumentNo } from '@/lib/jct-official';
+import {
+  decodeInvoiceVehicle,
+  extractChassis,
+  formatDepositRatio,
+  formatDocumentNo,
+  isFreeformInvoiceVehicle,
+} from '@/lib/jct-official';
 import {
   applyFreightToVehicleLines,
   filterFreightChargeLines,
@@ -56,9 +62,20 @@ function money(n: number) {
 
 function lineFromItem(item: InvoiceItem | TradeLine): ExcelLine {
   const bits = decodeInvoiceVehicle(item.description);
-  const chassis = bits.chassis_number || extractChassis(item.description) || '—';
-  const car = [bits.make, bits.model, bits.year, bits.engine].filter(Boolean).join(' ') || item.description;
-  const extra = [bits.colour, bits.transmission].filter(Boolean).join(' · ');
+  const vehicleId = 'vehicle_id' in item ? item.vehicle_id : null;
+  const freeform = isFreeformInvoiceVehicle(bits, {
+    vehicle_id: vehicleId,
+    make: 'make' in item ? item.make : null,
+    model: 'model' in item ? item.model : null,
+  });
+  const chassis =
+    bits.chassis_number ||
+    extractChassis(freeform ? bits.notes : item.description) ||
+    '—';
+  const car = freeform
+    ? (bits.notes || item.description || '').trim()
+    : [bits.make, bits.model, bits.year, bits.engine].filter(Boolean).join(' ') || item.description;
+  const extra = freeform ? '' : [bits.colour, bits.transmission].filter(Boolean).join(' · ');
   const qty = Number(item.quantity || 1);
   const unit = Number(item.unit_price || 0);
   const total = Number(item.line_total || 0) || qty * unit;

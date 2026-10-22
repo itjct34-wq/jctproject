@@ -29,8 +29,9 @@ import { CurrencySelect } from '@/components/ui/currency-select';
 import { toast } from 'sonner';
 import {
   decodeInvoiceVehicle,
-  describeInvoiceVehicle,
+  encodeInvoiceLineDescription,
   formatTransmissionLabel,
+  isJctvEncodedDescription,
   type CompanyLetterheadSettings,
 } from '@/lib/jct-official';
 import {
@@ -230,7 +231,7 @@ function QuotationsPageInner() {
       .map((item) => ({
         quotation_id: quotationId,
         vehicle_id: item.vehicle_id || null,
-        description: describeInvoiceVehicle({ ...item, notes: item.description }),
+        description: encodeInvoiceLineDescription({ ...item, notes: item.description, vehicle_id: item.vehicle_id }),
         quantity: Number(item.quantity) || 1,
         unit_price: Number(item.unit_price) || 0,
         line_total: (Number(item.quantity) || 1) * (Number(item.unit_price) || 0),
@@ -307,21 +308,22 @@ function QuotationsPageInner() {
       port_of_discharge: selected.port_of_discharge || '',
     });
     const mapped = rows.map((item) => {
+      const encoded = isJctvEncodedDescription(item.description);
       const bits = decodeInvoiceVehicle(item.description);
       const v = vehicles.find((x) => x.id === item.vehicle_id);
       return {
-        description: bits.notes || '',
+        description: encoded ? bits.notes || '' : item.description || '',
         quantity: String(item.quantity ?? 1),
         unit_price: String(item.unit_price ?? 0),
         vehicle_id: item.vehicle_id || '',
-        chassis_number: bits.chassis_number || v?.chassis_number || '',
-        stock_number: bits.stock_number || v?.stock_number || '',
-        make: bits.make || v?.make || '',
-        model: bits.model || v?.model || '',
-        colour: bits.colour || v?.color || '',
-        year: bits.year || (v?.model_year != null ? String(v.model_year) : ''),
-        engine: bits.engine || '',
-        transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
+        chassis_number: (encoded ? bits.chassis_number : '') || v?.chassis_number || '',
+        stock_number: (encoded ? bits.stock_number : '') || v?.stock_number || '',
+        make: (encoded ? bits.make : '') || v?.make || '',
+        model: (encoded ? bits.model : '') || v?.model || '',
+        colour: (encoded ? bits.colour : '') || v?.color || '',
+        year: (encoded ? bits.year : '') || (v?.model_year != null ? String(v.model_year) : ''),
+        engine: (encoded ? bits.engine : '') || '',
+        transmission: (encoded ? bits.transmission : '') || formatTransmissionLabel(v?.transmission),
       };
     });
     setLineItems(mapped.length ? mapped : [emptyQuoteLine()]);

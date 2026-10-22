@@ -7,6 +7,7 @@ import {
   formatDocumentNo,
   formatMoney,
   formatTransmissionLabel,
+  isFreeformInvoiceVehicle,
   letterheadHankoUrl,
   letterheadLogoUrl,
   letterheadName,
@@ -141,9 +142,20 @@ function cellText(value?: string | null) {
 function resolvedLine(line: TradeLine, vehicles: Props['vehicles']) {
   const vehicle = vehicles?.find((v) => v.id === line.vehicle_id);
   const bits = decodeInvoiceVehicle(line.description);
+  const freeform = isFreeformInvoiceVehicle(bits, {
+    vehicle_id: line.vehicle_id || vehicle?.id,
+    make: line.make,
+    model: line.model,
+  })
+    ? (bits.notes || '').trim()
+    : '';
   return {
+    freeform,
     chassis: cellText(
-      vehicle?.chassis_number || line.chassis_number || bits.chassis_number || extractChassis(line.description)
+      vehicle?.chassis_number ||
+        line.chassis_number ||
+        bits.chassis_number ||
+        (freeform ? extractChassis(freeform) : extractChassis(line.description))
     ),
     make: vehicle?.make || line.make || bits.make,
     model: vehicle?.model || line.model || bits.model,
@@ -374,12 +386,18 @@ export function OfficialTradeDocument({
                 <tr key={idx}>
                   <td className="px-1.5 py-0.5 font-mono text-[7.5px] align-top">{row.chassis}</td>
                   <td className="px-1.5 py-0.5 align-top">
-                    <p className="font-semibold leading-tight">
-                      {[row.make, row.model].filter(Boolean).join(' ') || '—'}
-                    </p>
-                    <p className="leading-tight">
-                      {[row.year, row.engine, row.colour, row.transmission].filter(Boolean).join(' · ') || '—'}
-                    </p>
+                    {row.freeform ? (
+                      <p className="whitespace-pre-line font-semibold leading-tight">{row.freeform}</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold leading-tight">
+                          {[row.make, row.model].filter(Boolean).join(' ') || '—'}
+                        </p>
+                        <p className="leading-tight">
+                          {[row.year, row.engine, row.colour, row.transmission].filter(Boolean).join(' · ') || '—'}
+                        </p>
+                      </>
+                    )}
                   </td>
                   <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{row.qty}</td>
                   {showDeposit && <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{deposit}</td>}

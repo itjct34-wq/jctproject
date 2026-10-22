@@ -33,7 +33,14 @@ import { Switch } from '@/components/ui/switch';
 import type { Invoice, InvoiceItem, Customer, Vehicle, CompanySettings } from '@/lib/types';
 import { Download, ExternalLink, FileText, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Printer, QrCode } from 'lucide-react';
 import { CurrencySelect } from '@/components/ui/currency-select';
-import { DEPOSIT_RATIOS, decodeInvoiceVehicle, describeInvoiceVehicle, formatTransmissionLabel, normalizeDepositRatio } from '@/lib/jct-official';
+import {
+  DEPOSIT_RATIOS,
+  decodeInvoiceVehicle,
+  encodeInvoiceLineDescription,
+  formatTransmissionLabel,
+  isJctvEncodedDescription,
+  normalizeDepositRatio,
+} from '@/lib/jct-official';
 import { customerContactErrorMessage, isInvoiceConsigneeComplete } from '@/lib/utils/customer-contact';
 import {
   freightValidationError,
@@ -371,21 +378,23 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     });
     setLineItems(loadedItems.map((i) => {
       const v = vehicles.find((x) => x.id === i.vehicle_id);
+      const encoded = isJctvEncodedDescription(i.description);
       const bits = decodeInvoiceVehicle(i.description);
       return {
-        description: bits.notes || '',
+        // Free-text lines: keep the textarea content verbatim (do not scrape into make/model).
+        description: encoded ? bits.notes || '' : i.description || '',
         quantity: String(i.quantity),
         unit_price: String(i.unit_price),
         discount: isAuction ? String(i.discount ?? 0) : String(normalizeDepositRatio(i.discount, i.unit_price)),
         vehicle_id: i.vehicle_id || '',
-        chassis_number: bits.chassis_number || v?.chassis_number || '',
-        stock_number: bits.stock_number || v?.stock_number || '',
-        make: bits.make || v?.make || '',
-        model: bits.model || v?.model || '',
-        colour: bits.colour || v?.color || '',
-        year: bits.year || (v?.model_year != null ? String(v.model_year) : ''),
-        engine: bits.engine || '',
-        transmission: bits.transmission || formatTransmissionLabel(v?.transmission),
+        chassis_number: (encoded ? bits.chassis_number : '') || v?.chassis_number || '',
+        stock_number: (encoded ? bits.stock_number : '') || v?.stock_number || '',
+        make: (encoded ? bits.make : '') || v?.make || '',
+        model: (encoded ? bits.model : '') || v?.model || '',
+        colour: (encoded ? bits.colour : '') || v?.color || '',
+        year: (encoded ? bits.year : '') || (v?.model_year != null ? String(v.model_year) : ''),
+        engine: (encoded ? bits.engine : '') || '',
+        transmission: (encoded ? bits.transmission : '') || formatTransmissionLabel(v?.transmission),
       };
     }));
     if (loadedItems.length === 0) setLineItems([{ ...emptyLine(kind) }]);
@@ -462,7 +471,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
       .map((item, idx) => ({
         invoice_id: invoiceId,
         vehicle_id: item.vehicle_id || null,
-        description: describeInvoiceVehicle({ ...item, notes: item.description }),
+        description: encodeInvoiceLineDescription({ ...item, notes: item.description, vehicle_id: item.vehicle_id }),
         quantity: Number(item.quantity) || 1,
         unit_price: Number(item.unit_price) || 0,
         discount: isAuction

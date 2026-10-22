@@ -133,6 +133,10 @@ export function normalizeDepositRatio(discount?: number | string | null, unitPri
   return 100;
 }
 
+export function isJctvEncodedDescription(description: string | null | undefined) {
+  return (description || '').trimStart().startsWith('[JCTV]');
+}
+
 export function describeInvoiceVehicle(parts: InvoiceVehicleBits & { description?: string | null }) {
   const notes = (parts.notes ?? parts.description)?.trim() || '';
   const fields = [
@@ -154,11 +158,24 @@ export function describeInvoiceVehicle(parts: InvoiceVehicleBits & { description
   return notes || 'Vehicle';
 }
 
+/**
+ * Persist a line description for invoices/quotations.
+ * Manual free-text (no stock vehicle_id + typed description) is stored verbatim so print
+ * can show the same layout. Stock-linked / structured-only lines still use [JCTV] encoding.
+ */
+export function encodeInvoiceLineDescription(
+  parts: InvoiceVehicleBits & { description?: string | null; vehicle_id?: string | null }
+) {
+  const notes = (parts.notes ?? parts.description)?.trim() || '';
+  if (!parts.vehicle_id && notes) return notes;
+  return describeInvoiceVehicle({ ...parts, notes });
+}
+
 export function decodeInvoiceVehicle(description: string | null | undefined): InvoiceVehicleBits {
   const text = (description || '').trim();
   if (!text) return {};
-  if (text.startsWith('[JCTV]')) {
-    const rest = text.replace(/^\[JCTV\]\s*/, '');
+  if (isJctvEncodedDescription(text)) {
+    const rest = text.replace(/^\[JCTV\]\s*/i, '');
     const [meta, notes] = rest.split(/\s\|\|\s/);
     const bits: Record<string, string> = {};
     (meta || '').split(/\s\|\s/).forEach((part) => {
@@ -177,45 +194,17 @@ export function decodeInvoiceVehicle(description: string | null | undefined): In
       notes: (notes || '').trim(),
     };
   }
-  const chassis = extractChassis(text);
-  const colour = text.match(/(?:colou?r)[:\s]+([A-Za-z0-9 /-]+)/i)?.[1]?.trim() || '';
-  const stockMatch = text.match(/(?:stock(?:\s*(?:no\.?|number|#))?)[:\s]+([A-Z0-9-]+)/i);
-  const year = text.match(/(?:year)[:\s]+(\d{4})/i)?.[1] || '';
-  const engine = text.match(/(?:engine)[:\s]+([A-Za-z0-9.]+(?:\s?cc)?)/i)?.[1] || '';
-  const transmission =
-    formatTransmissionLabel(text.match(/(?:transmission)[:\s]+([A-Za-z]+)/i)?.[1]) ||
-    (/\bautomatic\b/i.test(text) ? 'Automatic' : /\bmanual\b/i.test(text) ? 'Manual' : '');
-  const extras = { year, engine, transmission };
-  const cleaned = text
-    .replace(/\/?\s*(?:chassis|chassic|vin)[:\s#-]*[A-Z0-9-]{8,20}/gi, '')
-    .replace(/(?:colou?r)[:\s]+[A-Za-z0-9 /-]+/gi, '')
-    .replace(/(?:stock(?:\s*(?:no\.?|number|#))?)[:\s]+[A-Z0-9-]+/gi, '')
-    .replace(/(?:year)[:\s]+\d{4}/gi, '')
-    .replace(/(?:engine)[:\s]+[A-Za-z0-9.]+(?:\s?cc)?/gi, '')
-    .replace(/(?:transmission)[:\s]+[A-Za-z]+/gi, '')
-    .replace(/\b(?:automatic|manual|cvt)\b/gi, '')
-    .replace(/^[·/\s]+|[·/\s]+$/g, '')
-    .trim();
-  const chunks = cleaned.split(/\s·\s|\s\/\s|\n/).map((s) => s.trim()).filter(Boolean);
-  if (chunks.length >= 3) {
-    return {
-      chassis_number: chassis,
-      stock_number: stockMatch?.[1] || chunks[0],
-      make: chunks[1],
-      model: chunks.slice(2).join(' '),
-      colour,
-      ...extras,
-    };
-  }
-  if (chunks.length === 2) {
-    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], model: chunks[1], colour, ...extras };
-  }
-  if (chunks.length === 1) {
-    const words = chunks[0].split(/\s+/);
-    if (words.length >= 2) {
-      return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: words[0], model: words.slice(1).join(' '), colour, ...extras };
-    }
-    return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', make: chunks[0], colour, ...extras };
-  }
-  return { chassis_number: chassis, stock_number: stockMatch?.[1] || '', colour, ...extras };
+  // Plain free-text (manual paste): keep verbatim. Do not invent make/model from heuristics.
+  return { notes: text };
+}
+
+/** True when the line should print the description box text as-is (no structured make/model layout). */
+export function isFreeformInvoiceVehicle(
+  bits: InvoiceVehicleBits,
+  opts?: { vehicle_id?: string | null; make?: string | null; model?: string | null }
+) {
+  if (opts?.vehicle_id) return false;
+  if (opts?.make?.trim() || opts?.model?.trim()) return false;
+  if (bits.make?.trim() || bits.model?.trim()) return false;
+  return Boolean(bits.notes?.trim());
 }
