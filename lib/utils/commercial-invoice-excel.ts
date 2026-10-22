@@ -63,11 +63,8 @@ function money(n: number) {
 function lineFromItem(item: InvoiceItem | TradeLine): ExcelLine {
   const bits = decodeInvoiceVehicle(item.description);
   const vehicleId = 'vehicle_id' in item ? item.vehicle_id : null;
-  const freeform = isFreeformInvoiceVehicle(bits, {
-    vehicle_id: vehicleId,
-    make: 'make' in item ? item.make : null,
-    model: 'model' in item ? item.model : null,
-  });
+  // InvoiceItem / TradeLine carry free-text in description only (no structured make/model columns).
+  const freeform = isFreeformInvoiceVehicle(bits, { vehicle_id: vehicleId });
   const chassis =
     bits.chassis_number ||
     extractChassis(freeform ? bits.notes : item.description) ||
