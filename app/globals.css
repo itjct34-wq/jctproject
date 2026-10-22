@@ -1079,7 +1079,8 @@
 .invoice-print-root table.inv-table th,
 .invoice-print-root table.inv-table td {
   border: 1px solid #0b1f3a;
-  vertical-align: top;
+  /* Middle so short Chassis/Qty/Deposit/Total sit centered beside tall vehicle specs */
+  vertical-align: middle;
 }
 .invoice-print-root table.inv-table thead th {
   background: #0b1f3a;

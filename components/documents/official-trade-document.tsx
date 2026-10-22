@@ -384,8 +384,8 @@ export function OfficialTradeDocument({
                   : formatDepositRatio(row.discount, depositBaseUnit);
               return (
                 <tr key={idx}>
-                  <td className="px-1.5 py-0.5 font-mono text-[7.5px] align-top">{row.chassis}</td>
-                  <td className="px-1.5 py-0.5 align-top">
+                  <td className="px-1.5 py-0.5 align-middle font-mono text-[7.5px]">{row.chassis}</td>
+                  <td className="px-1.5 py-0.5 align-middle">
                     {row.freeform ? (
                       <p className="whitespace-pre-line font-semibold leading-tight">{row.freeform}</p>
                     ) : (
