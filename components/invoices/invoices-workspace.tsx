@@ -79,7 +79,7 @@ const typeChipClass: Record<Invoice['invoice_type'], string> = {
 };
 const typeLabels: Record<Invoice['invoice_type'], string> = { proforma: 'Proforma', commercial: 'Commercial', credit_note: 'Credit Note' };
 const emptyForm = {
-  customer_mode: 'existing' as 'existing' | 'manual',
+  customer_mode: 'manual' as 'existing' | 'manual',
   customer_id: '', sale_id: '', invoice_type: 'proforma' as Invoice['invoice_type'],
   invoice_code_mode: 'auto' as 'auto' | 'manual', invoice_code: '',
   issue_date: '', due_date: '', tax: '', currency: 'USD', notes: '',
@@ -674,53 +674,44 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
     <Dialog open={isOpen} onOpenChange={onClose}><DialogContent fullscreen><DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
       <form onSubmit={onSubmit} className="erp-invoice-workform">
         <div className="erp-invoice-workform-body">
-        {/* 1. Customer / consignee — one shared box (existing pick or Enter details) */}
-        <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
-          <div className="grid gap-1 sm:grid-cols-2">
-            <div className="space-y-0.5">
-              <Label>Customer source</Label>
-              <Select
-                value={form.customer_mode}
-                onValueChange={(v: 'existing' | 'manual') => setForm({ ...form, customer_mode: v, customer_id: v === 'manual' ? '' : form.customer_id })}
-              >
-                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="existing">From database</SelectItem>
-                  <SelectItem value="manual">Enter details</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {form.customer_mode === 'existing' ? (
-              <div className="space-y-0.5">
-                <Label>Customer *</Label>
-                <Select
-                  value={form.customer_id}
-                  onValueChange={(v) => {
-                    const c = customers.find((x) => x.id === v);
-                    setForm({
-                      ...form,
-                      customer_id: v,
-                      guest_name: c?.full_name || '',
-                      guest_company: c?.company_name || '',
-                      guest_email: c?.email || '',
-                      guest_phone: c?.phone || '',
-                      guest_country: c?.country || '',
-                      guest_city: c?.city || '',
-                      guest_address: c?.address_line1 || '',
-                      port_of_discharge: c?.port_of_discharge || form.port_of_discharge,
-                    });
-                  }}
-                >
-                  <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}{c.customer_code ? ` · ${c.customer_code}` : ''}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                <Label>Consignee Name *</Label>
-                <Input className="h-8 min-h-8 text-xs" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Consignee name" required />
-              </div>
-            )}
+        {/* 1. Customer — one box; no VAT / tax fields */}
+        <section className="shrink-0 space-y-2 rounded-md border border-border/60 p-2">
+          <p className="text-sm font-semibold leading-none">Customer</p>
+          <div className="space-y-0.5">
+            <Label>Saved customer</Label>
+            <Select
+              value={form.customer_mode === 'manual' ? '__manual__' : (form.customer_id || undefined)}
+              onValueChange={(v) => {
+                if (v === '__manual__') {
+                  setForm({ ...form, customer_mode: 'manual', customer_id: '' });
+                  return;
+                }
+                const c = customers.find((x) => x.id === v);
+                setForm({
+                  ...form,
+                  customer_mode: 'existing',
+                  customer_id: v,
+                  guest_name: c?.full_name || '',
+                  guest_company: c?.company_name || '',
+                  guest_email: c?.email || '',
+                  guest_phone: c?.phone || '',
+                  guest_country: c?.country || '',
+                  guest_city: c?.city || '',
+                  guest_address: c?.address_line1 || '',
+                  port_of_discharge: c?.port_of_discharge || form.port_of_discharge,
+                });
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Enter customer manually" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__manual__">Enter customer manually</SelectItem>
+                {customers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.full_name}{c.customer_code ? ` · ${c.customer_code}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {form.customer_mode === 'existing' && selectedCustomer && (
             <p className="truncate text-xs leading-tight text-muted-foreground">
@@ -732,235 +723,344 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             </p>
           )}
           {form.customer_mode === 'manual' && (
-            <div className="grid gap-1 sm:grid-cols-3">
-              <div className="space-y-0.5"><Label>Company</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Optional" /></div>
-              <div className="space-y-0.5"><Label>Contact</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone (or email)" /></div>
-              <div className="space-y-0.5"><Label>Email</Label><Input className="h-8 min-h-8 text-xs" type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email (or phone)" /></div>
-              <div className="space-y-0.5"><Label>Country</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} /></div>
-              <div className="space-y-0.5"><Label>City</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} /></div>
-              <div className="space-y-0.5"><Label>Address *</Label><Input className="h-8 min-h-8 text-xs" value={form.guest_address} onChange={(e) => setForm({ ...form, guest_address: e.target.value })} placeholder="Shipping address" required /></div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-0.5">
+                <Label>Contact name *</Label>
+                <Input className="h-9 text-sm" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="Contact name" required />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Company</Label>
+                <Input className="h-9 text-sm" value={form.guest_company} onChange={(e) => setForm({ ...form, guest_company: e.target.value })} placeholder="Optional" />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Email</Label>
+                <Input className="h-9 text-sm" type="email" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="Email (or phone)" />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Phone</Label>
+                <Input className="h-9 text-sm" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="Phone (or email)" />
+              </div>
+              <div className="space-y-0.5 sm:col-span-2">
+                <Label>Billing address *</Label>
+                <Textarea
+                  className="min-h-[3.5rem] text-sm"
+                  value={form.guest_address}
+                  onChange={(e) => setForm({ ...form, guest_address: e.target.value })}
+                  placeholder="Shipping / billing address"
+                  required
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label>City</Label>
+                <Input className="h-9 text-sm" value={form.guest_city} onChange={(e) => setForm({ ...form, guest_city: e.target.value })} placeholder="Optional" />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Country</Label>
+                <Input className="h-9 text-sm" value={form.guest_country} onChange={(e) => setForm({ ...form, guest_country: e.target.value })} placeholder="Optional" />
+              </div>
             </div>
           )}
         </section>
 
-        {/* 2. Invoice meta */}
-        <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
-          <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
+        {/* 2. Invoice essentials only */}
+        <section className="shrink-0 space-y-2 rounded-md border border-border/60 p-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-0.5">
-              <Label>Invoice #</Label>
-              <Select
-                value={form.invoice_code_mode}
-                onValueChange={(v: 'auto' | 'manual') =>
-                  setForm({
-                    ...form,
-                    invoice_code_mode: v,
-                    invoice_code: v === 'auto' ? nextAutoInvoiceCode() : form.invoice_code,
-                  })
-                }
-              >
-                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
+              <Label>{form.invoice_code_mode === 'auto' ? 'Invoice # (auto)' : 'Invoice #'}</Label>
+              <div className="flex gap-1">
+                <Input
+                  className="h-9 text-sm"
+                  value={form.invoice_code}
+                  onChange={(e) => setForm({ ...form, invoice_code: e.target.value, invoice_code_mode: 'manual' })}
+                  placeholder="INV0003"
+                />
+                {form.invoice_code_mode === 'manual' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 shrink-0 px-2 text-xs"
+                    onClick={() => setForm({ ...form, invoice_code_mode: 'auto', invoice_code: nextAutoInvoiceCode() })}
+                  >
+                    Auto
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label>Type</Label>
+              <Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Automatic</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
+                  <SelectItem value="proforma">Proforma</SelectItem>
+                  <SelectItem value="commercial">Commercial</SelectItem>
+                  <SelectItem value="credit_note">Credit Note</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-0.5">
-              <Label>{form.invoice_code_mode === 'auto' ? 'Next number' : 'Number'}</Label>
-              <Input
-                className="h-8 min-h-8 text-xs"
-                value={form.invoice_code}
-                onChange={(e) => setForm({ ...form, invoice_code: e.target.value, invoice_code_mode: 'manual' })}
-                placeholder="INV0003"
-              />
+              <Label>Currency</Label>
+              <CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} className="h-9 text-sm" />
             </div>
-            <div className="space-y-0.5"><Label>Type</Label><Select value={form.invoice_type} onValueChange={(v: Invoice['invoice_type']) => setForm({ ...form, invoice_type: v })}><SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="proforma">Proforma</SelectItem><SelectItem value="commercial">Commercial</SelectItem><SelectItem value="credit_note">Credit Note</SelectItem></SelectContent></Select></div>
-            <div className="space-y-0.5"><Label>Currency</Label><CurrencySelect value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })} className="h-8 min-h-8 text-xs" /></div>
-            <div className="space-y-0.5"><Label>FOB term</Label>
-              <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
-                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {incotermSelectOptions(form.incoterms).map((x) => (
-                    <SelectItem key={x} value={x}>{x}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-0.5">
+              <Label>Issue date</Label>
+              <Input className="h-9 text-sm" type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} />
             </div>
-            <div className="space-y-0.5"><Label>Payment</Label><Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}><SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem><SelectItem value="credited">Credited</SelectItem></SelectContent></Select></div>
-          </div>
-          <div className="grid gap-1 sm:grid-cols-3">
-            <div className="min-w-0 space-y-0.5"><Label>Issue date</Label><Input className="h-8 min-h-8 text-xs" type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} /></div>
-            <div className="min-w-0 space-y-0.5"><Label>Due date</Label><Input className="h-8 min-h-8 text-xs" type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
-            <div className="min-w-0 space-y-0.5"><Label>Sales agent</Label><Input className="h-8 min-h-8 text-xs" value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Sales agent name" /></div>
           </div>
         </section>
 
-        {/* 3. Shipping terms & charges + freight — always visible */}
-        <section className="shrink-0 space-y-1 rounded-md border border-border/60 p-1.5">
-          <p className="text-xs font-semibold leading-tight text-muted-foreground">Shipping terms & charges</p>
-          <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="space-y-0.5"><Label>Shipment mode</Label>
-              <Select
-                value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
-                onValueChange={(v) =>
-                  applyShippingPatch({
-                    container_mode: v,
-                    shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
-                  })
-                }
-              >
-                <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RORO">RORO</SelectItem>
-                  <SelectItem value="20ft Container">Container 20ft</SelectItem>
-                  <SelectItem value="40ft Container">Container 40ft</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-0.5"><Label>Port of loading</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Port of discharge</Label><Input className="h-8 min-h-8 text-xs" value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} placeholder="From customer when selected" /></div>
-            <div className="space-y-0.5">
-              <Label>Vessel</Label>
-              <Input
-                className="h-8 min-h-8 text-xs"
-                value={form.vessel_name}
-                onChange={(e) => setForm({ ...form, vessel_name: e.target.value })}
-                list="invoice-vessel-names"
-                placeholder="From Configuration → Vessels"
-              />
-              <datalist id="invoice-vessel-names">
-                {vesselOptions.map((n) => (
-                  <option key={n} value={n} />
-                ))}
-              </datalist>
-            </div>
-            <div className="space-y-0.5"><Label>B/L number</Label><Input className="h-8 min-h-8 text-xs" value={form.bl_number} onChange={(e) => setForm({ ...form, bl_number: e.target.value })} /></div>
-            {freightPolicy.allowFreight ? (
-              <>
-                <div className="space-y-0.5 lg:col-span-2">
-                  <Label>Freight description{freightPolicy.requireFreight ? ' *' : ''}</Label>
-                  <Input
-                    className="h-8 min-h-8 text-xs"
-                    value={form.freight_notes}
-                    onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
-                    placeholder={freightPolicy.defaultFreightLabel}
+        {/* 3. Line items — description + qty + price only (no VAT) */}
+        <section className="space-y-2 rounded-md border border-border/60 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold leading-none">Line items</p>
+            <Button type="button" size="sm" variant="outline" className="h-8 gap-1 px-2 text-xs" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}>
+              <Plus className="h-3.5 w-3.5" />Add line
+            </Button>
+          </div>
+          <div className="hidden gap-2 px-0.5 text-xs font-medium text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_5.5rem_2rem]">
+            <span>Description</span>
+            <span>Qty</span>
+            <span>Unit price</span>
+            <span>{isAuction ? 'Deposit' : 'Deposit %'}</span>
+            <span className="sr-only">Remove</span>
+          </div>
+          <div className="space-y-2">
+            {lineItems.map((item, idx) => (
+              <div key={idx} className="grid gap-2 rounded-md border border-border/50 bg-muted/20 p-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_5.5rem_2rem] sm:items-start">
+                <div className="space-y-1.5 min-w-0">
+                  <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyVehicle(idx, v === 'none' ? '' : v)}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Stock link" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Manual line / no stock link</SelectItem>
+                      {vehicles.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.stock_number} · {v.make} {v.model} · {v.chassis_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Textarea
+                    className="min-h-[3.25rem] text-sm"
+                    value={item.description}
+                    onChange={(e) => updateLine(idx, { description: e.target.value })}
+                    placeholder="Select a stock reference above or enter vehicle/part details"
                   />
+                  {(item.make || item.model || item.chassis_number) && (
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {[item.make, item.model].filter(Boolean).join(' ')}
+                      {item.chassis_number ? ` · ${item.chassis_number}` : ''}
+                      {item.stock_number ? ` · ${item.stock_number}` : ''}
+                    </p>
+                  )}
+                  <details className="text-xs">
+                    <summary className="cursor-pointer select-none text-muted-foreground">Vehicle details</summary>
+                    <div className="mt-1.5 grid gap-1.5 sm:grid-cols-3">
+                      <Input className="h-8 text-xs" value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" />
+                      <Input className="h-8 text-xs" value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" />
+                      <Input className="h-8 text-xs" value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis" />
+                      <Input className="h-8 text-xs" value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock no." />
+                      <Input className="h-8 text-xs" value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="Year" />
+                      <Input className="h-8 text-xs" value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
+                      <Input className="h-8 text-xs" value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="Engine" />
+                      <Input className="h-8 text-xs" value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="Transmission" />
+                    </div>
+                  </details>
                 </div>
                 <div className="space-y-0.5">
-                  <Label>Freight ({form.currency}){freightPolicy.requireFreight ? ' *' : ''}</Label>
-                  <Input
-                    className="h-8 min-h-8 text-xs"
-                    type="number"
-                    value={form.freight_total}
-                    onChange={(e) => setForm({ ...form, freight_total: e.target.value })}
-                    placeholder="0"
-                    required={freightPolicy.requireFreight}
-                  />
+                  <Label className="sm:sr-only">Qty</Label>
+                  <Input className="h-9 text-sm" type="number" min={1} value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} />
                 </div>
-              </>
-            ) : (
-              <div className="flex items-end sm:col-span-3 lg:col-span-3">
-                <p className="w-full rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-xs leading-tight text-muted-foreground">
-                  FOB — vehicle cost only; freight not on this invoice.
-                </p>
-              </div>
-            )}
-            <div className="space-y-0.5"><Label>Insurance</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Other charges</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} /></div>
-            <div className="space-y-0.5"><Label>Discount</Label><Input className="h-8 min-h-8 text-xs" type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} /></div>
-          </div>
-          {freightPolicy.requireFreight && (
-            <p className="text-xs leading-tight text-amber-700">Container shipments must include freight.</p>
-          )}
-        </section>
-
-        {/* 3. Vehicles — document flow; workform body scrolls (no nested list scroll) */}
-        <section className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <Label className="text-xs font-semibold">Vehicles</Label>
-            <Button type="button" size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" onClick={() => setLineItems([...lineItems, { ...emptyLine(kind) }])}><Plus className="h-3.5 w-3.5" />Add</Button>
-          </div>
-          <div className="space-y-1">
-            {lineItems.map((item, idx) => (
-              <div key={idx} className="rounded-md border border-border/60 p-1.5">
-                <div className="grid gap-1 sm:grid-cols-3 lg:grid-cols-6">
-                  <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
-                    <Label>From stock</Label>
-                    <Select value={item.vehicle_id || 'none'} onValueChange={(v) => applyVehicle(idx, v === 'none' ? '' : v)}>
-                      <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                <div className="space-y-0.5">
+                  <Label className="sm:sr-only">Unit price</Label>
+                  <Input className="h-9 text-sm" type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} placeholder="0" />
+                </div>
+                <div className="space-y-0.5">
+                  <Label className="sm:sr-only">{isAuction ? 'Deposit' : 'Deposit %'}</Label>
+                  {isAuction ? (
+                    <Input className="h-9 text-sm" type="number" value={item.discount} onChange={(e) => updateLine(idx, { discount: e.target.value })} placeholder="0" />
+                  ) : (
+                    <Select value={item.discount || '30'} onValueChange={(v) => updateLine(idx, { discount: v })}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Enter manually</SelectItem>
-                        {vehicles.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>{v.stock_number} · {v.make} {v.model} · {v.chassis_number}</SelectItem>
+                        {DEPOSIT_RATIOS.map((ratio) => (
+                          <SelectItem key={ratio} value={String(ratio)}>{ratio}%</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-0.5"><Label>Chassis</Label><Input className="h-8 min-h-8 text-xs" value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis" /></div>
-                  <div className="space-y-0.5"><Label>Stock no.</Label><Input className="h-8 min-h-8 text-xs" value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock" /></div>
-                  <div className="space-y-0.5"><Label>Make</Label><Input className="h-8 min-h-8 text-xs" value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" /></div>
-                  <div className="space-y-0.5"><Label>Model</Label><Input className="h-8 min-h-8 text-xs" value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" /></div>
-                  <div className="space-y-0.5"><Label>Vehicle cost</Label><Input className="h-8 min-h-8 text-xs" type="number" value={item.unit_price} onChange={(e) => updateLine(idx, { unit_price: e.target.value })} placeholder="0" /></div>
-                  <div className="space-y-0.5"><Label>Year</Label><Input className="h-8 min-h-8 text-xs" value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="2016" /></div>
-                  <div className="space-y-0.5"><Label>Colour</Label><Input className="h-8 min-h-8 text-xs" value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" /></div>
-                  <div className="space-y-0.5"><Label>Engine</Label><Input className="h-8 min-h-8 text-xs" value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="1500cc" /></div>
-                  <div className="space-y-0.5"><Label>Transmission</Label><Input className="h-8 min-h-8 text-xs" value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="AT" /></div>
-                  <div className="space-y-0.5"><Label>Qty</Label><Input className="h-8 min-h-8 text-xs" type="number" value={item.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} /></div>
-                  <div className="space-y-0.5">
-                    <Label>{isAuction ? 'Deposit amt' : 'Deposit %'}</Label>
-                    {isAuction ? (
-                      <Input className="h-8 min-h-8 text-xs" type="number" value={item.discount} onChange={(e) => updateLine(idx, { discount: e.target.value })} placeholder="Amount" />
-                    ) : (
-                      <Select value={item.discount || '30'} onValueChange={(v) => updateLine(idx, { discount: v })}>
-                        <SelectTrigger className="h-8 min-h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {DEPOSIT_RATIOS.map((ratio) => (
-                            <SelectItem key={ratio} value={String(ratio)}>{ratio}%</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                  <div className="space-y-0.5 sm:col-span-2 lg:col-span-2">
-                    <Label>Line note</Label>
-                    <Input className="h-8 min-h-8 text-xs" value={item.description} onChange={(e) => updateLine(idx, { description: e.target.value })} placeholder="Optional" />
-                  </div>
-                  <div className="flex items-end justify-end">
-                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove vehicle">
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </div>
+                  )}
+                </div>
+                <div className="flex items-start justify-end pt-0.5">
+                  <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} aria-label="Remove line">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
-          <div className="rounded-md bg-muted/50 px-2 py-1 text-xs">
+          <div className="rounded-md bg-muted/50 px-2 py-1.5 text-xs">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-              <span className="text-muted-foreground">Vehicles <span className="font-medium text-foreground">{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></span>
+              <span className="text-muted-foreground">Subtotal <span className="font-medium text-foreground">{form.currency} {(calcSubtotal(lineItems) + (freightPolicy.rollFreightIntoVehicleCost ? (Number(form.freight_total)||0) : 0)).toLocaleString()}</span></span>
               {isAuction && (
                 <span className="text-muted-foreground">Deposit <span className="font-medium text-foreground">{form.currency} {lineItems.reduce((sum, item) => sum + (Number(item.discount) || 0), 0).toLocaleString()}</span></span>
               )}
               {freightPolicy.allowFreight && !freightPolicy.rollFreightIntoVehicleCost && (
-                <span className="text-muted-foreground">{freightPolicy.isRoro ? 'Ocean freight' : 'Freight'} <span className="font-medium text-foreground">{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></span>
+                <span className="text-muted-foreground">Freight <span className="font-medium text-foreground">{form.currency} {(Number(form.freight_total)||0).toLocaleString()}</span></span>
               )}
               {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)) > 0 && (
-                <span className="text-muted-foreground">Ins./Other <span className="font-medium text-foreground">{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></span>
+                <span className="text-muted-foreground">Other <span className="font-medium text-foreground">{form.currency} {((Number(form.insurance_total)||0)+(Number(form.other_charges)||0)).toLocaleString()}</span></span>
               )}
               {(Number(form.discount_total)||0) > 0 && (
                 <span className="text-muted-foreground">Discount <span className="font-medium text-foreground">−{form.currency} {(Number(form.discount_total)||0).toLocaleString()}</span></span>
               )}
               <span className="ml-auto text-sm font-bold">Total {form.currency} {(calcSubtotal(lineItems) + (freightPolicy.allowFreight ? (Number(form.freight_total)||0) : 0) + (Number(form.insurance_total)||0) + (Number(form.other_charges)||0) - (Number(form.discount_total)||0)).toLocaleString()}</span>
             </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">No VAT — totals are tax-free.</p>
           </div>
         </section>
 
-        {/* 5. Invoice notes — collapsed */}
-        <details className="shrink-0 rounded-md border border-border/60">
-          <summary className="cursor-pointer select-none px-2 py-1 text-xs font-semibold text-muted-foreground">
-            Notes{form.notes.trim() ? ' · set' : ''}
+        {/* 4. Shipping — collapsed */}
+        <details className="shrink-0 rounded-md border border-border/60" open={freightPolicy.requireFreight || undefined}>
+          <summary className="cursor-pointer select-none px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+            Shipping &amp; freight{freightPolicy.requireFreight ? ' · required' : ''}
           </summary>
-          <div className="border-t border-border/60 px-2 py-1">
-            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Optional invoice notes" className="min-h-[2.5rem] text-xs" />
+          <div className="space-y-2 border-t border-border/60 p-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-0.5">
+                <Label>FOB term</Label>
+                <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {incotermSelectOptions(form.incoterms).map((x) => (
+                      <SelectItem key={x} value={x}>{x}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-0.5">
+                <Label>Shipment mode</Label>
+                <Select
+                  value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
+                  onValueChange={(v) =>
+                    applyShippingPatch({
+                      container_mode: v,
+                      shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RORO">RORO</SelectItem>
+                    <SelectItem value="20ft Container">Container 20ft</SelectItem>
+                    <SelectItem value="40ft Container">Container 40ft</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-0.5">
+                <Label>Port of loading</Label>
+                <Input className="h-9 text-sm" value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Port of discharge</Label>
+                <Input className="h-9 text-sm" value={form.port_of_discharge} onChange={(e) => setForm({ ...form, port_of_discharge: e.target.value })} placeholder="Destination port" />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Vessel</Label>
+                <Input
+                  className="h-9 text-sm"
+                  value={form.vessel_name}
+                  onChange={(e) => setForm({ ...form, vessel_name: e.target.value })}
+                  list="invoice-vessel-names"
+                  placeholder="Optional"
+                />
+                <datalist id="invoice-vessel-names">
+                  {vesselOptions.map((n) => (
+                    <option key={n} value={n} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="space-y-0.5">
+                <Label>B/L number</Label>
+                <Input className="h-9 text-sm" value={form.bl_number} onChange={(e) => setForm({ ...form, bl_number: e.target.value })} />
+              </div>
+              {freightPolicy.allowFreight ? (
+                <>
+                  <div className="space-y-0.5 sm:col-span-2">
+                    <Label>Freight description{freightPolicy.requireFreight ? ' *' : ''}</Label>
+                    <Input
+                      className="h-9 text-sm"
+                      value={form.freight_notes}
+                      onChange={(e) => setForm({ ...form, freight_notes: e.target.value })}
+                      placeholder={freightPolicy.defaultFreightLabel}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label>Freight ({form.currency}){freightPolicy.requireFreight ? ' *' : ''}</Label>
+                    <Input
+                      className="h-9 text-sm"
+                      type="number"
+                      value={form.freight_total}
+                      onChange={(e) => setForm({ ...form, freight_total: e.target.value })}
+                      placeholder="0"
+                      required={freightPolicy.requireFreight}
+                    />
+                  </div>
+                </>
+              ) : (
+                <p className="sm:col-span-3 rounded-md border border-border/60 bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
+                  FOB — vehicle cost only; freight not on this invoice.
+                </p>
+              )}
+            </div>
+            {freightPolicy.requireFreight && (
+              <p className="text-xs leading-tight text-amber-700">Container shipments must include freight.</p>
+            )}
+          </div>
+        </details>
+
+        {/* 5. Optional extras — collapsed; still no VAT */}
+        <details className="shrink-0 rounded-md border border-border/60">
+          <summary className="cursor-pointer select-none px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+            More options
+            {(form.due_date || form.sales_agent.trim() || Number(form.insurance_total) || Number(form.other_charges) || Number(form.discount_total) || form.notes.trim()) ? ' · set' : ''}
+          </summary>
+          <div className="space-y-2 border-t border-border/60 p-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-0.5">
+                <Label>Due date</Label>
+                <Input className="h-9 text-sm" type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Sales agent</Label>
+                <Input className="h-9 text-sm" value={form.sales_agent} onChange={(e) => setForm({ ...form, sales_agent: e.target.value })} placeholder="Optional" />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Payment status</Label>
+                <Select value={form.payment_status} onValueChange={(v: Invoice['payment_status']) => setForm({ ...form, payment_status: v })}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="credited">Credited</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-0.5">
+                <Label>Insurance</Label>
+                <Input className="h-9 text-sm" type="number" value={form.insurance_total} onChange={(e) => setForm({ ...form, insurance_total: e.target.value })} />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Other charges</Label>
+                <Input className="h-9 text-sm" type="number" value={form.other_charges} onChange={(e) => setForm({ ...form, other_charges: e.target.value })} />
+              </div>
+              <div className="space-y-0.5">
+                <Label>Invoice discount</Label>
+                <Input className="h-9 text-sm" type="number" value={form.discount_total} onChange={(e) => setForm({ ...form, discount_total: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label>Notes</Label>
+              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Optional invoice notes" className="min-h-[2.5rem] text-sm" />
+            </div>
           </div>
         </details>
         </div>
