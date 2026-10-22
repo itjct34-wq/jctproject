@@ -75,9 +75,9 @@ type Props = {
 };
 
 const LOGO_SIZE_CLASS: Record<NonNullable<Props['logoSize']>, string> = {
-  quotation: 'h-[140px] w-auto max-w-[380px] object-contain object-left shrink-0',
-  invoice: 'h-[184px] w-auto max-w-[520px] object-contain object-left shrink-0',
-  auction: 'h-[220px] w-auto max-w-[620px] object-contain object-left shrink-0',
+  quotation: 'h-[172px] w-auto max-w-[460px] object-contain object-left shrink-0',
+  invoice: 'h-[256px] w-auto max-w-[700px] object-contain object-left shrink-0',
+  auction: 'h-[300px] w-auto max-w-[800px] object-contain object-left shrink-0',
 };
 
 function customerAddress(customer?: Customer | null) {
