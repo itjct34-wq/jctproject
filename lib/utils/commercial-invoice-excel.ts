@@ -139,12 +139,12 @@ export async function exportTradeDocumentExcel(opts: {
     pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
-  const lastCol = opts.showDeposit ? 6 : 5;
+  // Chassis + Vehicle + Qty + [Deposit] + Total (no unit price column)
+  const lastCol = opts.showDeposit ? 5 : 4;
   ws.columns = [
     { width: 18 },
     { width: 36 },
     { width: 10 },
-    { width: 14 },
     ...(opts.showDeposit ? [{ width: 12 }] : []),
     { width: 16 },
   ];
@@ -213,8 +213,8 @@ export async function exportTradeDocumentExcel(opts: {
   row += 1;
 
   const vehicleHeaders = opts.showDeposit
-    ? ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Deposit', 'Total']
-    : ['Chassis', 'Vehicle', 'Qty', 'Unit price', 'Total'];
+    ? ['Chassis', 'Vehicle', 'Qty', 'Deposit', 'Total']
+    : ['Chassis', 'Vehicle', 'Qty', 'Total'];
   vehicleHeaders.forEach((h, i) => {
     const cell = ws.getCell(row, i + 1);
     cell.value = h;
@@ -230,13 +230,14 @@ export async function exportTradeDocumentExcel(opts: {
   const lines = applyFreightToVehicleLines(baseLines, freightDisplay.vehiclesFreightAddon);
   lines.forEach((line) => {
     const values = opts.showDeposit
-      ? [line.chassis, line.description, line.quantity, money(line.unit_price), line.deposit || '—', money(line.line_total)]
-      : [line.chassis, line.description, line.quantity, money(line.unit_price), money(line.line_total)];
+      ? [line.chassis, line.description, line.quantity, line.deposit || '—', money(line.line_total)]
+      : [line.chassis, line.description, line.quantity, money(line.line_total)];
     values.forEach((val, i) => {
       const cell = ws.getCell(row, i + 1);
       cell.value = val as ExcelJS.CellValue;
       styleBody(cell, { align: i >= 2 ? 'right' : 'left' });
-      if (typeof val === 'number' && i >= 3 && !(opts.showDeposit && i === 4)) cell.numFmt = '#,##0.00';
+      const isMoneyCol = i === values.length - 1;
+      if (typeof val === 'number' && isMoneyCol) cell.numFmt = '#,##0.00';
     });
     row += 1;
   });
@@ -317,12 +318,6 @@ export async function exportTradeDocumentExcel(opts: {
   styleHeader(ws.getCell(row, lastCol), RED);
   row += 2;
 
-  if (opts.verifyUrl) {
-    mergeTo(row);
-    ws.getCell(row, 1).value = `Verify authenticity: ${opts.verifyUrl}`;
-    ws.getCell(row, 1).font = { name: 'Arial', size: 8, color: { argb: '0066CC' } };
-    row += 1;
-  }
   if (opts.notes) {
     mergeTo(row);
     ws.getCell(row, 1).value = `Notes: ${opts.notes}`;

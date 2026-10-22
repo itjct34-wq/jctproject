@@ -100,7 +100,7 @@ export async function exportCommercialInvoiceDocx(opts: {
         cell(chassis),
         cell(stock),
         cell(formatDepositRatio(item.discount, depositBaseUnit), { align: AlignmentType.CENTER }),
-        cell(formatMoney(item.unit_price, invoice.currency), { align: AlignmentType.RIGHT }),
+        cell(formatMoney(item.line_total, invoice.currency), { align: AlignmentType.RIGHT }),
       ],
     });
   });

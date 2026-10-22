@@ -838,7 +838,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                     </SelectContent>
                   </Select>
                   <Textarea
-                    className="min-h-[3.25rem] text-sm"
+                    className="min-h-[4.5rem] resize-y rounded-md text-sm"
                     value={item.description}
                     onChange={(e) => updateLine(idx, { description: e.target.value })}
                     placeholder="Select a stock reference above or enter vehicle/part details"
@@ -852,15 +852,15 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
                   )}
                   <details className="text-xs">
                     <summary className="cursor-pointer select-none text-muted-foreground">Vehicle details</summary>
-                    <div className="mt-1.5 grid gap-1.5 sm:grid-cols-3">
-                      <Input className="h-8 text-xs" value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" />
-                      <Input className="h-8 text-xs" value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" />
-                      <Input className="h-8 text-xs" value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis" />
-                      <Input className="h-8 text-xs" value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock no." />
-                      <Input className="h-8 text-xs" value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="Year" />
-                      <Input className="h-8 text-xs" value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
-                      <Input className="h-8 text-xs" value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="Engine" />
-                      <Input className="h-8 text-xs" value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="Transmission" />
+                    <div className="mt-1.5 grid gap-1.5 rounded-md border border-border/50 bg-muted/20 p-2 sm:grid-cols-3">
+                      <Input className="h-8 rounded-md text-xs" value={item.make} onChange={(e) => updateLine(idx, { make: e.target.value, vehicle_id: '' })} placeholder="Make" />
+                      <Input className="h-8 rounded-md text-xs" value={item.model} onChange={(e) => updateLine(idx, { model: e.target.value, vehicle_id: '' })} placeholder="Model" />
+                      <Input className="h-8 rounded-md text-xs" value={item.chassis_number} onChange={(e) => updateLine(idx, { chassis_number: e.target.value, vehicle_id: '' })} placeholder="Chassis" />
+                      <Input className="h-8 rounded-md text-xs" value={item.stock_number} onChange={(e) => updateLine(idx, { stock_number: e.target.value, vehicle_id: '' })} placeholder="Stock no." />
+                      <Input className="h-8 rounded-md text-xs" value={item.year} onChange={(e) => updateLine(idx, { year: e.target.value, vehicle_id: '' })} placeholder="Year" />
+                      <Input className="h-8 rounded-md text-xs" value={item.colour} onChange={(e) => updateLine(idx, { colour: e.target.value, vehicle_id: '' })} placeholder="Colour" />
+                      <Input className="h-8 rounded-md text-xs" value={item.engine} onChange={(e) => updateLine(idx, { engine: e.target.value, vehicle_id: '' })} placeholder="Engine" />
+                      <Input className="h-8 rounded-md text-xs" value={item.transmission} onChange={(e) => updateLine(idx, { transmission: e.target.value, vehicle_id: '' })} placeholder="Transmission" />
                     </div>
                   </details>
                 </div>
@@ -1242,7 +1242,7 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2">
                 <Switch checked={printShowQr} onCheckedChange={setPrintShowQr} />
-                QR + verify link {printShowQr ? 'on' : 'off'}
+                QR code {printShowQr ? 'on' : 'off'}
               </label>
               <p className="text-xs text-muted-foreground">
                 Pinch or scroll to pan. Print uses A4 — turn off browser Headers and footers if a URL appears.

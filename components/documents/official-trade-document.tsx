@@ -236,7 +236,8 @@ export function OfficialTradeDocument({
   const showFreightBlock = freightDisplay.showFreightBlock;
   const freightLabel =
     freightNotes?.trim() || freightPolicy.defaultFreightLabel || 'Ocean freight';
-  const vehicleColSpan = showDeposit ? 5 : 4;
+  // Chassis + Vehicle + Qty + [Deposit] + Total (unit price hidden on print)
+  const vehicleColSpan = showDeposit ? 4 : 3;
   // RORO / no separate freight: single "Total" label (not "Vehicles total" + Ocean freight).
   const vehiclesTotalLabel = showFreightBlock ? 'Vehicles total' : 'Total';
   const totalWord = kind === 'quotation' ? 'Quotation total' : 'Invoice total';
@@ -355,7 +356,6 @@ export function OfficialTradeDocument({
               <th className="px-1.5 py-0.5 text-left">Chassis</th>
               <th className="px-1.5 py-0.5 text-left">Vehicle / specification</th>
               <th className="px-1.5 py-0.5 text-center">Qty</th>
-              <th className="px-1.5 py-0.5 text-right">Unit price</th>
               {showDeposit && <th className="px-1.5 py-0.5 text-center">Deposit</th>}
               <th className="px-1.5 py-0.5 text-right">Total</th>
             </tr>
@@ -382,7 +382,6 @@ export function OfficialTradeDocument({
                     </p>
                   </td>
                   <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{row.qty}</td>
-                  <td className="px-1.5 py-0.5 text-right align-middle font-medium">{formatMoney(row.unit, currency)}</td>
                   {showDeposit && <td className="px-1.5 py-0.5 text-center align-middle font-semibold">{deposit}</td>}
                   <td className="px-1.5 py-0.5 text-right align-middle font-medium">
                     {formatMoney(row.amount, currency)}
@@ -537,14 +536,6 @@ export function OfficialTradeDocument({
               )}
             </div>
           </div>
-          {showQr && verificationUrl ? (
-            <p className="invoice-verify-url mt-1 text-center text-[6.5px] leading-snug text-[#0b1f3a]">
-              Verify link:{' '}
-              <a href={verificationUrl} className="underline break-all">
-                {verificationUrl}
-              </a>
-            </p>
-          ) : null}
           <div className="mt-1.5 border-t-2 border-[#0b1f3a] pt-1 text-center">
             <p className="text-[9px] font-semibold tracking-[0.14em]">SIGNATURE OF AUTHORISED PERSON</p>
           </div>
