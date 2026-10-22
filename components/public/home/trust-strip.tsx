@@ -9,11 +9,11 @@ const ITEMS = [
 
 export function TrustStrip() {
   return (
-    <section className="border-y border-[var(--jct-border)] bg-[var(--jct-panel)]">
+    <section className="border-y border-[var(--jct-border)] bg-white">
       <div className="jct-home-wrap grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
         {ITEMS.map((item) => (
           <div key={item.title} className="flex gap-3">
-            <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--jct-vermilion)]" aria-hidden="true" />
+            <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--jct-canopy)]" aria-hidden="true" />
             <div>
               <h2 className="font-display text-sm font-semibold text-[var(--jct-navy)]">{item.title}</h2>
               <p className="mt-1 text-sm text-[var(--jct-muted-2)]">{item.body}</p>

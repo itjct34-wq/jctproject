@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { PUBLIC_STOCK_NAV } from '@/lib/stock-category';
 import { cn } from '@/lib/utils';
 
@@ -27,13 +28,13 @@ export function HomeHeader() {
 
   return (
     <header className="jct-site-header sticky top-0 z-50">
-      <div className="jct-home-wrap flex min-h-14 items-center justify-between gap-4 py-2.5 sm:min-h-16 lg:py-3">
+      <div className="jct-home-wrap flex min-h-14 items-center justify-between gap-4 py-2 sm:min-h-16 lg:py-2.5">
         <Link
           href="/"
-          className="font-display text-lg font-semibold tracking-[0.18em] text-[var(--jct-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
-          aria-label="ERP home"
+          className="shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          aria-label="Japan Circular Trading home"
         >
-          ERP
+          <BrandLogo placement="header" />
         </Link>
         <nav className="hidden shrink-0 items-center gap-0.5 lg:flex" aria-label="Primary">
           {NAV.map((item) => (
@@ -63,7 +64,7 @@ export function HomeHeader() {
         </nav>
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border-2 border-[var(--jct-navy)]/20 bg-white/90 text-[var(--jct-navy)] hover:border-[var(--jct-vermilion)] hover:text-[var(--jct-vermilion)] lg:hidden"
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius)] border-2 border-[var(--jct-navy)]/20 bg-white text-[var(--jct-navy)] hover:border-[var(--jct-vermilion)] hover:text-[var(--jct-vermilion)] lg:hidden"
           aria-expanded={open}
           aria-controls="home-mobile-nav"
           aria-label={open ? 'Close menu' : 'Open menu'}
@@ -75,16 +76,16 @@ export function HomeHeader() {
       {open && (
         <div
           id="home-mobile-nav"
-          className="fixed inset-0 z-[60] flex flex-col bg-[var(--jct-panel,#f7f8fa)] lg:hidden"
+          className="fixed inset-0 z-[60] flex flex-col bg-[var(--jct-panel,#E8EAED)] lg:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Site menu"
         >
-          <div className="flex items-center justify-between border-b border-[var(--jct-border)] px-4 py-3">
-            <span className="font-display text-lg font-semibold tracking-[0.18em] text-[var(--jct-navy)]">ERP</span>
+          <div className="flex items-center justify-between border-b-2 border-[var(--jct-canopy)] bg-white px-4 py-3">
+            <BrandLogo placement="header" />
             <button
               type="button"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--jct-navy)]/20"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius)] border border-[var(--jct-navy)]/20"
               aria-label="Close menu"
               onClick={() => setOpen(false)}
             >
@@ -99,8 +100,8 @@ export function HomeHeader() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    'rounded-2xl px-4 py-3.5 text-base font-medium text-[var(--jct-navy)] hover:bg-white',
-                    navLinkActive(pathname, item.href) && 'bg-white font-semibold shadow-sm'
+                    'rounded-[var(--radius)] px-4 py-3.5 text-base font-semibold text-[var(--jct-navy)] hover:bg-white',
+                    navLinkActive(pathname, item.href) && 'bg-white shadow-sm'
                   )}
                 >
                   {item.label}
@@ -108,7 +109,7 @@ export function HomeHeader() {
               ))}
             </div>
           </nav>
-          <div className="sticky bottom-0 space-y-2 border-t border-[var(--jct-border)] bg-[var(--jct-panel,#f7f8fa)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="sticky bottom-0 space-y-2 border-t border-[var(--jct-border)] bg-[var(--jct-panel,#E8EAED)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Link
               href="/inventory"
               onClick={() => setOpen(false)}

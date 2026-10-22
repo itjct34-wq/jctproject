@@ -6,70 +6,69 @@
   :root {
     color-scheme: light;
     /*
-      Light-only ERP. Vibe palette matches the public site:
-      navy #0B1F33, vermilion #D8392B, gold, cream canvas.
-      Print CSS stays scoped below (invoice-print).
+      Enamel Yard Board — classic used-vehicle dealer / export lot.
+      Cool concrete ground, asphalt ink, canopy green, signal crimson.
+      Print CSS stays scoped below (invoice-print) — do not restyle.
     */
-    --jct-navy: #0B1F33;
-    --jct-vermilion: #D8392B;
-    --jct-gold: #C4A35A;
-    --jct-panel: #F4F7FB;
-    --jct-surface: #EEF3F8;
-    --jct-border: #D5DEE8;
-    --jct-muted: #3B4C5D;
-    --background: 210 40% 97%;
-    --foreground: 210 64% 12%;
+    --jct-navy: #14181C; /* lot asphalt ink (legacy token name kept for cascade) */
+    --jct-vermilion: #C8102E; /* signal crimson — sale / CTA */
+    --jct-gold: #8B7E66; /* brushed brass, muted */
+    --jct-canopy: #0F3D2E; /* heritage dealership canopy green */
+    --jct-panel: #E8EAED; /* lot concrete */
+    --jct-surface: #F2F3F5;
+    --jct-border: #C5CAD0;
+    --jct-muted: #3A424A;
+    --jct-muted-2: #5A636C;
+    --background: 210 12% 92%;
+    --foreground: 210 12% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 210 64% 12%;
+    --card-foreground: 210 12% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 64% 12%;
-    --primary: 210 64% 16%;
+    --popover-foreground: 210 12% 9%;
+    --primary: 160 61% 15%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 32% 94%;
-    --secondary-foreground: 210 64% 16%;
-    --muted: 210 28% 94%;
-    --muted-foreground: 207 18% 38%;
-    --accent: 5 78% 96%;
-    --accent-foreground: 5 72% 36%;
-    --destructive: 5 72% 46%;
+    --secondary: 210 10% 90%;
+    --secondary-foreground: 210 12% 12%;
+    --muted: 210 10% 90%;
+    --muted-foreground: 210 8% 38%;
+    --accent: 350 70% 96%;
+    --accent-foreground: 350 85% 32%;
+    --destructive: 350 85% 42%;
     --destructive-foreground: 0 0% 100%;
-    --success: 158 64% 28%;
+    --success: 158 55% 28%;
     --success-foreground: 0 0% 100%;
-    --warning: 36 88% 38%;
+    --warning: 36 80% 38%;
     --warning-foreground: 0 0% 100%;
-    --info: 199 84% 36%;
+    --info: 199 70% 34%;
     --info-foreground: 0 0% 100%;
-    --border: 210 24% 86%;
-    --input: 210 20% 84%;
-    --ring: 5 72% 51%;
-    --brand: 5 72% 51%;
+    --border: 210 10% 78%;
+    --input: 210 10% 76%;
+    --ring: 350 85% 42%;
+    --brand: 350 85% 42%;
     --brand-foreground: 0 0% 100%;
-    --gold: 40 48% 56%;
-    --gold-foreground: 210 64% 12%;
-    --chart-1: 5 72% 51%;
-    --chart-2: 210 64% 28%;
-    --chart-3: 158 64% 32%;
-    --chart-4: 40 72% 48%;
-    --chart-5: 199 84% 40%;
-    --chart-6: 262 48% 52%;
-    --radius: 1.125rem;
-    --glass-bg: 0 0% 100% / 0.72;
-    --glass-bg-strong: 0 0% 100% / 0.9;
-    --glass-border: 0 0% 100% / 0.8;
-    --glass-border-muted: 210 24% 70% / 0.45;
-    /* Prefer lighter blur for paint cost; strong panels/sidebar bump locally. */
-    --glass-blur: 12px;
-    --glass-shadow: 0 14px 48px hsl(210 64% 12% / 0.1), 0 1px 0 hsl(0 0% 100% / 0.8) inset;
-    --glass-shadow-sm: 0 6px 22px hsl(210 64% 12% / 0.07);
-    --shell-glow: radial-gradient(ellipse 70% 48% at 6% -8%, hsl(5 72% 51% / 0.14), transparent 52%),
-      radial-gradient(ellipse 55% 40% at 96% 0%, hsl(210 64% 28% / 0.12), transparent 50%),
-      radial-gradient(ellipse 40% 30% at 70% 100%, hsl(40 48% 56% / 0.18), transparent 55%),
-      linear-gradient(165deg, hsl(210 45% 98%) 0%, hsl(210 32% 95%) 46%, hsl(200 28% 96%) 100%);
-    --sidebar-glass: 210 64% 10% / 0.94;
+    --gold: 40 15% 47%;
+    --gold-foreground: 210 12% 9%;
+    --chart-1: 350 85% 42%;
+    --chart-2: 160 61% 22%;
+    --chart-3: 158 55% 32%;
+    --chart-4: 40 40% 48%;
+    --chart-5: 199 70% 38%;
+    --chart-6: 210 12% 28%;
+    --radius: 0.5rem;
+    /* Legacy glass aliases → solid enamel desk (no frosted blur) */
+    --glass-bg: 0 0% 100% / 1;
+    --glass-bg-strong: 0 0% 100% / 1;
+    --glass-border: 210 10% 78% / 1;
+    --glass-border-muted: 210 10% 78% / 0.9;
+    --glass-blur: 0px;
+    --glass-shadow: 0 10px 28px hsl(210 12% 9% / 0.08), 0 1px 0 hsl(0 0% 100% / 0.9) inset;
+    --glass-shadow-sm: 0 4px 14px hsl(210 12% 9% / 0.06);
+    --shell-glow: linear-gradient(180deg, hsl(210 12% 93%) 0%, hsl(210 10% 90%) 100%);
+    --sidebar-glass: 210 14% 10% / 1;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-muted: 0 0% 100%;
-    --sidebar-muted-foreground: 210 18% 72%;
-    --sidebar-border: 0 0% 100%;
+    --sidebar-muted-foreground: 210 8% 68%;
+    --sidebar-border: 210 10% 22%;
   }
 }
 
@@ -110,18 +109,14 @@
     border-radius: 3px;
   }
   .glass-panel {
-    background: hsl(var(--glass-bg));
-    border: 1px solid hsl(var(--glass-border-muted));
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     box-shadow: var(--glass-shadow-sm);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
   }
   .glass-panel-strong {
-    background: hsl(var(--glass-bg-strong));
-    border: 1px solid hsl(var(--glass-border-muted));
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     box-shadow: var(--glass-shadow);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
   }
   .erp-chip {
     @apply inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide;
@@ -153,7 +148,7 @@
   }
 }
 
-/* ERP Liquid Glass shell — scoped so public marketing / print stay untouched. */
+/* ERP desk shell — Enamel Yard Board tokens, solid panels (no Liquid Glass). */
 .erp-shell {
   background: var(--shell-glow);
   background-attachment: fixed;
@@ -162,53 +157,42 @@
   @apply flex flex-col gap-2.5 md:flex-row md:items-center;
 }
 .erp-shell .erp-filter-panel {
-  border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: var(--glass-shadow-sm);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
   @apply p-2.5 sm:p-3;
 }
 .erp-shell .erp-sidebar {
   background: hsl(var(--sidebar-glass));
-  border-right-color: hsl(var(--sidebar-border) / 0.12);
+  border-right: 1px solid hsl(var(--sidebar-border));
   color: hsl(var(--sidebar-foreground));
-  box-shadow: var(--glass-shadow), inset -1px 0 0 hsl(0 0% 100% / 0.04);
-  backdrop-filter: blur(calc(var(--glass-blur) + 4px));
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px));
+  box-shadow: 4px 0 24px hsl(210 12% 9% / 0.12);
   --foreground: var(--sidebar-foreground);
   --muted-foreground: var(--sidebar-muted-foreground);
   --muted: var(--sidebar-muted);
   --border: var(--sidebar-border);
 }
 .erp-shell .erp-sidebar .hover\:bg-muted\/60:hover { background: hsl(0 0% 100% / 0.08); }
-.erp-shell .erp-sidebar .border-border\/60 { border-color: hsl(var(--sidebar-border) / 0.12); }
+.erp-shell .erp-sidebar .border-border\/60 { border-color: hsl(var(--sidebar-border) / 0.45); }
 .erp-shell .erp-list-panel {
-  border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg-strong));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: var(--glass-shadow-sm);
-  /* Opaque enough without blur — keeps long stock lists cheap to paint. */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   overflow: hidden;
 }
 .erp-shell .erp-summary-panel {
-  border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: var(--glass-shadow-sm);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 .erp-shell .erp-stat-card {
-  border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: var(--glass-shadow-sm);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 .erp-shell .erp-filter-bar input,
 .erp-shell .erp-filter-panel input,
@@ -260,10 +244,8 @@
 }
 .erp-shell .erp-data-table thead {
   @apply sticky top-0 z-10;
-  background: hsl(var(--muted) / 0.92);
+  background: hsl(var(--muted));
   color: hsl(var(--foreground));
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   border-bottom: 1px solid hsl(var(--border));
 }
 .erp-shell .erp-data-table thead tr {
@@ -285,35 +267,33 @@
   background-color: hsl(var(--brand) / 0.04);
 }
 .erp-shell .erp-stat-card {
-  border-radius: calc(var(--radius) - 2px);
-  border: 1px solid hsl(var(--glass-border-muted));
-  background: hsl(var(--glass-bg-strong));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: var(--glass-shadow-sm);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-left: 3px solid hsl(var(--brand));
+  border-top: 3px solid hsl(var(--brand));
 }
 .erp-shell .erp-stat-label {
   @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
 }
 .erp-shell .erp-stat-value {
-  @apply mt-1 text-2xl font-bold leading-none tracking-tight text-foreground;
+  @apply mt-1 font-display text-2xl font-bold leading-none tracking-tight text-foreground;
 }
 .erp-shell .erp-stat-card--navy {
-  border-left-color: hsl(210 64% 22%);
-  background: linear-gradient(180deg, hsl(210 55% 97%), hsl(0 0% 100%));
+  border-top-color: var(--jct-canopy);
+  background: hsl(var(--card));
 }
 .erp-shell .erp-stat-card--success {
-  border-left-color: hsl(var(--success));
-  background: linear-gradient(180deg, hsl(158 48% 96%), hsl(0 0% 100%));
+  border-top-color: hsl(var(--success));
+  background: hsl(var(--card));
 }
 .erp-shell .erp-stat-card--gold {
-  border-left-color: hsl(var(--gold));
-  background: linear-gradient(180deg, hsl(40 70% 96%), hsl(0 0% 100%));
+  border-top-color: hsl(var(--gold));
+  background: hsl(var(--card));
 }
 .erp-shell .erp-stat-card--brand {
-  border-left-color: hsl(var(--brand));
-  background: linear-gradient(180deg, hsl(5 80% 97%), hsl(0 0% 100%));
+  border-top-color: hsl(var(--brand));
+  background: hsl(var(--card));
 }
 .erp-shell .erp-empty {
   @apply text-muted-foreground;
@@ -375,40 +355,46 @@
   filter: brightness(0.92);
 }
 
-/* Public marketing pages share the JCT light navy/red shell. */
+/* Public site — Enamel Yard Board (classic used-vehicle dealer). */
 .public-site {
   color-scheme: light;
-  --jct-navy: #0B1F33;
-  --jct-vermilion: #D8392B;
-  --jct-gold: #C4A35A;
-  --jct-panel: #F3F5F7;
-  --jct-surface: #eef1f5;
-  --jct-border: #DDE3E9;
-  --jct-muted: #3B4C5D;
-  --jct-muted-2: #4A5B6C;
+  --jct-navy: #14181C;
+  --jct-vermilion: #C8102E;
+  --jct-gold: #8B7E66;
+  --jct-canopy: #0F3D2E;
+  --jct-panel: #E8EAED;
+  --jct-surface: #F2F3F5;
+  --jct-border: #C5CAD0;
+  --jct-muted: #3A424A;
+  --jct-muted-2: #5A636C;
 }
 
-/* Homepage redesign tokens — scoped so ERP and other public pages stay unchanged. */
 .jct-home {
-  --jct-navy: #0B1F33;
-  --jct-vermilion: #D8392B;
-  --jct-gold: #C4A35A;
-  --jct-panel: #F3F5F7;
-  --jct-border: #DDE3E9;
-  --jct-muted: #3B4C5D;
-  --jct-muted-2: #4A5B6C;
+  --jct-navy: #14181C;
+  --jct-vermilion: #C8102E;
+  --jct-gold: #8B7E66;
+  --jct-canopy: #0F3D2E;
+  --jct-panel: #E8EAED;
+  --jct-border: #C5CAD0;
+  --jct-muted: #3A424A;
+  --jct-muted-2: #5A636C;
   color-scheme: light;
-  --jct-surface: #eef1f5;
+  --jct-surface: #F2F3F5;
   background: var(--jct-panel);
   color: var(--jct-navy);
   font-family: var(--font-sans), var(--font-jp), ui-sans-serif, system-ui, sans-serif;
 }
 .jct-home .font-display,
+.public-site .font-display,
 .jct-home h1,
 .jct-home h2,
-.jct-home h3 {
-  font-family: var(--font-sans), var(--font-jp), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.02em;
+.jct-home h3,
+.public-site h1,
+.public-site h2,
+.public-site h3 {
+  font-family: var(--font-display), var(--font-jp), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 /* Homepage motion — hero entrance, subtle ken burns, yard-fresh rail */
@@ -497,20 +483,18 @@
   }
 }
 
-/* Public inventory cards & listing panels (navy + vermilion). */
+/* Public inventory cards — enamel plaque over lot concrete */
 .public-site .jct-stock-card,
 .jct-home .jct-stock-card {
   position: relative;
   overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid rgba(11, 31, 51, 0.14);
+  border-radius: var(--radius);
+  border: 1px solid var(--jct-border);
   background: #ffffff;
-  box-shadow:
-    0 1px 0 rgba(11, 31, 51, 0.04),
-    0 8px 28px rgba(11, 31, 51, 0.08);
+  box-shadow: 0 2px 0 rgba(20, 24, 28, 0.04), 0 8px 24px rgba(20, 24, 28, 0.07);
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
     border-color 0.2s ease;
 }
 .public-site .jct-stock-card::before,
@@ -519,59 +503,55 @@
   position: absolute;
   inset: 0 0 auto 0;
   z-index: 1;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--jct-navy) 0%,
-    var(--jct-navy) 72%,
-    var(--jct-vermilion) 100%
-  );
+  height: 4px;
+  background: var(--jct-canopy);
   pointer-events: none;
 }
 .public-site .jct-stock-card:hover,
 .jct-home .jct-stock-card:hover {
-  border-color: rgba(11, 31, 51, 0.28);
-  box-shadow:
-    0 2px 0 rgba(11, 31, 51, 0.04),
-    0 18px 48px rgba(11, 31, 51, 0.14);
-  transform: translateY(-3px);
+  border-color: var(--jct-navy);
+  box-shadow: 0 4px 0 rgba(20, 24, 28, 0.05), 0 16px 40px rgba(20, 24, 28, 0.12);
+  transform: translateY(-2px);
 }
 .public-site .jct-stock-panel,
 .jct-home .jct-stock-panel {
-  border-radius: 1rem;
-  border: 1px solid rgba(11, 31, 51, 0.12);
+  border-radius: var(--radius);
+  border: 1px solid var(--jct-border);
   background: #ffffff;
-  box-shadow: 0 10px 36px rgba(11, 31, 51, 0.07);
+  box-shadow: 0 8px 28px rgba(20, 24, 28, 0.06);
 }
 .public-site .jct-stock-panel-accent,
 .jct-home .jct-stock-panel-accent {
-  border-left: 3px solid var(--jct-vermilion);
+  border-top: 3px solid var(--jct-vermilion);
+  border-left: none;
 }
 
-/* Public chrome: header, footer, shared buttons (navy + vermilion). */
+/* Public chrome: canopy header bar, asphalt footer */
 .public-site .jct-site-header,
 .jct-home .jct-site-header {
-  background: linear-gradient(180deg, #f8f9fb 0%, var(--jct-panel) 55%, #e8ecf1 100%);
-  border-bottom: 2px solid rgba(11, 31, 51, 0.14);
-  box-shadow: 0 6px 28px rgba(11, 31, 51, 0.07);
+  background: #ffffff;
+  border-bottom: 3px solid var(--jct-canopy);
+  box-shadow: 0 4px 18px rgba(20, 24, 28, 0.06);
 }
 
 .public-site .jct-site-header-mobile,
 .jct-home .jct-site-header-mobile {
   background: var(--jct-panel);
-  border-top: 1px solid rgba(11, 31, 51, 0.1);
+  border-top: 1px solid var(--jct-border);
 }
 
 .public-site .jct-site-footer,
 .jct-home .jct-site-footer {
-  background: linear-gradient(180deg, var(--jct-panel) 0%, var(--jct-surface, #eef1f5) 100%);
-  border-top: 3px solid var(--jct-navy);
+  background: var(--jct-navy);
+  color: rgba(255, 255, 255, 0.78);
+  border-top: 4px solid var(--jct-canopy);
 }
 
 .public-site .jct-site-footer-bar,
 .jct-home .jct-site-footer-bar {
-  background: rgba(11, 31, 51, 0.04);
-  border-top: 1px solid rgba(11, 31, 51, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .public-site .jct-nav-link,
@@ -579,33 +559,30 @@
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
-  border-radius: 9999px;
-  padding-left: 0.875rem;
-  padding-right: 0.875rem;
+  border-radius: 0;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
   font-size: 0.875rem;
+  font-weight: 600;
   line-height: 1.25rem;
+  letter-spacing: 0.02em;
   color: var(--jct-muted);
   transition:
     color 0.15s ease,
-    background-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .public-site .jct-nav-link:hover,
 .jct-home .jct-nav-link:hover {
   color: var(--jct-navy);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: inset 0 -2px 0 var(--jct-vermilion);
+  box-shadow: inset 0 -3px 0 var(--jct-vermilion);
 }
 
 .public-site .jct-nav-link.is-active,
 .jct-home .jct-nav-link.is-active {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--jct-navy);
-  background: #ffffff;
-  box-shadow:
-    inset 0 -2px 0 var(--jct-vermilion),
-    0 1px 0 rgba(11, 31, 51, 0.06);
+  box-shadow: inset 0 -3px 0 var(--jct-canopy);
 }
 
 .public-site .jct-btn-primary,
@@ -614,24 +591,32 @@
   min-height: 2.75rem;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
-  border: 2px solid #b83226;
+  border-radius: var(--radius);
+  border: 2px solid #a00d25;
   background: var(--jct-vermilion);
   padding-left: 1.25rem;
   padding-right: 1.25rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   line-height: 1.25rem;
   color: #ffffff;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .public-site .jct-btn-primary:hover,
 .jct-home .jct-btn-primary:hover {
-  border-color: #a32d22;
-  background: #c23024;
+  border-color: #8a0b1f;
+  background: #b00e28;
+}
+
+.public-site .jct-btn-primary:active,
+.jct-home .jct-btn-primary:active {
+  transform: scale(0.98);
 }
 
 .public-site .jct-btn-secondary,
@@ -640,13 +625,15 @@
   min-height: 2.75rem;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: var(--radius);
   border: 2px solid var(--jct-navy);
   background: #ffffff;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   line-height: 1.25rem;
   color: var(--jct-navy);
   transition:
@@ -665,8 +652,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  border-radius: 9999px;
-  border: 2px solid rgba(11, 31, 51, 0.18);
+  border-radius: var(--radius);
+  border: 1px solid var(--jct-border);
   background: #ffffff;
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
@@ -674,25 +661,31 @@
   color: var(--jct-navy);
   transition:
     border-color 0.15s ease,
-    background-color 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color 0.15s ease;
 }
 
 .public-site .jct-chip:hover,
 .jct-home .jct-chip:hover {
-  border-color: var(--jct-vermilion);
+  border-color: var(--jct-canopy);
   background: #ffffff;
-  box-shadow: 0 2px 10px rgba(216, 57, 43, 0.12);
 }
 
 .public-site .jct-footer-link,
 .jct-home .jct-footer-link {
+  color: rgba(255, 255, 255, 0.78);
   transition: color 0.15s ease;
 }
 
 .public-site .jct-footer-link:hover,
 .jct-home .jct-footer-link:hover {
-  color: var(--jct-vermilion);
+  color: #ffffff;
+}
+
+/* Selection + focus — themed browser chrome */
+.public-site ::selection,
+.jct-home ::selection {
+  background: color-mix(in srgb, var(--jct-vermilion) 28%, white);
+  color: var(--jct-navy);
 }
 
 /* Full-screen create/edit work forms — compact ERP density */

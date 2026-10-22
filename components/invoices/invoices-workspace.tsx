@@ -806,6 +806,36 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
               <Label>Issue date</Label>
               <Input className="h-9 text-sm" type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} />
             </div>
+            <div className="space-y-0.5">
+              <Label>FOB term</Label>
+              <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {incotermSelectOptions(form.incoterms).map((x) => (
+                    <SelectItem key={x} value={x}>{x}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-0.5">
+              <Label>Shipment mode</Label>
+              <Select
+                value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
+                onValueChange={(v) =>
+                  applyShippingPatch({
+                    container_mode: v,
+                    shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
+                  })
+                }
+              >
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RORO">RORO</SelectItem>
+                  <SelectItem value="20ft Container">Container 20ft</SelectItem>
+                  <SelectItem value="40ft Container">Container 40ft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </section>
 
@@ -923,36 +953,6 @@ export function InvoicesWorkspace({ kind }: { kind: InvoiceWorkspaceKind }) {
           </summary>
           <div className="space-y-2 border-t border-border/60 p-2">
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-0.5">
-                <Label>FOB term</Label>
-                <Select value={form.incoterms} onValueChange={(v) => applyShippingPatch({ incoterms: v })}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {incotermSelectOptions(form.incoterms).map((x) => (
-                      <SelectItem key={x} value={x}>{x}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-0.5">
-                <Label>Shipment mode</Label>
-                <Select
-                  value={form.container_mode === 'RORO Vessel' ? 'RORO' : form.container_mode}
-                  onValueChange={(v) =>
-                    applyShippingPatch({
-                      container_mode: v,
-                      shipment_type: v.includes('Container') ? 'Container' : v === 'RORO' ? 'RORO' : form.shipment_type,
-                    })
-                  }
-                >
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="RORO">RORO</SelectItem>
-                    <SelectItem value="20ft Container">Container 20ft</SelectItem>
-                    <SelectItem value="40ft Container">Container 40ft</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-0.5">
                 <Label>Port of loading</Label>
                 <Input className="h-9 text-sm" value={form.port_of_loading} onChange={(e) => setForm({ ...form, port_of_loading: e.target.value })} />

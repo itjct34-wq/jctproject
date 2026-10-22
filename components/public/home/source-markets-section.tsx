@@ -14,7 +14,7 @@ export function SourceMarketsSection() {
           <li key={market.code}>
             <Link
               href={sourceMarketPath(market)}
-              className="flex min-h-[88px] items-center gap-3 rounded-xl border border-[var(--jct-border)] bg-white px-4 py-3 transition hover:border-[var(--jct-vermilion)]/40 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+              className="flex min-h-[88px] items-center gap-3 rounded-[var(--radius)] border border-[var(--jct-border)] bg-white px-4 py-3 transition hover:border-[var(--jct-canopy)] hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
             >
               <CountryFlag country={market.name} code={market.code} size="lg" />
               <span className="min-w-0">

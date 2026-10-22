@@ -77,7 +77,7 @@ export function JustListedRail({ vehicles }: Props) {
                 >
                   <Link
                     href={href}
-                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--jct-navy)]/12 bg-white shadow-[0_8px_28px_rgba(11,31,51,0.08)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-[var(--jct-navy)]/28 hover:shadow-[0_16px_40px_rgba(11,31,51,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+                    className="group flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--jct-border)] bg-white shadow-[0_8px_28px_rgba(20,24,28,0.08)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-[var(--jct-navy)] hover:shadow-[0_16px_40px_rgba(20,24,28,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
                   >
                     <span className="relative block aspect-[16/10] bg-[var(--jct-panel)]">
                       {photo ? (

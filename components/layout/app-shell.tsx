@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="erp-shell flex min-h-[100dvh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4 rounded-3xl border border-border/40 bg-card/70 px-8 py-10 shadow-glass backdrop-blur-2xl">
+        <div className="flex flex-col items-center gap-4 rounded-[var(--radius)] border border-border bg-card px-8 py-10 shadow-glass-sm">
           <ErpMark size="lg" compact showWordmark={false} tone="chrome" />
           <div className="flex items-center gap-2 text-muted-foreground" role="status" aria-live="polite">
             <Loader2 className="h-4 w-4 animate-spin text-brand" />
@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           id="main-content"
           className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:p-4 md:p-5 lg:p-6 lg:pb-6"
         >
-          <div className="animate-glass-in">{children}</div>
+          <div className="animate-fade-in">{children}</div>
         </main>
         <MobileTabBar
           onMore={() => setMobileOpen(true)}

@@ -1,233 +1,31 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-10-22T10:30:00.000Z",
-  "title": "Design System: Japan Circular Trading (JCT)",
-  "extensions": {
-    "colorMeta": {
-      "jct-navy": {
-        "role": "primary",
-        "displayName": "Export Navy",
-        "canonical": "#0B1F33",
-        "tonalRamp": ["#061018", "#0B1F33", "#16324A", "#2A4A66", "#4A6B88", "#7A97AE", "#B3C5D4", "#E8EEF3"]
-      },
-      "jct-vermilion": {
-        "role": "tertiary",
-        "displayName": "Vermilion Signal",
-        "canonical": "#D8392B",
-        "tonalRamp": ["#5C1510", "#8F2218", "#B82D22", "#D8392B", "#E85F52", "#F08F85", "#F8C4BF", "#FDEEEC"]
-      },
-      "jct-gold": {
-        "role": "secondary",
-        "displayName": "Trade Gold",
-        "canonical": "#C4A35A",
-        "tonalRamp": ["#4A3C18", "#7A6230", "#A08442", "#C4A35A", "#D4BB7E", "#E4D3A8", "#F1E9D0", "#FAF6EC"]
-      },
-      "primary": {
-        "role": "primary",
-        "displayName": "Harbor Charcoal",
-        "canonical": "hsl(210 64% 16%)",
-        "tonalRamp": ["#071420", "#0E2944", "#1A3D5C", "#2E5678", "#4A7394", "#7A9BB4", "#B5C8D8", "#E8F0F6"]
-      },
-      "brand": {
-        "role": "tertiary",
-        "displayName": "Brand Red",
-        "canonical": "hsl(5 72% 51%)",
-        "tonalRamp": ["#5C1510", "#8F2218", "#B82D22", "#DD3C2A", "#E85F52", "#F08F85", "#F8C4BF", "#FEF1EF"]
-      },
-      "background": {
-        "role": "neutral",
-        "displayName": "Cool Paper",
-        "canonical": "hsl(210 40% 97%)",
-        "tonalRamp": ["#9AA8B8", "#B8C4D0", "#D0D9E2", "#E2E8EF", "#EBF0F5", "#F2F6FA", "#F7FAFC", "#FCFDFE"]
-      },
-      "foreground": {
-        "role": "neutral",
-        "displayName": "Ink",
-        "canonical": "hsl(210 64% 12%)",
-        "tonalRamp": ["#061018", "#0B1F33", "#16324A", "#2A4A66", "#4A6B88", "#7A97AE", "#B3C5D4", "#E8EEF3"]
-      },
-      "sidebar-glass": {
-        "role": "neutral",
-        "displayName": "Sidebar Night",
-        "canonical": "hsl(210 64% 10% / 0.94)",
-        "tonalRamp": ["#050B12", "#0A1624", "#142536", "#243A50", "#3D5670", "#6A829A", "#A8BAC9", "#E4EBF1"]
-      }
-    },
-    "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Public catalog titles and hero wordmarks." },
-      "headline": { "displayName": "Headline", "purpose": "Section titles on public and ERP headers." },
-      "title": { "displayName": "Title", "purpose": "Card and panel titles." },
-      "body": { "displayName": "Body", "purpose": "Default ERP and public body copy." },
-      "label": { "displayName": "Label", "purpose": "Chips, stat labels, filter captions." },
-      "mono": { "displayName": "Mono", "purpose": "Stock codes and technical IDs." }
-    },
-    "shadows": [
-      {
-        "name": "glass",
-        "value": "0 14px 48px hsl(210 64% 12% / 0.1), 0 1px 0 hsl(0 0% 100% / 0.8) inset",
-        "purpose": "Strong ERP panels and sidebar."
-      },
-      {
-        "name": "glass-sm",
-        "value": "0 6px 22px hsl(210 64% 12% / 0.07)",
-        "purpose": "Filter bars, list panels, stat cards."
-      },
-      {
-        "name": "public-card",
-        "value": "0 4px 18px rgba(11,31,51,0.06)",
-        "purpose": "Public catalog cards and sticky filters."
-      }
-    ],
-    "motion": [
-      {
-        "name": "ease-out",
-        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
-        "purpose": "Default exit easing for glass-in and hero enter."
-      },
-      {
-        "name": "press",
-        "value": "120ms",
-        "purpose": "Button press feedback."
-      },
-      {
-        "name": "glass-in",
-        "value": "0.35s ease-out",
-        "purpose": "ERP panel entrance."
-      },
-      {
-        "name": "reduced-motion",
-        "value": "0.01ms",
-        "purpose": "Collapse animations/transitions under prefers-reduced-motion."
-      }
-    ],
-    "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" },
-      { "name": "xl", "value": "1280px" }
-    ],
-    "glass": {
-      "blur": "12px",
-      "bg": "hsl(0 0% 100% / 0.72)",
-      "bgStrong": "hsl(0 0% 100% / 0.9)",
-      "note": "Scoped to .erp-shell; list panels skip blur; sidebar uses blur+4px."
-    }
+  "name": "Japan Circular Trading (JCT)",
+  "world": "Enamel Yard Board",
+  "updated": "2026-10-22",
+  "colors": {
+    "jct-navy": "#14181C",
+    "jct-vermilion": "#C8102E",
+    "jct-gold": "#8B7E66",
+    "jct-canopy": "#0F3D2E",
+    "jct-panel": "#E8EAED",
+    "jct-surface": "#F2F3F5",
+    "jct-border": "#C5CAD0",
+    "brand": "#C8102E",
+    "primary": "#0F3D2E",
+    "background": "#E8EAED",
+    "foreground": "#14181C"
   },
-  "components": [
-    {
-      "name": "ERP Primary Button",
-      "kind": "button",
-      "refersTo": "button-primary",
-      "description": "Brand-red ERP action button for saves and primary commits.",
-      "html": "<button class=\"ds-btn-primary\" type=\"button\">Save changes</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 6px 14px; border: none; border-radius: 12px; background: hsl(5 72% 51%); color: #fff; font-family: Outfit, system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 0.15s, transform 0.12s; } .ds-btn-primary:hover { background: hsl(5 72% 46%); } .ds-btn-primary:focus-visible { outline: 2px solid hsl(5 72% 51%); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.98); }"
-    },
-    {
-      "name": "Public Primary Button",
-      "kind": "button",
-      "refersTo": "button-public-primary",
-      "description": "Vermilion pill CTA for marketing and catalog actions.",
-      "html": "<button class=\"ds-btn-public-primary\" type=\"button\">Enquire now</button>",
-      "css": ".ds-btn-public-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border: 2px solid #b83226; border-radius: 9999px; background: #D8392B; color: #fff; font-family: Outfit, system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 0.15s, border-color 0.15s; } .ds-btn-public-primary:hover { background: #c23024; border-color: #a32d22; } .ds-btn-public-primary:focus-visible { outline: 2px solid #D8392B; outline-offset: 2px; }"
-    },
-    {
-      "name": "Public Secondary Button",
-      "kind": "button",
-      "refersTo": "button-public-secondary",
-      "description": "Navy-outline pill for secondary public actions.",
-      "html": "<button class=\"ds-btn-public-secondary\" type=\"button\">View stock</button>",
-      "css": ".ds-btn-public-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border: 2px solid #0B1F33; border-radius: 9999px; background: #fff; color: #0B1F33; font-family: Outfit, system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 0.15s, color 0.15s; } .ds-btn-public-secondary:hover { background: #0B1F33; color: #fff; } .ds-btn-public-secondary:focus-visible { outline: 2px solid #0B1F33; outline-offset: 2px; }"
-    },
-    {
-      "name": "ERP Filter Input",
-      "kind": "input",
-      "refersTo": "input-default",
-      "description": "Glass filter-bar search/select control.",
-      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Search</span><input class=\"ds-input\" type=\"search\" placeholder=\"Chassis, make…\" /></label>",
-      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; font-family: Outfit, system-ui, sans-serif; } .ds-field-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F6C; } .ds-input { height: 36px; padding: 0 12px; border: 1px solid #CDD6E0; border-radius: calc(1.125rem - 6px); background: rgba(242,246,250,0.7); color: #0B1F33; font-size: 0.875rem; } .ds-input:focus-visible { outline: 2px solid hsl(5 72% 51%); outline-offset: 1px; border-color: hsl(5 72% 51%); }"
-    },
-    {
-      "name": "ERP Status Chip",
-      "kind": "chip",
-      "refersTo": "chip-status-brand",
-      "description": "Compact uppercase status / document-type chip.",
-      "html": "<span class=\"ds-chip\">INVOICE</span>",
-      "css": ".ds-chip { display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid rgba(221,60,42,0.3); background: rgba(221,60,42,0.05); padding: 2px 6px; font-family: Outfit, system-ui, sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; color: hsl(5 72% 51%); }"
-    },
-    {
-      "name": "Glass Stat Card",
-      "kind": "card",
-      "refersTo": "card-stat",
-      "description": "ERP metric tile with intentional brand left accent.",
-      "html": "<div class=\"ds-stat\"><p class=\"ds-stat-label\">In stock</p><p class=\"ds-stat-value\">128</p></div>",
-      "css": ".ds-stat { border-radius: calc(1.125rem - 2px); border: 1px solid hsl(210 24% 70% / 0.45); border-left: 3px solid hsl(5 72% 51%); background: hsl(0 0% 100% / 0.9); box-shadow: 0 6px 22px hsl(210 64% 12% / 0.07); padding: 12px 14px; font-family: Outfit, system-ui, sans-serif; backdrop-filter: blur(16px); } .ds-stat-label { margin: 0; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F6C; } .ds-stat-value { margin: 4px 0 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; color: #0B1F33; }"
-    },
-    {
-      "name": "ERP Sidebar Active Item",
-      "kind": "nav",
-      "refersTo": "nav-sidebar-active",
-      "description": "Active sidebar row with brand tint and left bar.",
-      "html": "<a class=\"ds-nav-item is-active\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M3 10h18\"/></svg>Vehicles</a>",
-      "css": ".ds-nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: calc(1.125rem - 4px); color: hsl(210 18% 72%); text-decoration: none; font-family: Outfit, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; background: transparent; border-left: 3px solid transparent; } .ds-nav-item:hover { background: hsl(0 0% 100% / 0.08); color: #FAFAFA; } .ds-nav-item.is-active { background: hsl(5 72% 51% / 0.12); color: #FAFAFA; border-left-color: hsl(5 72% 51%); } .ds-nav-item:focus-visible { outline: 2px solid hsl(5 72% 51%); outline-offset: 2px; } .ds-nav-icon { flex-shrink: 0; opacity: 0.9; }"
-    },
-    {
-      "name": "Glass Panel",
-      "kind": "card",
-      "refersTo": "card-glass",
-      "description": "Frosted ERP container for filters and list chrome.",
-      "html": "<div class=\"ds-glass\"><p class=\"ds-glass-title\">Filters</p><p class=\"ds-glass-body\">Search and refine stock.</p></div>",
-      "css": ".ds-glass { border-radius: calc(1.125rem - 2px); border: 1px solid hsl(210 24% 70% / 0.45); background: hsl(0 0% 100% / 0.72); box-shadow: 0 6px 22px hsl(210 64% 12% / 0.07); padding: 12px; font-family: Outfit, system-ui, sans-serif; backdrop-filter: blur(16px); } .ds-glass-title { margin: 0; font-size: 0.875rem; font-weight: 600; color: #0B1F33; } .ds-glass-body { margin: 4px 0 0; font-size: 0.8125rem; color: #4F5F6C; }"
-    }
-  ],
-  "narrative": {
-    "northStar": "The Twin Harbor",
-    "overview": "JCT is one product with two doors onto the same commercial truth. The public harbor is an export showroom — deep navy, vermilion CTAs, cream panels, and real yard photography that earn buyer trust without marketing theater. The operations deck is Liquid Glass ERP — charcoal primary chrome, refined brand-red accents, frosted panels over a soft atmospheric shell — built for dense, role-shaped daily work.\n\nPersonality is factual trade English on the public side and operable density on the ERP side. Expression belongs on the marketing shell; the ERP wordmark stays neutral ERP with no company logos in chrome. Light-only theming is intentional. Print letterhead stays conservative A4 navy/red tables and is never casually restyled.",
-    "keyCharacteristics": [
-      "Dual visual worlds that must not be collapsed without an explicit rebrand",
-      "Liquid Glass ERP: frosted panels, shell glow, charcoal sidebar, brand-red signals",
-      "Public marketing: navy/vermilion/gold, pill CTAs, catalog grids, stock photography",
-      "Side-tab / left-edge accents are intentional status and hierarchy cues",
-      "Coarse-pointer targets trend toward 44px; forms prefer visible labels",
-      "prefers-reduced-motion respected on ERP chrome and workforms"
-    ],
-    "rules": [
-      {
-        "name": "The Twin Door Rule",
-        "body": "Public navy/vermilion marketing and ERP Liquid Glass must stay distinct; do not restyle ERP chrome with public pill logos or collapse public pages into glass panels.",
-        "section": "colors"
-      },
-      {
-        "name": "The Accent Edge Rule",
-        "body": "Thick left borders, sidebar active bars, and stock-list row accents are intentional hierarchy — not decorative slop. Preserve them.",
-        "section": "colors"
-      },
-      {
-        "name": "The Print Freeze Rule",
-        "body": "OfficialTradeDocument / invoice-print-root keep conservative A4 navy/red tables; do not apply glass, brand gradients, or marketing radius.",
-        "section": "colors"
-      },
-      {
-        "name": "The ERP Density Rule",
-        "body": "Prefer text-sm / text-xs in operate surfaces; reserve display sizes for public marketing and rare ERP page titles.",
-        "section": "typography"
-      },
-      {
-        "name": "The Scoped Glass Rule",
-        "body": "Glass utilities and --shell-glow apply only under .erp-shell. Public and print stay outside Liquid Glass.",
-        "section": "elevation"
-      }
-    ],
-    "dos": [
-      "Do keep public marketing expression and ERP operate density as separate worlds under The Twin Door Rule.",
-      "Do use brand/vermilion sparingly on ERP for primary actions, focus, and intentional left-edge accents.",
-      "Do prefer visible labels, ~44×44px fullscreen close / coarse controls, and reduced-motion-safe chrome.",
-      "Do scope Liquid Glass to .erp-shell and leave print letterhead untouched."
-    ],
-    "donts": [
-      "Don't put company logos in ERP shell or login — neutral ERP wordmark only.",
-      "Don't remove side-tab / left-border accents as “slop”; they are documented hierarchy.",
-      "Don't invent dark-mode or restyle OfficialTradeDocument / invoice print roots for glass aesthetics.",
-      "Don't invent testimonials, pricing theater, or unverified stock imagery on public surfaces."
-    ]
-  }
+  "typography": {
+    "display": "Oswald",
+    "body": "Barlow",
+    "jp": "Noto Sans JP",
+    "mono": "JetBrains Mono"
+  },
+  "radius": "0.5rem",
+  "motion": ["jct-hero-enter", "jct-hero-kenburns", "jct-rail-item-in"],
+  "shadows": {
+    "sm": "0 4px 14px rgba(20, 24, 28, 0.06)",
+    "md": "0 10px 28px rgba(20, 24, 28, 0.08)"
+  },
+  "notes": "Replaces Liquid Glass / navy dual world. Print letterhead frozen."
 }

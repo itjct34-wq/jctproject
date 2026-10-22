@@ -51,17 +51,17 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
   };
 
   const field =
-    'h-11 w-full appearance-none rounded-lg border border-[var(--jct-border)] bg-white px-3 pr-9 text-sm text-[var(--jct-navy)] outline-none transition-colors focus-visible:border-[var(--jct-vermilion)] focus-visible:ring-2 focus-visible:ring-[var(--jct-vermilion)]/20';
+    'h-11 w-full appearance-none rounded-[var(--radius)] border border-[var(--jct-border)] bg-white px-3 pr-9 text-sm text-[var(--jct-navy)] outline-none transition-colors focus-visible:border-[var(--jct-vermilion)] focus-visible:ring-2 focus-visible:ring-[var(--jct-vermilion)]/20';
 
   const fieldDisabled =
-    'h-11 w-full appearance-none rounded-lg border border-[var(--jct-border)]/70 bg-[var(--jct-panel)] px-3 pr-9 text-sm text-[var(--jct-muted-2)] outline-none cursor-not-allowed';
+    'h-11 w-full appearance-none rounded-[var(--radius)] border border-[var(--jct-border)]/70 bg-[var(--jct-panel)] px-3 pr-9 text-sm text-[var(--jct-muted-2)] outline-none cursor-not-allowed';
 
   const labelClass = 'block text-xs font-semibold text-[var(--jct-muted)]';
 
   return (
     <form
       onSubmit={submit}
-      className="rounded-2xl border border-[var(--jct-border)] bg-white p-4 shadow-[0_12px_40px_rgba(11,31,51,0.12)] sm:p-5"
+      className="rounded-[var(--radius)] border-2 border-[var(--jct-canopy)] bg-white p-4 shadow-[0_12px_40px_rgba(20,24,28,0.14)] sm:p-5"
     >
       <div>
         <label htmlFor={`${baseId}-keyword`} className={labelClass}>
@@ -75,7 +75,7 @@ export function HeroSearch({ makes, modelsByMake }: Props) {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="e.g. Toyota Prius, hybrid, 2020…"
-            className="h-11 w-full rounded-lg border border-[var(--jct-border)] bg-white py-0 pl-10 pr-3 text-sm text-[var(--jct-navy)] outline-none focus-visible:border-[var(--jct-vermilion)] focus-visible:ring-2 focus-visible:ring-[var(--jct-vermilion)]/20"
+            className="h-11 w-full rounded-[var(--radius)] border border-[var(--jct-border)] bg-white py-0 pl-10 pr-3 text-sm text-[var(--jct-navy)] outline-none focus-visible:border-[var(--jct-vermilion)] focus-visible:ring-2 focus-visible:ring-[var(--jct-vermilion)]/20"
           />
         </div>
       </div>

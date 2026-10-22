@@ -18,7 +18,7 @@ export function StepsSection() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((step) => (
             <div key={step.n} className="rounded-2xl border border-[var(--jct-border)] bg-white p-5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--jct-vermilion)] font-display text-sm font-semibold text-white">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius)] bg-[var(--jct-canopy)] font-display text-sm font-semibold text-white">
                 {step.n}
               </span>
               <h3 className="mt-4 font-display text-lg font-semibold text-[var(--jct-navy)]">{step.t}</h3>

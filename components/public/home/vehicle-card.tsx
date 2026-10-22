@@ -75,7 +75,7 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
             Photos coming soon
           </span>
         )}
-        <span className="absolute left-3 top-4 z-[2] inline-flex items-center gap-1.5 rounded-full border border-[var(--jct-navy)]/15 bg-white/95 px-2.5 py-1 shadow-[0_2px_10px_rgba(11,31,51,0.12)] backdrop-blur-sm">
+        <span className="absolute left-3 top-3 z-[2] inline-flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--jct-border)] bg-white px-2.5 py-1 shadow-sm">
           <CountryFlag country={source} code={sourceCountryCode(vehicle)} size="sm" />
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--jct-navy)]">
             {source}
@@ -86,17 +86,17 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
           aria-label={saved ? 'Remove from saved' : 'Save vehicle'}
           onClick={toggleSave}
           className={cn(
-            'absolute right-3 top-4 z-[2] flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 shadow-sm transition-colors',
+            'absolute right-3 top-3 z-[2] flex h-10 w-10 items-center justify-center rounded-[var(--radius)] border bg-white shadow-sm transition-colors',
             saved
-              ? 'border-red-200 text-red-600'
-              : 'border-[var(--jct-navy)]/15 text-[var(--jct-navy)]'
+              ? 'border-[var(--jct-vermilion)]/40 text-[var(--jct-vermilion)]'
+              : 'border-[var(--jct-border)] text-[var(--jct-navy)]'
           )}
         >
           <Heart className={cn('h-4 w-4', saved && 'fill-current')} aria-hidden />
         </button>
         <span
           className={cn(
-            'absolute bottom-3 left-3 z-[2] rounded-full px-2.5 py-0.5 text-[11px] font-semibold shadow-sm',
+            'absolute bottom-3 left-3 z-[2] rounded-[var(--radius)] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide shadow-sm',
             vehicle.status === 'reserved'
               ? 'bg-[#FCE8E8] text-[#9B1C1C]'
               : vehicle.status === 'in_transit' || vehicle.status === 'exported'
@@ -133,8 +133,8 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
             ))}
           </ul>
         ) : null}
-        <div className="jct-stock-panel-accent mt-2.5 rounded-lg border border-[var(--jct-navy)]/12 bg-gradient-to-br from-[#0b1f33]/[0.04] to-[#c9a227]/[0.08] px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--jct-vermilion)]">
+        <div className="jct-stock-panel-accent mt-2.5 rounded-[var(--radius)] border border-[var(--jct-border)] bg-[var(--jct-surface)] px-3 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--jct-vermilion)]">
             FOB USD
           </p>
           <p className="mt-0.5 font-display text-2xl font-bold tracking-tight text-[var(--jct-navy)]">
@@ -145,7 +145,7 @@ export function VehicleCard({ vehicle, hrefBase }: { vehicle: PublicVehicle; hre
         </div>
         <Link
           href={href}
-          className="mt-2.5 inline-flex min-h-11 items-center justify-center rounded-full border-2 border-[var(--jct-navy)] bg-[var(--jct-navy)] px-5 text-sm font-semibold text-white transition-transform active:scale-[0.97] hover:border-[#b83226] hover:bg-[var(--jct-vermilion)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+          className="mt-2.5 inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border-2 border-[var(--jct-navy)] bg-[var(--jct-navy)] px-5 text-sm font-bold uppercase tracking-wide text-white transition-colors active:scale-[0.97] hover:border-[var(--jct-vermilion)] hover:bg-[var(--jct-vermilion)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
         >
           View details
         </Link>

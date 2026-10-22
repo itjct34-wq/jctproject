@@ -23,7 +23,7 @@ export function MakeList({ makes }: { makes: HomeMakeRow[] }) {
           <li key={make.slug}>
             <Link
               href={`/inventory?make=${encodeURIComponent(make.name)}`}
-              className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[var(--jct-border)] bg-white px-3 py-3 hover:border-[var(--jct-navy)]/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
+              className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius)] border border-[var(--jct-border)] bg-white px-3 py-3 hover:border-[var(--jct-canopy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--jct-vermilion)]"
             >
               <span className="relative flex h-12 w-[72px] shrink-0 items-center justify-center rounded-md bg-[var(--jct-panel)]">
                 {make.logoPath ? (

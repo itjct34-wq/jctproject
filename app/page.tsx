@@ -36,7 +36,7 @@ export default async function HomePage() {
 
   return (
     <HomeShell>
-      {/* Full-bleed hero — product line only, no company name */}
+      {/* Full-bleed lot hero — brand first, inventory search is the action */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -47,38 +47,37 @@ export default async function HomePage() {
             sizes="100vw"
             className="object-cover jct-hero-kenburns"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[var(--jct-navy)] via-[var(--jct-navy)]/90 to-[var(--jct-navy)]/50" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--jct-navy)] via-[var(--jct-navy)]/88 to-[var(--jct-navy)]/45" />
           <div
-            className="absolute inset-0 opacity-[0.12]"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle at 18% 22%, rgba(196,163,90,0.55), transparent 42%), radial-gradient(circle at 88% 70%, rgba(216,57,43,0.35), transparent 40%)',
-            }}
+            className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[var(--jct-navy)]/80 to-transparent"
             aria-hidden
           />
         </div>
 
-        <div className="jct-home-wrap relative z-10 pb-28 pt-14 md:pb-36 md:pt-20">
-          <h1 className="jct-hero-enter jct-hero-enter-delay-1 max-w-3xl font-display text-[2.35rem] font-bold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-[3.35rem]">
-            Used cars from Japan
+        <div className="jct-home-wrap relative z-10 pb-28 pt-12 md:pb-36 md:pt-16">
+          <h1 className="jct-hero-enter jct-hero-enter-delay-1 max-w-4xl font-display text-[2.35rem] font-bold leading-[1.02] text-white sm:text-5xl md:text-[3.35rem]">
+            Japan Circular Trading
           </h1>
-          <p className="jct-hero-enter jct-hero-enter-delay-2 mt-4 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
-            Auction-grade Japanese cars, ready for your port — FOB, C&amp;F or CIF from Nagoya.
+          <p className="jct-hero-enter jct-hero-enter-delay-2 mt-3 max-w-2xl font-display text-xl font-semibold leading-snug text-white/95 sm:text-2xl md:text-[1.75rem]">
+            Used cars from Japan
+          </p>
+          <p className="jct-hero-enter jct-hero-enter-delay-3 mt-4 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+            Auction-sourced stock with FOB pricing — RORO or container from Nagoya to your port.
           </p>
           <div className="jct-hero-enter jct-hero-enter-delay-3 mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/inventory"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--jct-vermilion)] px-6 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="jct-btn-primary px-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               Browse stock
             </Link>
             <Link
               href="/contact"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/40 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border-2 border-white/55 bg-transparent px-6 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               Get a price estimate
             </Link>
-            <span className="hidden text-xs font-medium uppercase tracking-[0.16em] text-white/55 sm:inline">
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-white/60 sm:inline">
               {stockLabel}
             </span>
           </div>

@@ -1,14 +1,23 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { JetBrains_Mono, Noto_Sans_JP, Outfit } from 'next/font/google';
+import { Barlow, JetBrains_Mono, Noto_Sans_JP, Oswald } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LocaleProvider } from '@/lib/i18n/locale-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { Analytics } from '@vercel/analytics/next';
 
-const outfit = Outfit({
+/** Lot-banner condensed display — classic dealership / yard-board voice */
+const oswald = Oswald({
   subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+/** Automotive workhorse UI sans — not Inter/Outfit */
+const barlow = Barlow({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
   display: 'swap',
 });
@@ -35,7 +44,7 @@ export const metadata: Metadata = {
     'Vehicle export management — CRM, inventory, auctions, invoicing, payments, and shipping.',
   manifest: '/manifest.webmanifest',
   applicationName: 'ERP',
-  themeColor: '#F4F7FB',
+  themeColor: '#E8EAED',
   appleWebApp: {
     capable: true,
     title: 'ERP',
@@ -56,7 +65,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${outfit.variable} ${notoSansJp.variable} ${jetbrainsMono.variable} font-sans`}
+        className={`${oswald.variable} ${barlow.variable} ${notoSansJp.variable} ${jetbrainsMono.variable} font-sans`}
       >
         <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false}>
           <LocaleProvider>

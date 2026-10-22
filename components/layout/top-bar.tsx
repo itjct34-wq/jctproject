@@ -127,11 +127,11 @@ export function TopBar({
       : t('common.notifications');
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/30 bg-card/55 px-3 shadow-glass-sm backdrop-blur-2xl supports-[backdrop-filter]:bg-card/40 sm:gap-3 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card px-3 shadow-glass-sm sm:gap-3 sm:px-4">
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
-        className="lg:hidden -ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-muted/70 active:scale-95"
+        className="lg:hidden -ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] hover:bg-muted/70 active:scale-95"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -149,7 +149,7 @@ export function TopBar({
         <button
           type="button"
           onClick={() => onOpenPalette?.()}
-          className="relative flex h-10 w-full items-center rounded-full border border-border/40 bg-card/65 px-3.5 text-left text-sm text-muted-foreground shadow-glass-sm backdrop-blur-xl transition-colors hover:bg-card/90"
+          className="relative flex h-10 w-full items-center rounded-[var(--radius)] border border-border bg-background px-3.5 text-left text-sm text-muted-foreground shadow-glass-sm transition-colors hover:bg-muted/60"
           aria-label={t('common.quickActions')}
         >
           <Search className="mr-2.5 h-4 w-4 shrink-0" />

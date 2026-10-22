@@ -91,7 +91,7 @@ function LoginForm() {
             <p className="text-xs font-medium text-muted-foreground">Staff sign-in</p>
           </div>
 
-          <div className="glass-panel-strong rounded-[1.125rem] border border-border/40 p-6 shadow-glass sm:p-8">
+          <div className="rounded-[var(--radius)] border border-border bg-card p-6 shadow-glass-sm sm:p-8">
             <h2 className="text-center text-xl font-semibold text-foreground">Sign in</h2>
             <p className="mt-1 text-center text-sm text-muted-foreground">
               Access your ERP workspace

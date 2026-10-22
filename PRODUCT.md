@@ -71,7 +71,7 @@ Not a generic inventory brochure: JCT couples a **live export catalog** (categor
 - **Official contact & registration facts** in `JCT_OFFICIAL` (Nagoya address, phones, email, corporate number, Aichi license, Rakuten Bank wire block) — preserve as product/legal truth for documents; do not invent alternate bank or license data.
 - **Tagline (official block):** `EXPORT / IMPORT TRADE / USED CARS / TRUCKS`.
 - **Voice (observed, not a design brief):** factual export-trade English — yard/auction sourcing, inspection support, RORO and container shipping, FOB pricing, document authenticity.
-- **ERP vs public identity split is binding:** public navy/vermilion marketing shell vs ERP “Liquid Glass” charcoal/brand-red operate chrome; do not collapse them without an explicit rebrand request.
+- **Shared Enamel Yard Board world:** public Persuade and ERP Operate share classic used-vehicle lot tokens (asphalt / concrete / canopy green / signal crimson); ERP stays Operate-dense with neutral **ERP** wordmark (no company logo in shell/login). Print letterhead remains frozen.
 
 *(Visual recipes belong in DESIGN.md later — not expanded here.)*
 

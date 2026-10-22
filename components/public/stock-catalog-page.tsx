@@ -133,7 +133,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
   };
 
   const field =
-    'h-11 w-full rounded-xl border border-[var(--jct-border)] bg-white px-3 text-sm text-[var(--jct-navy)] outline-none focus:ring-2 focus:ring-[var(--jct-vermilion)]/25';
+    'h-11 w-full rounded-[var(--radius)] border border-[var(--jct-border)] bg-white px-3 text-sm text-[var(--jct-navy)] outline-none focus:ring-2 focus:ring-[var(--jct-vermilion)]/25';
 
   const FilterPanel = (
     <div className="space-y-5">
@@ -147,9 +147,9 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
               setModelFilter('');
             }}
             className={cn(
-              'rounded-full border px-2.5 py-1 text-xs font-medium',
+              'rounded-[var(--radius)] border px-2.5 py-1 text-xs font-semibold',
               makeFilter === 'all'
-                ? 'border-[var(--jct-navy)] bg-[var(--jct-navy)] text-white'
+                ? 'border-[var(--jct-canopy)] bg-[var(--jct-canopy)] text-white'
                 : 'border-[var(--jct-border)] bg-white text-[var(--jct-navy)]'
             )}
           >
@@ -164,9 +164,9 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
                 setModelFilter('');
               }}
               className={cn(
-                'rounded-full border px-2.5 py-1 text-xs font-medium',
+                'rounded-[var(--radius)] border px-2.5 py-1 text-xs font-semibold',
                 makeFilter === m
-                  ? 'border-[var(--jct-navy)] bg-[var(--jct-navy)] text-white'
+                  ? 'border-[var(--jct-canopy)] bg-[var(--jct-canopy)] text-white'
                   : 'border-[var(--jct-border)] bg-white text-[var(--jct-navy)]'
               )}
             >
@@ -242,7 +242,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
 
       <button
         type="button"
-        className="flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--jct-vermilion)] text-sm font-semibold text-white"
+        className="jct-btn-primary flex w-full items-center justify-center"
         onClick={() => setFiltersOpen(false)}
       >
         Show {filtered.length} results
@@ -293,7 +293,7 @@ export function StockCatalogPage({ category }: { category: StockCategory }) {
             </div>
             <button
               type="button"
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--jct-navy)] bg-[var(--jct-navy)] px-4 text-sm font-semibold text-white md:hidden"
+              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius)] border-2 border-[var(--jct-navy)] bg-[var(--jct-navy)] px-4 text-sm font-bold uppercase tracking-wide text-white md:hidden"
               onClick={() => setFiltersOpen(true)}
             >
               <SlidersHorizontal className="h-4 w-4" />

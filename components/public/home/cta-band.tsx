@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export function CtaBand() {
   return (
-    <section className="bg-[var(--jct-navy)]">
+    <section className="border-t-4 border-[var(--jct-canopy)] bg-[var(--jct-navy)]">
       <div className="jct-home-wrap py-12 text-center md:py-16">
         <h2 className="font-display text-2xl font-semibold text-white md:text-3xl">Can&apos;t find the car you want?</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-white/80">
@@ -17,7 +17,7 @@ export function CtaBand() {
           </Link>
           <Link
             href="/verify-agent"
-            className="inline-flex min-h-11 items-center rounded-full border-2 border-white/55 px-5 text-sm font-semibold text-white transition-colors hover:border-white hover:bg-white/12"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius)] border-2 border-white/55 px-5 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:border-white hover:bg-white/12"
           >
             Verify an agent first
           </Link>
