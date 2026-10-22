@@ -92,7 +92,7 @@ function customerAddress(customer?: Customer | null) {
 
 function LabeledLine({ label, value }: { label: string; value?: string | null }) {
   return (
-    <p className="text-[8px] leading-[1.25]">
+    <p className="text-[9.5px] leading-[1.3]">
       <span className="font-semibold">{label}: </span>
       <span>{cellText(value)}</span>
     </p>
@@ -115,7 +115,7 @@ function PartyBlock({
   return (
     <div>
       {heading && (
-        <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0b1f3a]">{heading}</p>
+        <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-[#0b1f3a]">{heading}</p>
       )}
       <LabeledLine label="Name" value={name} />
       <LabeledLine label="contact" value={phone} />
@@ -127,7 +127,7 @@ function PartyBlock({
 
 function BankLine({ label, value }: { label: string; value: string }) {
   return (
-    <p className="text-[8px] leading-[1.35] text-[#0b1f3a]">
+    <p className="text-[9px] leading-[1.4] text-[#0b1f3a]">
       <span className="font-bold">{label}: </span>
       <span>{value}</span>
     </p>
@@ -269,7 +269,7 @@ export function OfficialTradeDocument({
           ) : (
             <div className="min-w-0">
               <p className="text-[14px] font-bold leading-tight tracking-tight text-[#0b1f3a]">{orgName}</p>
-              <p className="mt-0.5 text-[8px] leading-snug text-[#0b1f3a]">{JCT_OFFICIAL.address}</p>
+              <p className="mt-0.5 text-[9px] leading-snug text-[#0b1f3a]">{JCT_OFFICIAL.address}</p>
             </div>
           )}
           <div className="text-right shrink-0">
@@ -278,7 +278,7 @@ export function OfficialTradeDocument({
           </div>
         </header>
 
-        <table className="inv-table mt-2 text-[9px]">
+        <table className="inv-table mt-2 text-[10px]">
           <thead>
             <tr>
               <th className="px-1.5 py-0.5 text-left">{kind === 'invoice' ? 'Issue date' : 'Date'}</th>
@@ -297,7 +297,7 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        <table className="inv-table mt-1.5 text-[9px]">
+        <table className="inv-table mt-1.5 text-[10px]">
           <thead>
             <tr>
               <th className="px-1.5 py-0.5 text-left">{showBuyer ? 'Buyer / Consignee' : 'Consignee'}</th>
@@ -327,17 +327,17 @@ export function OfficialTradeDocument({
                 />
               </td>
               <td className="px-1.5 py-1">
-                <p className="text-[11px] font-bold leading-tight">{orgName}</p>
-                <p className="mt-0.5 text-[9px] leading-snug">{JCT_OFFICIAL.address}</p>
-                <p className="text-[9px]">Fax {JCT_OFFICIAL.fax} · Tel {JCT_OFFICIAL.phone}</p>
-                <p className="text-[9px]">{JCT_OFFICIAL.email}</p>
-                <p className="text-[9px]">{JCT_OFFICIAL.website}</p>
+                <p className="text-[12px] font-bold leading-tight">{orgName}</p>
+                <p className="mt-0.5 text-[10px] leading-snug">{JCT_OFFICIAL.address}</p>
+                <p className="text-[10px]">Fax {JCT_OFFICIAL.fax} · Tel {JCT_OFFICIAL.phone}</p>
+                <p className="text-[10px]">{JCT_OFFICIAL.email}</p>
+                <p className="text-[10px]">{JCT_OFFICIAL.website}</p>
               </td>
             </tr>
           </tbody>
         </table>
 
-        <table className="inv-table mt-1.5 text-[9px]">
+        <table className="inv-table mt-1.5 text-[10px]">
           <thead>
             <tr>
               {['Type', 'Mode', 'Term', 'POL', 'POD'].map((label) => (
@@ -356,13 +356,13 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        <p className="mt-1.5 mb-0.5 text-[9px] font-bold text-[#0b1f3a]">
+        <p className="mt-1.5 mb-0.5 text-[11px] font-bold text-[#0b1f3a]">
           Vehicles
           <span className="ml-1 font-medium normal-case tracking-normal">
             {units} unit{units === 1 ? '' : 's'}
           </span>
         </p>
-        <table className="inv-table inv-compact text-[8px]">
+        <table className="inv-table inv-compact text-[10px]">
           <thead>
             <tr>
               <th className="px-1.5 py-0.5 text-left">Chassis</th>
@@ -384,16 +384,16 @@ export function OfficialTradeDocument({
                   : formatDepositRatio(row.discount, depositBaseUnit);
               return (
                 <tr key={idx}>
-                  <td className="px-1.5 py-0.5 align-middle font-mono text-[7.5px]">{row.chassis}</td>
-                  <td className="px-1.5 py-0.5 align-middle">
+                  <td className="px-1.5 py-0.5 align-middle font-mono text-[9.5px]">{row.chassis}</td>
+                  <td className="px-1.5 py-0.5 align-middle text-[10px]">
                     {row.freeform ? (
-                      <p className="whitespace-pre-line font-semibold leading-tight">{row.freeform}</p>
+                      <p className="whitespace-pre-line font-semibold leading-snug">{row.freeform}</p>
                     ) : (
                       <>
-                        <p className="font-semibold leading-tight">
+                        <p className="font-semibold leading-snug">
                           {[row.make, row.model].filter(Boolean).join(' ') || '—'}
                         </p>
-                        <p className="leading-tight">
+                        <p className="leading-snug">
                           {[row.year, row.engine, row.colour, row.transmission].filter(Boolean).join(' · ') || '—'}
                         </p>
                       </>
@@ -410,10 +410,10 @@ export function OfficialTradeDocument({
             {/* RORO (no separate freight): skip blue intermediate Total — red Invoice total is enough. */}
             {showFreightBlock ? (
               <tr className="inv-subtotal">
-                <td colSpan={vehicleColSpan} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
+                <td colSpan={vehicleColSpan} className="px-1.5 py-0.5 text-right text-[9.5px] font-bold tracking-wide">
                   {vehiclesTotalLabel}
                 </td>
-                <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(vehiclesSum, currency)}</td>
+                <td className="px-1.5 py-0.5 text-right text-[11px] font-black">{formatMoney(vehiclesSum, currency)}</td>
               </tr>
             ) : null}
           </tbody>
@@ -421,8 +421,8 @@ export function OfficialTradeDocument({
 
         {showFreightBlock && (
           <>
-            <p className="mt-1.5 mb-0.5 text-[9px] font-bold text-[#0b1f3a]">Freight</p>
-            <table className="inv-table inv-compact text-[8px]">
+            <p className="mt-1.5 mb-0.5 text-[11px] font-bold text-[#0b1f3a]">Freight</p>
+            <table className="inv-table inv-compact text-[10px]">
               <thead>
                 <tr>
                   <th className="px-1.5 py-0.5 text-left">Description</th>
@@ -437,17 +437,17 @@ export function OfficialTradeDocument({
                   <td className="px-1.5 py-0.5 text-right font-medium">{formatMoney(freight, currency)}</td>
                 </tr>
                 <tr className="inv-subtotal">
-                  <td colSpan={2} className="px-1.5 py-0.5 text-right text-[8px] font-bold tracking-wide">
+                  <td colSpan={2} className="px-1.5 py-0.5 text-right text-[9.5px] font-bold tracking-wide">
                     Freight total
                   </td>
-                  <td className="px-1.5 py-0.5 text-right text-[10px] font-black">{formatMoney(freight, currency)}</td>
+                  <td className="px-1.5 py-0.5 text-right text-[11px] font-black">{formatMoney(freight, currency)}</td>
                 </tr>
               </tbody>
             </table>
           </>
         )}
 
-        <table className="inv-table inv-compact mt-1.5 text-[8px]">
+        <table className="inv-table inv-compact mt-1.5 text-[10px]">
           <tbody>
             {hasExtraCharges && (
               <tr>
@@ -480,16 +480,16 @@ export function OfficialTradeDocument({
               </tr>
             )}
             <tr className="inv-total">
-              <td className="px-1.5 py-1 text-right text-[9px] font-bold tracking-wide">{totalWord}</td>
-              <td className="px-1.5 py-1 text-right text-[11px] font-black">{formatMoney(total, currency)}</td>
+              <td className="px-1.5 py-1 text-right text-[11px] font-bold tracking-wide">{totalWord}</td>
+              <td className="px-1.5 py-1 text-right text-[13px] font-black">{formatMoney(total, currency)}</td>
             </tr>
           </tbody>
         </table>
 
-        <table className="inv-table mt-1.5 text-[8px] leading-[1.3]">
+        <table className="inv-table mt-1.5 text-[9.5px] leading-[1.35]">
           <thead>
             <tr>
-              <th colSpan={3} className="px-1.5 py-1 text-center text-[8px] font-bold uppercase tracking-[0.18em]">
+              <th colSpan={3} className="px-1.5 py-1 text-center text-[9.5px] font-bold uppercase tracking-[0.18em]">
                 BANKING DETAILS
               </th>
             </tr>
@@ -497,7 +497,7 @@ export function OfficialTradeDocument({
           <tbody>
             <tr className="align-top">
               <td className="w-1/3 px-1.5 py-1">
-                <p className="mb-0.5 text-[7.5px] font-bold uppercase tracking-wide text-[#0b1f3a]">
+                <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0b1f3a]">
                   Beneficiary Bank (Account with Institution)
                 </p>
                 <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.name} />
@@ -506,13 +506,13 @@ export function OfficialTradeDocument({
                 <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.swift} />
               </td>
               <td className="w-1/3 px-1.5 py-1">
-                <p className="mb-0.5 text-[7.5px] font-bold uppercase tracking-wide text-[#0b1f3a]">Beneficiary Information</p>
+                <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0b1f3a]">Beneficiary Information</p>
                 <BankLine label="Account Number" value={JCT_OFFICIAL.bank.account} />
                 <BankLine label="Beneficiary Name" value={beneficiaryName} />
                 <BankLine label="Beneficiary Address" value={JCT_OFFICIAL.bank.beneficiaryAddress} />
               </td>
               <td className="w-1/3 px-1.5 py-1">
-                <p className="mb-0.5 text-[7.5px] font-bold uppercase tracking-wide text-[#0b1f3a]">Intermediary Bank</p>
+                <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0b1f3a]">Intermediary Bank</p>
                 <BankLine label="Bank Name" value={JCT_OFFICIAL.bank.intermediaryName} />
                 <BankLine label="SWIFT Code / BIC" value={JCT_OFFICIAL.bank.intermediarySwift} />
                 <BankLine label="Intermediary Bank address" value={JCT_OFFICIAL.bank.intermediaryAddress} />
@@ -521,16 +521,16 @@ export function OfficialTradeDocument({
           </tbody>
         </table>
 
-        {notes && <p className="mt-1 text-[8px] text-[#0b1f3a] line-clamp-2">Notes: {notes}</p>}
+        {notes && <p className="mt-1 text-[9px] text-[#0b1f3a] line-clamp-2">Notes: {notes}</p>}
 
         <footer className="mt-auto pt-1.5">
           <div className="grid grid-cols-[1fr_96px] items-center gap-2">
             <div className="invoice-sign-block px-1 text-center">
-              <p className="text-[10px] font-bold leading-tight tracking-tight text-[#0b1f3a] uppercase">
+              <p className="text-[11px] font-bold leading-tight tracking-tight text-[#0b1f3a] uppercase">
                 {orgName}
               </p>
               <div className="invoice-sign-row mt-0.5 flex items-center justify-center gap-3 text-[#0b1f3a]">
-                <span className="text-[8.5px] font-semibold whitespace-nowrap">
+                <span className="text-[9.5px] font-semibold whitespace-nowrap">
                   {JCT_OFFICIAL.directorTitle}
                 </span>
                 <span className="invoice-hanko-name">
@@ -538,16 +538,16 @@ export function OfficialTradeDocument({
                   <JctHanko className="invoice-hanko-stamp" src={hankoUrl} alt={`${orgName} seal`} />
                 </span>
               </div>
-              <p className="mt-0.5 text-[7.5px] leading-snug uppercase">
+              <p className="mt-0.5 text-[8.5px] leading-snug uppercase">
                 2-505-101, DAITOURO, NAKAGAWA-KU, NAGOYA-SHI, AICHI-KEN 454-0943 JAPAN
               </p>
-              <p className="text-[7.5px] leading-snug uppercase">PHONE :+81 52-717-4476</p>
+              <p className="text-[8.5px] leading-snug uppercase">PHONE :+81 52-717-4476</p>
             </div>
             <div className="flex justify-end">
               {showQr && verificationUrl ? (
                 <div className="invoice-qr-wrap flex max-w-[110px] flex-col items-center text-center">
                   <InvoiceQRCode value={verificationUrl} size={88} className="invoice-qr" />
-                  <p className="mt-0.5 text-[7px] font-semibold tracking-wide">Scan to verify</p>
+                  <p className="mt-0.5 text-[8px] font-semibold tracking-wide">Scan to verify</p>
                 </div>
               ) : (
                 <span />
@@ -555,7 +555,7 @@ export function OfficialTradeDocument({
             </div>
           </div>
           <div className="mt-1.5 border-t-2 border-[#0b1f3a] pt-1 text-center">
-            <p className="text-[9px] font-semibold tracking-[0.14em]">SIGNATURE OF AUTHORISED PERSON</p>
+            <p className="text-[10px] font-semibold tracking-[0.14em]">SIGNATURE OF AUTHORISED PERSON</p>
           </div>
         </footer>
       </div>
